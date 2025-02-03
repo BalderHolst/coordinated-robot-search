@@ -1,4 +1,0 @@
-cargo:rustc-link-search=native=/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot/lib
-cargo:rustc-link-search=native=/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one/lib
-cargo:rustc-link-search=native=/opt/ros/jazzy/lib
-cargo:rerun-if-changed=build.rs

@@ -1,1 +1,6 @@
 /.direnv
+build/
+install/
+log/
+.cargo/
+target/
