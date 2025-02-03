@@ -108,13 +108,6 @@
                 git
                 docker
                 python3
-                numpy
-                pandas
-                matplotlib
-                scikit-learn
-                easydict
-                ruamel-yaml
-                pytorch
                 # rosPackages.humble.rclpy
 
             ] ++ lib.attrsets.mapAttrsToList
@@ -125,8 +118,6 @@
                 ${commands.help}
 
                 export ROOT="$(pwd)"
-                export PYTHONPATH="$PYTHONPATH:$ROOT/rccar_gym"
-
                 export CONTAINER="${container-name}"
             '';
         };
