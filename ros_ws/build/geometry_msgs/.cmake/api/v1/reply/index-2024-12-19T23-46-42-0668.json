@@ -1,0 +1,54 @@
+{
+	"cmake" : 
+	{
+		"generator" : 
+		{
+			"multiConfig" : false,
+			"name" : "Unix Makefiles"
+		},
+		"paths" : 
+		{
+			"cmake" : "/nix/store/kap109b20fvapdkpk0djrqy5chqc8rgh-cmake-3.29.6/bin/cmake",
+			"cpack" : "/nix/store/kap109b20fvapdkpk0djrqy5chqc8rgh-cmake-3.29.6/bin/cpack",
+			"ctest" : "/nix/store/kap109b20fvapdkpk0djrqy5chqc8rgh-cmake-3.29.6/bin/ctest",
+			"root" : "/nix/store/kap109b20fvapdkpk0djrqy5chqc8rgh-cmake-3.29.6/share/cmake-3.29"
+		},
+		"version" : 
+		{
+			"isDirty" : false,
+			"major" : 3,
+			"minor" : 29,
+			"patch" : 6,
+			"string" : "3.29.6",
+			"suffix" : ""
+		}
+	},
+	"objects" : 
+	[
+		{
+			"jsonFile" : "codemodel-v2-dbf801c23618234dd636.json",
+			"kind" : "codemodel",
+			"version" : 
+			{
+				"major" : 2,
+				"minor" : 7
+			}
+		}
+	],
+	"reply" : 
+	{
+		"client-colcon-cmake" : 
+		{
+			"codemodel-v2" : 
+			{
+				"jsonFile" : "codemodel-v2-dbf801c23618234dd636.json",
+				"kind" : "codemodel",
+				"version" : 
+				{
+					"major" : 2,
+					"minor" : 7
+				}
+			}
+		}
+	}
+}

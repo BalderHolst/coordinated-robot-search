@@ -1,0 +1,9 @@
+{
+  "package_name": "action_msgs",
+  "non_idl_tuples": [
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/action_msgs:msg/GoalInfo.msg",
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/action_msgs:msg/GoalStatus.msg",
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/action_msgs:msg/GoalStatusArray.msg",
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/action_msgs:srv/CancelGoal.srv"
+  ]
+}

@@ -1,0 +1,267 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-20d2c9b5c6603cbc51b4.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						15,
+						16,
+						17,
+						18,
+						19
+					]
+				},
+				{
+					"build" : "geometry_msgs__rs",
+					"jsonFile" : "directory-geometry_msgs__rs-eedaa890868923258223.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/home/balling/projects/RIC/ros_ws/build/geometry_msgs/geometry_msgs__rs",
+					"targetIndexes" : 
+					[
+						14
+					]
+				},
+				{
+					"build" : "geometry_msgs__py",
+					"jsonFile" : "directory-geometry_msgs__py-0519a504fe55bc71f059.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/home/balling/projects/RIC/ros_ws/build/geometry_msgs/geometry_msgs__py",
+					"targetIndexes" : 
+					[
+						4
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"name" : "geometry_msgs",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_build_geometry_msgs_egg::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_build_geometry_msgs_egg-397b1f9c6c3efc6db28d.json",
+					"name" : "ament_cmake_python_build_geometry_msgs_egg",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_copy_geometry_msgs::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_copy_geometry_msgs-13188d3295edd7087987.json",
+					"name" : "ament_cmake_python_copy_geometry_msgs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs-50d76755b7d3a225bfda.json",
+					"name" : "geometry_msgs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__cpp-e2d228e1f49448ae42f8.json",
+					"name" : "geometry_msgs__cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "geometry_msgs__py::@b0f52cc1ec7993d292c2",
+					"jsonFile" : "target-geometry_msgs__py-5c71f18da8c1532090b6.json",
+					"name" : "geometry_msgs__py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_generator_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_generator_c-55a299a7e0511deadc83.json",
+					"name" : "geometry_msgs__rosidl_generator_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_generator_py::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_generator_py-966b221b328ac934efd9.json",
+					"name" : "geometry_msgs__rosidl_generator_py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_generator_type_description::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_generator_type_description-282d6fc5989dbc47e394.json",
+					"name" : "geometry_msgs__rosidl_generator_type_description",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_c-f03877ebcdcd5db04adc.json",
+					"name" : "geometry_msgs__rosidl_typesupport_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_cpp-8a426f1de7107bf04b08.json",
+					"name" : "geometry_msgs__rosidl_typesupport_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_fastrtps_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_fastrtps_c-b89ab1004c6492b7a6c6.json",
+					"name" : "geometry_msgs__rosidl_typesupport_fastrtps_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_fastrtps_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_fastrtps_cpp-d4ae0f1625661108365a.json",
+					"name" : "geometry_msgs__rosidl_typesupport_fastrtps_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_introspection_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_introspection_c-849298e915656a3feaa6.json",
+					"name" : "geometry_msgs__rosidl_typesupport_introspection_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs__rosidl_typesupport_introspection_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs__rosidl_typesupport_introspection_cpp-d023ad7b6138e85a2559.json",
+					"name" : "geometry_msgs__rosidl_typesupport_introspection_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "geometry_msgs__rs::@55816a9049d522f27c8b",
+					"jsonFile" : "target-geometry_msgs__rs-18e27e67e894fd0f6117.json",
+					"name" : "geometry_msgs__rs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs_s__rosidl_typesupport_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs_s__rosidl_typesupport_c-dd771342ee206bd613ea.json",
+					"name" : "geometry_msgs_s__rosidl_typesupport_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs_s__rosidl_typesupport_fastrtps_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs_s__rosidl_typesupport_fastrtps_c-e626796378c8f7a6574a.json",
+					"name" : "geometry_msgs_s__rosidl_typesupport_fastrtps_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs_s__rosidl_typesupport_introspection_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs_s__rosidl_typesupport_introspection_c-11798f83465c104413b2.json",
+					"name" : "geometry_msgs_s__rosidl_typesupport_introspection_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "geometry_msgs_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-geometry_msgs_uninstall-5c3836173bb602e3ca3f.json",
+					"name" : "geometry_msgs_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-73ed3f3eac1983178254.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/balling/projects/RIC/ros_ws/build/geometry_msgs",
+		"source" : "/home/balling/projects/RIC/ros_ws/src/ros2/common_interfaces/geometry_msgs"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

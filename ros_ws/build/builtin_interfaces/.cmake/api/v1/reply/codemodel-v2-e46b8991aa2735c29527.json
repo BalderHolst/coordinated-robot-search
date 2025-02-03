@@ -1,0 +1,267 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"childIndexes" : 
+					[
+						1,
+						2
+					],
+					"hasInstallRule" : true,
+					"jsonFile" : "directory-.-0a2206114129b09c7683.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						15,
+						16,
+						17,
+						18,
+						19
+					]
+				},
+				{
+					"build" : "builtin_interfaces__rs",
+					"jsonFile" : "directory-builtin_interfaces__rs-2bd3fc0430bf0514cb45.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/home/balling/projects/RIC/ros_ws/build/builtin_interfaces/builtin_interfaces__rs",
+					"targetIndexes" : 
+					[
+						14
+					]
+				},
+				{
+					"build" : "builtin_interfaces__py",
+					"jsonFile" : "directory-builtin_interfaces__py-157c0b6133425193319f.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.20"
+					},
+					"parentIndex" : 0,
+					"projectIndex" : 0,
+					"source" : "/home/balling/projects/RIC/ros_ws/build/builtin_interfaces/builtin_interfaces__py",
+					"targetIndexes" : 
+					[
+						4
+					]
+				}
+			],
+			"name" : "",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0,
+						1,
+						2
+					],
+					"name" : "builtin_interfaces",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3,
+						4,
+						5,
+						6,
+						7,
+						8,
+						9,
+						10,
+						11,
+						12,
+						13,
+						14,
+						15,
+						16,
+						17,
+						18,
+						19
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_build_builtin_interfaces_egg::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_build_builtin_interfaces_egg-e882a7045ecb076be6e5.json",
+					"name" : "ament_cmake_python_build_builtin_interfaces_egg",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "ament_cmake_python_copy_builtin_interfaces::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-ament_cmake_python_copy_builtin_interfaces-c57fbfe62f8f8830a25f.json",
+					"name" : "ament_cmake_python_copy_builtin_interfaces",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces-b323a734c1c4785acf0d.json",
+					"name" : "builtin_interfaces",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__cpp-86df2df3deeb404ef34d.json",
+					"name" : "builtin_interfaces__cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 2,
+					"id" : "builtin_interfaces__py::@9869342174ea89b0961b",
+					"jsonFile" : "target-builtin_interfaces__py-ff98b9908442b4a7803e.json",
+					"name" : "builtin_interfaces__py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_generator_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_generator_c-6f54876a5c8fc3bedbb5.json",
+					"name" : "builtin_interfaces__rosidl_generator_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_generator_py::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_generator_py-2caed8230e4713d4eb59.json",
+					"name" : "builtin_interfaces__rosidl_generator_py",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_generator_type_description::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_generator_type_description-27767ea41f3d0856cf8f.json",
+					"name" : "builtin_interfaces__rosidl_generator_type_description",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_c-241d1f2dc262942d7743.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_cpp-6221a7a463c04b589d0a.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_fastrtps_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_fastrtps_c-7492155cfc3b653c19be.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_fastrtps_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_fastrtps_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_fastrtps_cpp-c3dbc7412f7ccef597a3.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_fastrtps_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_introspection_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_introspection_c-0927f4977b793f4442a1.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_introspection_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces__rosidl_typesupport_introspection_cpp::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces__rosidl_typesupport_introspection_cpp-41928f8de9bb0472c2ec.json",
+					"name" : "builtin_interfaces__rosidl_typesupport_introspection_cpp",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 1,
+					"id" : "builtin_interfaces__rs::@2f003a8b6a1456ac6c7d",
+					"jsonFile" : "target-builtin_interfaces__rs-86b0cd1f54eeb469cb02.json",
+					"name" : "builtin_interfaces__rs",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces_s__rosidl_typesupport_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces_s__rosidl_typesupport_c-a3d15ad192159025458e.json",
+					"name" : "builtin_interfaces_s__rosidl_typesupport_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces_s__rosidl_typesupport_fastrtps_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces_s__rosidl_typesupport_fastrtps_c-0af5f85c2369e445a65d.json",
+					"name" : "builtin_interfaces_s__rosidl_typesupport_fastrtps_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces_s__rosidl_typesupport_introspection_c::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces_s__rosidl_typesupport_introspection_c-5daa46d8bc1fbaa25d82.json",
+					"name" : "builtin_interfaces_s__rosidl_typesupport_introspection_c",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "builtin_interfaces_uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-builtin_interfaces_uninstall-05bbc142c8f539898ad1.json",
+					"name" : "builtin_interfaces_uninstall",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "uninstall::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-uninstall-0b1840f3eac2a7b246de.json",
+					"name" : "uninstall",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/balling/projects/RIC/ros_ws/build/builtin_interfaces",
+		"source" : "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/builtin_interfaces"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

@@ -1,0 +1,41 @@
+file(REMOVE_RECURSE
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/_geographic_msgs_s.ep.rosidl_typesupport_c.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/_geographic_msgs_s.ep.rosidl_typesupport_fastrtps_c.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/_geographic_msgs_s.ep.rosidl_typesupport_introspection_c.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/__init__.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_bounding_box.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_bounding_box_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geo_point.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geo_point_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geo_pose.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geo_pose_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geographic_map.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geographic_map_changes.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geographic_map_changes_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_geographic_map_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_key_value.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_key_value_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_map_feature.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_map_feature_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_network.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_network_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_path.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_path_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_segment.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_route_segment_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_way_point.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/msg/_way_point_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/__init__.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_get_geographic_map.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_get_geographic_map_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_get_route_plan.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_get_route_plan_s.c"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_update_geographic_map.py"
+  "/home/balling/projects/RIC/ros_ws/build/geographic_msgs/rosidl_generator_py/geographic_msgs/srv/_update_geographic_map_s.c"
+  "CMakeFiles/geographic_msgs__py"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang )
+  include(CMakeFiles/geographic_msgs__py.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()

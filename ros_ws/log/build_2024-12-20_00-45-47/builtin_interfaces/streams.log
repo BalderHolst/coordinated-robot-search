@@ -1,0 +1,274 @@
+[0.008s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake /home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/builtin_interfaces -DCMAKE_INSTALL_PREFIX=/home/balling/projects/RIC/ros_ws/install/builtin_interfaces
+[0.072s] -- The C compiler identification is GNU 13.3.0
+[0.136s] -- The CXX compiler identification is GNU 13.3.0
+[0.146s] -- Detecting C compiler ABI info
+[0.212s] -- Detecting C compiler ABI info - done
+[0.229s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.229s] -- Detecting C compile features
+[0.229s] -- Detecting C compile features - done
+[0.232s] -- Detecting CXX compiler ABI info
+[0.306s] -- Detecting CXX compiler ABI info - done
+[0.327s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.327s] -- Detecting CXX compile features
+[0.327s] -- Detecting CXX compile features - done
+[0.328s] -- Found ament_cmake: 2.5.2 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.453s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter
+[0.547s] -- Found rosidl_core_generators: 0.2.0 (/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators/share/rosidl_core_generators/cmake)
+[0.551s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.600s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.647s] -- Found rosidl_adapter: 4.6.4 (/opt/ros/jazzy/share/rosidl_adapter/cmake)
+[1.090s] -- Found ament_cmake_cppcheck: 0.17.1 (/opt/ros/jazzy/share/ament_cmake_cppcheck/cmake)
+[1.094s] -- Found ament_cmake_cpplint: 0.17.1 (/opt/ros/jazzy/share/ament_cmake_cpplint/cmake)
+[1.098s] -- Found ament_cmake_uncrustify: 0.17.1 (/opt/ros/jazzy/share/ament_cmake_uncrustify/cmake)
+[1.101s] -- Found ament_cmake_ros: 0.12.0 (/opt/ros/jazzy/share/ament_cmake_ros/cmake)
+[1.454s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[1.899s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[1.906s] -- Found python_cmake_module: 0.11.1 (/opt/ros/jazzy/share/python_cmake_module/cmake)
+[2.014s] -- Found PythonExtra: /usr/bin/python3
+[2.356s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter Development NumPy Development.Module Development.Embed
+[2.385s] -- Found ament_cmake_flake8: 0.17.1 (/opt/ros/jazzy/share/ament_cmake_flake8/cmake)
+[2.388s] -- Found ament_cmake_pep257: 0.17.1 (/opt/ros/jazzy/share/ament_cmake_pep257/cmake)
+[2.394s] -- Configuring done (2.4s)
+[2.422s] -- Generating done (0.0s)
+[2.431s] -- Build files have been written to: /home/balling/projects/RIC/ros_ws/build/builtin_interfaces
+[2.437s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake /home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/builtin_interfaces -DCMAKE_INSTALL_PREFIX=/home/balling/projects/RIC/ros_ws/install/builtin_interfaces
+[2.438s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake --build /home/balling/projects/RIC/ros_ws/build/builtin_interfaces -- -j8 -l8
+[2.475s] [  2%] [34m[1mGenerating type hashes for ROS interfaces[0m
+[2.477s] [  4%] [34m[1mGenerating Rust code for ROS interfaces[0m
+[2.484s] [  4%] Built target ament_cmake_python_copy_builtin_interfaces
+[2.646s] running egg_info
+[2.646s] creating builtin_interfaces.egg-info
+[2.661s] writing builtin_interfaces.egg-info/PKG-INFO
+[2.661s] writing dependency_links to builtin_interfaces.egg-info/dependency_links.txt
+[2.661s] writing top-level names to builtin_interfaces.egg-info/top_level.txt
+[2.661s] writing manifest file 'builtin_interfaces.egg-info/SOURCES.txt'
+[2.669s] [  4%] Built target builtin_interfaces__rosidl_generator_type_description
+[2.679s] [  6%] [34m[1mGenerating C code for ROS interfaces[0m
+[2.683s] [  8%] [34m[1mGenerating C++ code for ROS interfaces[0m
+[2.689s] [  8%] Built target builtin_interfaces__rs
+[2.705s] reading manifest file 'builtin_interfaces.egg-info/SOURCES.txt'
+[2.706s] writing manifest file 'builtin_interfaces.egg-info/SOURCES.txt'
+[2.732s] [  8%] Built target ament_cmake_python_build_builtin_interfaces_egg
+[2.926s] [  8%] Built target builtin_interfaces__cpp
+[2.946s] [ 11%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/duration__functions.c.o[0m
+[2.948s] [ 13%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/time__description.c.o[0m
+[2.951s] [ 15%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/duration__type_support.c.o[0m
+[2.957s] [ 17%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/time__type_support.c.o[0m
+[2.957s] [ 20%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/time__functions.c.o[0m
+[2.957s] [ 22%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_c.dir/rosidl_generator_c/builtin_interfaces/msg/detail/duration__description.c.o[0m
+[3.017s] [ 24%] [32m[1mLinking C shared library libbuiltin_interfaces__rosidl_generator_c.so[0m
+[3.048s] [ 24%] Built target builtin_interfaces__rosidl_generator_c
+[3.057s] [ 26%] [34m[1mGenerating C++ type support dispatch for ROS interfaces[0m
+[3.061s] [ 28%] [34m[1mGenerating C introspection for ROS interfaces[0m
+[3.064s] [ 31%] [34m[1mGenerating C type support for eProsima Fast-RTPS[0m
+[3.067s] [ 33%] [34m[1mGenerating C type support dispatch for ROS interfaces[0m
+[3.073s] [ 35%] [34m[1mGenerating C++ type support for eProsima Fast-RTPS[0m
+[3.073s] [ 37%] [34m[1mGenerating C++ introspection for ROS interfaces[0m
+[3.366s] [ 40%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/builtin_interfaces/msg/time__type_support.cpp.o[0m
+[3.366s] [ 42%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_cpp.dir/rosidl_typesupport_cpp/builtin_interfaces/msg/duration__type_support.cpp.o[0m
+[3.401s] [ 44%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/builtin_interfaces/msg/detail/duration__type_support.c.o[0m
+[3.401s] [ 46%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_typesupport_introspection_c.dir/rosidl_typesupport_introspection_c/builtin_interfaces/msg/detail/time__type_support.c.o[0m
+[3.485s] [ 48%] [32m[1mLinking C shared library libbuiltin_interfaces__rosidl_typesupport_introspection_c.so[0m
+[3.505s] [ 51%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/builtin_interfaces/msg/detail/duration__type_support_c.cpp.o[0m
+[3.506s] [ 53%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_fastrtps_c.dir/rosidl_typesupport_fastrtps_c/builtin_interfaces/msg/detail/time__type_support_c.cpp.o[0m
+[3.521s] [ 55%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/builtin_interfaces/msg/duration__type_support.cpp.o[0m
+[3.567s] [ 57%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/builtin_interfaces/msg/detail/duration__type_support.cpp.o[0m
+[3.569s] [ 57%] Built target builtin_interfaces__rosidl_typesupport_introspection_c
+[3.601s] [ 60%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_introspection_cpp.dir/rosidl_typesupport_introspection_cpp/builtin_interfaces/msg/detail/time__type_support.cpp.o[0m
+[3.628s] [ 62%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/builtin_interfaces/msg/detail/dds_fastrtps/duration__type_support.cpp.o[0m
+[3.641s] [ 64%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_c.dir/rosidl_typesupport_c/builtin_interfaces/msg/time__type_support.cpp.o[0m
+[3.731s] [ 66%] [32m[1mLinking CXX shared library libbuiltin_interfaces__rosidl_typesupport_c.so[0m
+[3.856s] [ 66%] Built target builtin_interfaces__rosidl_typesupport_c
+[3.864s] [ 68%] [32mBuilding CXX object CMakeFiles/builtin_interfaces__rosidl_typesupport_fastrtps_cpp.dir/rosidl_typesupport_fastrtps_cpp/builtin_interfaces/msg/detail/dds_fastrtps/time__type_support.cpp.o[0m
+[4.000s] [ 71%] [32m[1mLinking CXX shared library libbuiltin_interfaces__rosidl_typesupport_cpp.so[0m
+[4.059s] [ 71%] Built target builtin_interfaces__rosidl_typesupport_cpp
+[4.196s] [ 73%] [32m[1mLinking CXX shared library libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so[0m
+[4.236s] [ 73%] Built target builtin_interfaces__rosidl_typesupport_introspection_cpp
+[4.286s] [ 75%] [32m[1mLinking CXX shared library libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so[0m
+[4.324s] [ 75%] Built target builtin_interfaces__rosidl_typesupport_fastrtps_c
+[4.325s] [ 77%] [32m[1mLinking CXX shared library libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so[0m
+[4.366s] [ 77%] Built target builtin_interfaces__rosidl_typesupport_fastrtps_cpp
+[4.380s] [ 77%] Built target builtin_interfaces
+[4.394s] [ 80%] [34m[1mGenerating Python code for ROS interfaces[0m
+[4.691s] [ 80%] Built target builtin_interfaces__py
+[4.704s] [ 82%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_py.dir/rosidl_generator_py/builtin_interfaces/msg/_duration_s.c.o[0m
+[4.705s] [ 84%] [32mBuilding C object CMakeFiles/builtin_interfaces__rosidl_generator_py.dir/rosidl_generator_py/builtin_interfaces/msg/_time_s.c.o[0m
+[4.794s] [ 86%] [32m[1mLinking C shared library libbuiltin_interfaces__rosidl_generator_py.so[0m
+[4.823s] [ 86%] Built target builtin_interfaces__rosidl_generator_py
+[4.837s] [ 91%] [32mBuilding C object CMakeFiles/builtin_interfaces_s__rosidl_typesupport_introspection_c.dir/rosidl_generator_py/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_introspection_c.c.o[0m
+[4.837s] [ 91%] [32mBuilding C object CMakeFiles/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.dir/rosidl_generator_py/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c.o[0m
+[4.838s] [ 93%] [32mBuilding C object CMakeFiles/builtin_interfaces_s__rosidl_typesupport_c.dir/rosidl_generator_py/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_c.c.o[0m
+[4.914s] [ 97%] [32m[1mLinking C shared module rosidl_generator_py/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_introspection_c.so[0m
+[4.914s] [100%] [32m[1mLinking C shared module rosidl_generator_py/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.so[0m
+[4.914s] [ 97%] [32m[1mLinking C shared module rosidl_generator_py/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_c.so[0m
+[4.937s] [100%] Built target builtin_interfaces_s__rosidl_typesupport_fastrtps_c
+[4.937s] [100%] Built target builtin_interfaces_s__rosidl_typesupport_c
+[4.937s] [100%] Built target builtin_interfaces_s__rosidl_typesupport_introspection_c
+[4.947s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake --build /home/balling/projects/RIC/ros_ws/build/builtin_interfaces -- -j8 -l8
+[4.947s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake --install /home/balling/projects/RIC/ros_ws/build/builtin_interfaces
+[4.953s] -- Install configuration: ""
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/ament_index/resource_index/rosidl_interfaces/builtin_interfaces
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Duration.json
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Time.json
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.953s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__functions.c
+[4.954s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.h
+[4.954s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__description.c
+[4.954s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.c
+[4.954s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__functions.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__functions.c
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__description.c
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.c
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__struct.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__functions.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/duration.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/time.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/rosidl_generator_c__visibility_control.h
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/library_path.sh
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/library_path.dsv
+[4.955s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_generator_c.so
+[4.956s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_generator_c.so" to ""
+[4.956s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.956s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.956s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.956s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__rosidl_typesupport_fastrtps_c.h
+[4.956s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__rosidl_typesupport_fastrtps_c.h
+[4.956s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/rosidl_typesupport_fastrtps_c__visibility_control.h
+[4.956s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so
+[4.956s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_c.so" to ""
+[4.957s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.957s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.957s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__rosidl_typesupport_introspection_c.h
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.c
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__rosidl_typesupport_introspection_c.h
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.c
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/rosidl_typesupport_introspection_c__visibility_control.h
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so
+[4.957s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_c.so" to ""
+[4.957s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_c.so
+[4.958s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_c.so" to ""
+[4.958s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.958s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.958s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.958s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.hpp
+[4.958s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__builder.hpp
+[4.958s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__struct.hpp
+[4.959s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__traits.hpp
+[4.959s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__builder.hpp
+[4.959s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.hpp
+[4.959s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__struct.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__traits.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/rosidl_generator_cpp__visibility_control.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/time.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/duration.hpp
+[4.960s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.960s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.960s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__rosidl_typesupport_fastrtps_cpp.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__rosidl_typesupport_fastrtps_cpp.hpp
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/dds_fastrtps
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/rosidl_typesupport_fastrtps_cpp__visibility_control.h
+[4.960s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so
+[4.961s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_fastrtps_cpp.so" to ""
+[4.961s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces
+[4.961s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg
+[4.961s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__rosidl_typesupport_introspection_cpp.hpp
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/duration__type_support.cpp
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__type_support.cpp
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/include/builtin_interfaces/builtin_interfaces/msg/detail/time__rosidl_typesupport_introspection_cpp.hpp
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so
+[4.961s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_introspection_cpp.so" to ""
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_cpp.so
+[4.961s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_typesupport_cpp.so" to ""
+[4.961s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/ament_index/resource_index/rust_packages/builtin_interfaces
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust/build.rs
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust/Cargo.toml
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust/src
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust/src/lib.rs
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/rust/src/msg.rs
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/pythonpath.sh
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/pythonpath.dsv
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces-2.0.2-py3.12.egg-info
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces-2.0.2-py3.12.egg-info/PKG-INFO
+[4.962s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces-2.0.2-py3.12.egg-info/dependency_links.txt
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces-2.0.2-py3.12.egg-info/top_level.txt
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces-2.0.2-py3.12.egg-info/SOURCES.txt
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_introspection_c.so
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_time_s.c
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_duration.py
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_duration_s.c
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/__init__.py
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_time.py
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_c.so
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_introspection_c.c
+[4.963s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_c.c
+[4.964s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/__init__.py
+[4.964s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/_builtin_interfaces_s.ep.rosidl_typesupport_fastrtps_c.c
+[4.964s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[4.991s] Listing '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces'...
+[4.991s] Compiling '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/__init__.py'...
+[4.991s] Listing '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg'...
+[4.991s] Compiling '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/__init__.py'...
+[4.991s] Compiling '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_duration.py'...
+[4.991s] Compiling '/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/msg/_time.py'...
+[4.996s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.so
+[4.996s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_fastrtps_c.so" to ""
+[4.996s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_introspection_c.so
+[4.996s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_introspection_c.so" to ""
+[4.996s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_c.so
+[4.997s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/python3.12/site-packages/builtin_interfaces/builtin_interfaces_s__rosidl_typesupport_c.so" to ""
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_generator_py.so
+[4.997s] -- Set non-toolchain portion of runtime path of "/home/balling/projects/RIC/ros_ws/install/builtin_interfaces/lib/libbuiltin_interfaces__rosidl_generator_py.so" to ""
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Duration.idl
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Time.idl
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Duration.msg
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/msg/Time.msg
+[4.997s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/ament_index/resource_index/package_run_dependencies/builtin_interfaces
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/ament_index/resource_index/parent_prefix_path/builtin_interfaces
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/ament_prefix_path.sh
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/ament_prefix_path.dsv
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/path.sh
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/environment/path.dsv
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/local_setup.bash
+[4.998s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/local_setup.sh
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/local_setup.zsh
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/local_setup.dsv
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/package.dsv
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/ament_index/resource_index/packages/builtin_interfaces
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_generator_cExport.cmake
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_generator_cExport-noconfig.cmake
+[4.999s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_typesupport_fastrtps_cExport.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_typesupport_fastrtps_cExport-noconfig.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_introspection_cExport.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_introspection_cExport-noconfig.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_cExport.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_cExport-noconfig.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_generator_cppExport.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_typesupport_fastrtps_cppExport.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_typesupport_fastrtps_cppExport-noconfig.cmake
+[5.000s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_introspection_cppExport.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_introspection_cppExport-noconfig.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_cppExport.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfaces__rosidl_typesupport_cppExport-noconfig.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_generator_pyExport.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/export_builtin_interfaces__rosidl_generator_pyExport-noconfig.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/rosidl_cmake-extras.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/ament_cmake_export_include_directories-extras.cmake
+[5.001s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/ament_cmake_export_libraries-extras.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/ament_cmake_export_targets-extras.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/rosidl_cmake_export_typesupport_targets-extras.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/ament_cmake_export_dependencies-extras.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/rosidl_cmake_export_typesupport_libraries-extras.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfacesConfig.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/cmake/builtin_interfacesConfig-version.cmake
+[5.002s] -- Installing: /home/balling/projects/RIC/ros_ws/install/builtin_interfaces/share/builtin_interfaces/package.xml
+[5.005s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/builtin_interfaces' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_core_runtime:/home/balling/projects/RIC/ros_ws/install/rosidl_core_generators:/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs:/home/balling/projects/RIC/mobile_robot_ws/install/mobile_robot:/home/balling/projects/RIC/mobile_robot_ws/install/articubot_one:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com PYTHONPATH=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages:${PYTHONPATH} /home/balling/.nix-profile/bin/cmake --install /home/balling/projects/RIC/ros_ws/build/builtin_interfaces

@@ -1,0 +1,4 @@
+/home/balling/projects/RIC/ros_ws/build/action_msgs/rosidl_adapter/action_msgs:msg/GoalInfo.idl
+/home/balling/projects/RIC/ros_ws/build/action_msgs/rosidl_adapter/action_msgs:msg/GoalStatus.idl
+/home/balling/projects/RIC/ros_ws/build/action_msgs/rosidl_adapter/action_msgs:msg/GoalStatusArray.idl
+/home/balling/projects/RIC/ros_ws/build/action_msgs/rosidl_adapter/action_msgs:srv/CancelGoal.idl

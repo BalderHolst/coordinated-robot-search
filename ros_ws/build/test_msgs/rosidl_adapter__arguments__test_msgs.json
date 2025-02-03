@@ -1,0 +1,23 @@
+{
+  "package_name": "test_msgs",
+  "non_idl_tuples": [
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Arrays.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/BasicTypes.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/BoundedPlainSequences.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/BoundedSequences.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Constants.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Defaults.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Empty.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/MultiNested.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Nested.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/Strings.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/UnboundedSequences.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:msg/WStrings.msg",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:srv/Arrays.srv",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:srv/BasicTypes.srv",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:srv/Empty.srv",
+    "/home/balling/projects/RIC/ros_ws/install/test_interface_files/share/test_interface_files:action/Fibonacci.action",
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/test_msgs:msg/Builtins.msg",
+    "/home/balling/projects/RIC/ros_ws/src/ros2/rcl_interfaces/test_msgs:action/NestedMessage.action"
+  ]
+}

@@ -1,0 +1,87 @@
+[0.010s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake /home/balling/projects/RIC/ros_ws/src/ros2_rust/rosidl_generator_rs -DCMAKE_INSTALL_PREFIX=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs
+[0.077s] -- The C compiler identification is GNU 13.3.0
+[0.145s] -- The CXX compiler identification is GNU 13.3.0
+[0.158s] -- Detecting C compiler ABI info
+[0.227s] -- Detecting C compiler ABI info - done
+[0.241s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.242s] -- Detecting C compile features
+[0.243s] -- Detecting C compile features - done
+[0.246s] -- Detecting CXX compiler ABI info
+[0.319s] -- Detecting CXX compiler ABI info - done
+[0.335s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.335s] -- Detecting CXX compile features
+[0.336s] -- Detecting CXX compile features - done
+[0.339s] -- Found ament_cmake: 2.5.2 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.456s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter
+[0.537s] -- Found rosidl_generator_c: 4.6.4 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+[0.551s] -- Found rosidl_typesupport_introspection_c: 4.6.4 (/opt/ros/jazzy/share/rosidl_typesupport_introspection_c/cmake)
+[0.694s] -- Configuring done (0.7s)
+[0.698s] -- Generating done (0.0s)
+[0.700s] -- Build files have been written to: /home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs
+[0.705s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake /home/balling/projects/RIC/ros_ws/src/ros2_rust/rosidl_generator_rs -DCMAKE_INSTALL_PREFIX=/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs
+[0.706s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake --build /home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs -- -j8 -l8
+[0.745s] Built target ament_cmake_python_copy_rosidl_generator_rs
+[0.868s] running egg_info
+[0.868s] creating rosidl_generator_rs.egg-info
+[0.877s] writing rosidl_generator_rs.egg-info/PKG-INFO
+[0.878s] writing dependency_links to rosidl_generator_rs.egg-info/dependency_links.txt
+[0.878s] writing top-level names to rosidl_generator_rs.egg-info/top_level.txt
+[0.878s] writing manifest file 'rosidl_generator_rs.egg-info/SOURCES.txt'
+[0.904s] reading manifest file 'rosidl_generator_rs.egg-info/SOURCES.txt'
+[0.904s] writing manifest file 'rosidl_generator_rs.egg-info/SOURCES.txt'
+[0.920s] Built target ament_cmake_python_build_rosidl_generator_rs_egg
+[0.929s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake --build /home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs -- -j8 -l8
+[0.929s] Invoking command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake --install /home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs
+[0.934s] -- Install configuration: ""
+[0.935s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/ament_index/resource_index/rosidl_generator_packages/rosidl_generator_rs
+[0.935s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/ament_index/resource_index/rosidl_runtime_packages/rosidl_generator_rs
+[0.935s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/pythonpath.sh
+[0.935s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/pythonpath.dsv
+[0.935s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs-0.4.1-py3.12.egg-info
+[0.936s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs-0.4.1-py3.12.egg-info/PKG-INFO
+[0.936s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs-0.4.1-py3.12.egg-info/dependency_links.txt
+[0.936s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs-0.4.1-py3.12.egg-info/top_level.txt
+[0.936s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs-0.4.1-py3.12.egg-info/SOURCES.txt
+[0.936s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs
+[0.937s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs/__init__.py
+[0.966s] Listing '/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs'...
+[0.966s] Compiling '/home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/python3.12/site-packages/rosidl_generator_rs/__init__.py'...
+[0.970s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/ament_index/resource_index/package_run_dependencies/rosidl_generator_rs
+[0.970s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/ament_index/resource_index/parent_prefix_path/rosidl_generator_rs
+[0.970s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/ament_prefix_path.sh
+[0.970s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/ament_prefix_path.dsv
+[0.970s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/path.sh
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/environment/path.dsv
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/local_setup.bash
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/local_setup.sh
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/local_setup.zsh
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/local_setup.dsv
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/package.dsv
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/ament_index/resource_index/packages/rosidl_generator_rs
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/rosidl_generator_rs-extras.cmake
+[0.971s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/register_rs.cmake
+[0.972s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/ament_cmake_export_dependencies-extras.cmake
+[0.972s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/rosidl_generator_rsConfig.cmake
+[0.972s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/rosidl_generator_rsConfig-version.cmake
+[0.972s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/package.xml
+[0.972s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake
+[0.972s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/custom_command.cmake
+[0.972s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/register_rs.cmake
+[0.973s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/rosidl_generator_rs_generate_interfaces.cmake
+[0.973s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/lib/rosidl_generator_rs/rosidl_generator_rs
+[0.973s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake
+[0.973s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/custom_command.cmake
+[0.973s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/register_rs.cmake
+[0.973s] -- Up-to-date: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/cmake/rosidl_generator_rs_generate_interfaces.cmake
+[0.973s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource
+[0.973s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/srv_idiomatic.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/Cargo.toml.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/msg_rmw.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/msg_idiomatic.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/lib.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/build.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/srv_rmw.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/action.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/srv.rs.em
+[0.974s] -- Installing: /home/balling/projects/RIC/ros_ws/install/rosidl_generator_rs/share/rosidl_generator_rs/resource/msg.rs.em
+[0.976s] Invoked command in '/home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs' returned '0': AMENT_PREFIX_PATH=/home/balling/projects/RIC/ros_ws/install/rosidl_runtime_rs:${AMENT_PREFIX_PATH} CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /home/balling/.nix-profile/bin/cmake --install /home/balling/projects/RIC/ros_ws/build/rosidl_generator_rs
