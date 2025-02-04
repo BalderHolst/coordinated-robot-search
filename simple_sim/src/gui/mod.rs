@@ -1,5 +1,8 @@
 use app::App;
-use eframe::egui;
+use eframe::egui::{self, Pos2, Rgba, Vec2};
+use robcore::behaviors;
+
+use crate::sim::{Robot, Simulator};
 
 mod camera;
 mod app;
@@ -10,10 +13,28 @@ pub fn run() {
         ..Default::default()
     };
 
+    let mut sim = Simulator::new(behaviors::circle);
+    sim.add_robot(Robot {
+        pos: Pos2::new(-1.0, 0.0),
+        vel: 0.0,
+        angle: 0.0,
+        avel: 0.0,
+        color: Rgba::GREEN,
+    });
+    sim.add_robot(Robot {
+        pos: Pos2::new(-0.5, 1.0),
+        vel: 0.0,
+        angle: 0.0,
+        avel: 0.0,
+        color: Rgba::BLUE,
+    });
+
+    let app = App::new(sim);
+
     if let Err(e) = eframe::run_native(
         env!("CARGO_PKG_NAME"),
         options,
-        Box::new(|_cc| Ok(Box::new(App::new()))),
+        Box::new(|_cc| Ok(Box::new(app))),
     ) {
         let m = match e {
             eframe::Error::AppCreation(_) => todo!(),

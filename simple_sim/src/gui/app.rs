@@ -1,24 +1,55 @@
+use crate::sim::Simulator;
+
 use super::camera::Camera;
 use eframe::{
     self,
-    egui::{self, Frame, Margin, Pos2, Rgba, Sense},
-    epaint::Hsva,
+    egui::{self, Frame, Margin, Painter, Pos2, Rgba, Sense, Shape, Vec2},
+    epaint::{Hsva, PathShape, PathStroke},
 };
 
+const FPS: f32 = 60.0;
+
 pub struct App {
-    cam: Camera,
+    pub cam: Camera,
+    pub sim: Simulator,
 }
 
 impl App {
-    pub fn new() -> Self {
+    pub fn new(sim: Simulator) -> Self {
         Self {
             cam: Camera::new(Pos2::ZERO),
+            sim,
+        }
+    }
+
+    fn draw_robots(&mut self, painter: &Painter) {
+        for robot in self.sim.robots.iter() {
+            let pos = self.cam.world_to_viewport(robot.pos);
+            let vel = Vec2::angled(robot.angle) * robot.vel;
+            let end = pos + self.cam.scaled(vel);
+
+            painter.line(
+                vec![pos, end],
+                PathStroke::new(self.cam.scaled(0.05), robot.color),
+            );
+
+            painter.circle_filled(pos, self.cam.scaled(0.2), robot.color);
+
+            let _idx = painter.add(Shape::Path(PathShape {
+                points: vec![pos, end],
+                closed: true,
+                fill: robot.color.into(),
+                stroke: PathStroke::new(self.cam.scaled(10.0), Rgba::WHITE),
+            }));
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+
+        ctx.request_repaint_after_secs(1.0/FPS);
+
         egui::TopBottomPanel::top("top-bar")
             .frame(Frame {
                 inner_margin: Margin::symmetric(4.0, 4.0),
@@ -48,17 +79,17 @@ impl eframe::App for App {
                 let size = ui.available_size_before_wrap();
                 let (resp, painter) = ui.allocate_painter(size, Sense::click_and_drag());
 
+
                 let viewport = ui.ctx().input(|i| i.screen_rect());
                 painter.rect_filled(viewport, 0.0, Rgba::from_white_alpha(0.01));
                 self.cam.set_viewport(viewport);
                 self.cam.update(ui, &resp);
-                painter.rect_filled(painter.clip_rect(), 0.0, Rgba::from_white_alpha(0.01));
 
-                painter.circle_filled(
-                    self.cam.world_to_viewport(Pos2::ZERO),
-                    self.cam.scaled(1.0),
-                    Rgba::RED,
-                );
+                ui.input(|i| {
+                    self.sim.step(i.unstable_dt);
+                });
+
+                self.draw_robots(&painter);
             });
     }
 }

@@ -5,14 +5,14 @@ pub struct CamData;
 pub struct LidarData;
 
 pub struct Control {
-    speed: f32,
-    steer: f32,
+    pub speed: f32,
+    pub steer: f32,
 }
 
 #[derive(Clone)]
 pub struct Pos {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 impl Copy for Pos {}
 
@@ -33,7 +33,7 @@ pub trait Robot {
     fn recv(&mut self) -> Vec<Message>;
 
     /// Set the control signal for the robot. "Move the robot like this".
-    fn set_control(&self, control: Control);
+    fn set_control(&mut self, control: Control);
 
 }
 
