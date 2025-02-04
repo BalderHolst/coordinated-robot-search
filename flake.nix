@@ -114,6 +114,12 @@
                 (k: v: pkgs.writeShellScriptBin k v)
                 commands;
 
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+                wayland
+                libGL
+                libxkbcommon
+            ]);
+
             shellHook = ''
                 ${commands.help}
 
