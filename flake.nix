@@ -6,8 +6,8 @@
     };
     outputs = { flake-utils, nixpkgs, ... }@inputs:
         let
-            container-name = "intelligent-systems";
-            dockerfile = ./Dockerfile;
+            container-name = "robot-search";
+            dockerfile = "./Dockerfile";
         in
         flake-utils.lib.eachDefaultSystem (system:
             let
