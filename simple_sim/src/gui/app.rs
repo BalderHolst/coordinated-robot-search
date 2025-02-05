@@ -6,6 +6,7 @@ use eframe::{
     egui::{self, Frame, Margin, Painter, Pos2, Rgba, Sense, Shape, Vec2},
     epaint::{Hsva, PathShape, PathStroke},
 };
+use robcore::Robot;
 
 const FPS: f32 = 60.0;
 
@@ -28,19 +29,22 @@ impl App {
             let vel = Vec2::angled(robot.angle) * robot.vel;
             let end = pos + self.cam.scaled(vel);
 
-            painter.line(
-                vec![pos, end],
+            for point in &robot.get_lidar_data().0 {
+                let end = pos + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
+                painter.line(
+                    vec![pos, end],
+                    PathStroke::new(self.cam.scaled(0.01), Hsva::new(point.distance, 0.8, 0.8, 1.0))
+                );
+            }
+
+            painter.line_segment(
+                [pos, end],
                 PathStroke::new(self.cam.scaled(0.05), robot.color),
             );
 
+
             painter.circle_filled(pos, self.cam.scaled(0.2), robot.color);
 
-            let _idx = painter.add(Shape::Path(PathShape {
-                points: vec![pos, end],
-                closed: true,
-                fill: robot.color.into(),
-                stroke: PathStroke::new(self.cam.scaled(10.0), Rgba::WHITE),
-            }));
         }
     }
 }

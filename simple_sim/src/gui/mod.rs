@@ -1,8 +1,8 @@
 use app::App;
-use eframe::egui::{self, Pos2, Rgba, Vec2};
+use eframe::egui;
 use robcore::behaviors;
 
-use crate::sim::{Robot, Simulator};
+use crate::sim::{Robot, Simulator, World};
 
 mod camera;
 mod app;
@@ -13,21 +13,10 @@ pub fn run() {
         ..Default::default()
     };
 
-    let mut sim = Simulator::new(behaviors::circle);
-    sim.add_robot(Robot {
-        pos: Pos2::new(-1.0, 0.0),
-        vel: 0.0,
-        angle: 0.0,
-        avel: 0.0,
-        color: Rgba::GREEN,
-    });
-    sim.add_robot(Robot {
-        pos: Pos2::new(-0.5, 1.0),
-        vel: 0.0,
-        angle: 0.0,
-        avel: 0.0,
-        color: Rgba::BLUE,
-    });
+    let world = World::new(10.0, 10.0);
+    let mut sim = Simulator::new(world, behaviors::circle);
+    sim.add_robot(Robot::new_at(-1.0, 0.0));
+    sim.add_robot(Robot::new_at(1.0, -0.5));
 
     let app = App::new(sim);
 

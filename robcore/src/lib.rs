@@ -1,30 +1,34 @@
-#![allow(dead_code)] // TODO: remove
+pub use emath::{Pos2, Vec2};
 
+#[derive(Debug, Clone)]
 pub struct Message;
+
+#[derive(Debug, Clone)]
 pub struct CamData;
-pub struct LidarData;
+
+#[derive(Debug, Clone)]
+pub struct LidarPoint {
+    pub angle: f32,
+    pub distance: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct LidarData(pub Vec<LidarPoint>);
 
 pub struct Control {
     pub speed: f32,
     pub steer: f32,
 }
 
-#[derive(Clone)]
-pub struct Pos {
-    pub x: f32,
-    pub y: f32,
-}
-impl Copy for Pos {}
-
 pub trait Robot {
     /// Get the position of the robot
-    fn get_pos(&self) -> Pos;
+    fn get_pos(&self) -> Pos2;
 
     /// Get the data from the camera. Angles and probability of objects.
     fn get_cam_data(&self) -> CamData;
 
     /// Get the data from the lidar. Distance to objects.
-    fn get_lidar_data(&self) -> Vec<i32>;
+    fn get_lidar_data(&self) -> LidarData;
 
     /// Send a message to the other robots.
     fn post(&self, msg: Message);
@@ -46,4 +50,14 @@ pub mod behaviors {
             steer: 0.5,
         });
     }
+
+    pub fn move_to_center(robot: &mut dyn Robot) {
+        let pos = robot.get_pos();
+        let steer = f32::atan2(-pos.y, -pos.x);
+        robot.set_control(Control {
+            speed: 1.0,
+            steer,
+        });
+    }
+
 }
