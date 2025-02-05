@@ -6,3 +6,4 @@ edition = "2021"
 [dependencies]
 robcore = { path = "../robcore/" }
 eframe = { version = "0.30.0" }
+clap = { version = "4.5.28", features = ["derive"] }

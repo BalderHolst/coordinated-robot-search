@@ -1,5 +1,7 @@
 use eframe::egui::{Key, Pos2, Rect, Response, Ui, Vec2};
 
+use crate::{bind_down, bind_pressed};
+
 #[derive(Debug)]
 pub struct Camera {
     home: Pos2,
@@ -81,27 +83,14 @@ impl Camera {
 
         // Keys
         ui.input(|i| {
-            macro_rules! bind {
-                ($bind:tt, $($key:expr),+ => $e:expr) => {{
-                    if $(i.$bind($key))|+ {
-                        $e;
-                    }
-                }}
-            }
-            macro_rules! bind_down {
-                ($($key:expr),+ => $e:expr) => {bind!(key_down, $($key),+ => $e)}
-            }
-            macro_rules! bind_pressed {
-                ($($key:expr),+ => $e:expr) => {bind!(key_pressed, $($key),+ => $e)}
-            }
 
             let mut velocity = Vec2::ZERO;
-            bind_down!(Key::ArrowRight, Key::D => velocity.x += 1.0);
-            bind_down!(Key::ArrowLeft,  Key::A => velocity.x -= 1.0);
-            bind_down!(Key::ArrowUp,    Key::W => velocity.y -= 1.0);
-            bind_down!(Key::ArrowDown,  Key::S => velocity.y += 1.0);
+            bind_down!(i; Key::ArrowRight, Key::D => velocity.x += 1.0);
+            bind_down!(i; Key::ArrowLeft,  Key::A => velocity.x -= 1.0);
+            bind_down!(i; Key::ArrowUp,    Key::W => velocity.y -= 1.0);
+            bind_down!(i; Key::ArrowDown,  Key::S => velocity.y += 1.0);
 
-            bind_pressed!(Key::H => self.home());
+            bind_pressed!(i; Key::H => self.home());
 
             if velocity != Vec2::ZERO {
                 self.pos += velocity * 0.001 * self.scale;

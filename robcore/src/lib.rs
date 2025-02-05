@@ -66,7 +66,7 @@ pub mod behaviors {
         let mut steer = 0.0;
         let mut speed = 1.0;
 
-        // Find the closest point
+        // Find the closest point in front of the robot
         let mut min_point = LidarPoint {
             angle: 0.0,
             distance: f32::INFINITY,

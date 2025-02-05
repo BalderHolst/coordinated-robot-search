@@ -1,22 +1,23 @@
 use app::App;
 use eframe::egui;
-use robcore::behaviors;
 
-use crate::sim::{Robot, Simulator, World};
+use crate::{cli::Args, sim::{Robot, Simulator, World}};
 
 mod camera;
 mod app;
+mod bind_key;
 
-pub fn run() {
+pub fn run(args: Args) {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
     };
 
     let world = World::new(10.0, 10.0);
-    let mut sim = Simulator::new(world, behaviors::avoid_obstacles);
+    let mut sim = Simulator::new(world, args.behavior.get_fn());
     sim.add_robot(Robot::new_at(-1.0, 0.0));
     sim.add_robot(Robot::new_at(1.0, -4.0));
+    sim.add_robot(Robot::new_at(1.0, 4.0));
 
     let app = App::new(sim);
 
