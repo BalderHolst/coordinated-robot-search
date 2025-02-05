@@ -9,6 +9,12 @@ pub enum Cell {
     OutOfBounds,
 }
 
+impl Cell {
+    pub fn is_empty(&self) -> bool {
+        matches!(self, Self::Empty)
+    }
+}
+
 pub struct Grid {
     cells: Vec<Cell>,
     width: usize,
@@ -41,7 +47,7 @@ impl Grid {
     }
 
     pub fn is_empty(&self, x: usize, y: usize) -> bool {
-        self.get(x, y) == Cell::Empty
+        self.get(x, y).is_empty()
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (usize, usize, Cell)> + '_ {

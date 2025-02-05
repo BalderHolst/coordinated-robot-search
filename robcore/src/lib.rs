@@ -38,10 +38,11 @@ pub trait Robot {
 
     /// Set the control signal for the robot. "Move the robot like this".
     fn set_control(&mut self, control: Control);
-
 }
 
 pub mod behaviors {
+    use std::f32::consts::PI;
+
     use super::*;
 
     pub fn circle(robot: &mut dyn Robot) {
@@ -54,10 +55,35 @@ pub mod behaviors {
     pub fn move_to_center(robot: &mut dyn Robot) {
         let pos = robot.get_pos();
         let steer = f32::atan2(-pos.y, -pos.x);
-        robot.set_control(Control {
-            speed: 1.0,
-            steer,
-        });
+        robot.set_control(Control { speed: 1.0, steer });
     }
 
+    pub fn avoid_obstacles(robot: &mut dyn Robot) {
+        const MIN_DISTANCE: f32 = 3.0;
+
+        let lidar = robot.get_lidar_data();
+
+        let mut steer = 0.0;
+        let mut speed = 1.0;
+
+        // Find the closest point
+        let mut min_point = LidarPoint {
+            angle: 0.0,
+            distance: f32::INFINITY,
+        };
+        for point in lidar.0 {
+            if point.distance < min_point.distance {
+                min_point = point;
+            }
+        }
+
+        // If the closest point is too close, steer away from it
+        if min_point.distance < MIN_DISTANCE {
+            let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
+            steer = how_close * (min_point.angle - PI).signum();
+            speed *= 1.0 - how_close;
+        }
+
+        robot.set_control(Control { speed, steer });
+    }
 }

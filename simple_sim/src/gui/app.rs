@@ -3,7 +3,7 @@ use crate::sim::Simulator;
 use super::camera::Camera;
 use eframe::{
     self,
-    egui::{self, Frame, Margin, Painter, Pos2, Rgba, Sense, Shape, Vec2},
+    egui::{self, Frame, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape, Vec2},
     epaint::{Hsva, PathShape, PathStroke},
 };
 use robcore::Robot;
@@ -30,29 +30,30 @@ impl App {
             let end = pos + self.cam.scaled(vel);
 
             for point in &robot.get_lidar_data().0 {
-                let end = pos + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
+                let end =
+                    pos + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
                 painter.line(
                     vec![pos, end],
-                    PathStroke::new(self.cam.scaled(0.01), Hsva::new(point.distance, 0.8, 0.8, 1.0))
+                    PathStroke::new(
+                        self.cam.scaled(0.01),
+                        Hsva::new(point.distance / self.sim.world.width() * 2.0, 0.8, 0.8, 1.0),
+                    ),
                 );
             }
 
             painter.line_segment(
                 [pos, end],
-                PathStroke::new(self.cam.scaled(0.05), robot.color),
+                PathStroke::new(self.cam.scaled(0.10), robot.color),
             );
 
-
             painter.circle_filled(pos, self.cam.scaled(0.2), robot.color);
-
         }
     }
 }
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-
-        ctx.request_repaint_after_secs(1.0/FPS);
+        ctx.request_repaint_after_secs(1.0 / FPS);
 
         egui::TopBottomPanel::top("top-bar")
             .frame(Frame {
@@ -62,7 +63,11 @@ impl eframe::App for App {
             })
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.heading(env!("CARGO_PKG_NAME"));
+                    ui.heading(concat!(
+                        env!("CARGO_PKG_NAME"),
+                        " ",
+                        env!("CARGO_PKG_VERSION")
+                    ));
                     ui.button("Back").clicked().then(|| {
                         println!("Back button clicked");
                     });
@@ -83,10 +88,17 @@ impl eframe::App for App {
                 let size = ui.available_size_before_wrap();
                 let (resp, painter) = ui.allocate_painter(size, Sense::click_and_drag());
 
-
                 let viewport = ui.ctx().input(|i| i.screen_rect());
-                painter.rect_filled(viewport, 0.0, Rgba::from_white_alpha(0.01));
                 self.cam.set_viewport(viewport);
+
+                // Draw world area
+                let (min, max) = &self.sim.world.bounds();
+                let world_rect = Rect::from_points(&[
+                    self.cam.world_to_viewport(*min),
+                    self.cam.world_to_viewport(*max),
+                ]);
+                painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
+
                 self.cam.update(ui, &resp);
 
                 ui.input(|i| {

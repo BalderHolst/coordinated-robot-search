@@ -14,14 +14,14 @@ pub fn run() {
     };
 
     let world = World::new(10.0, 10.0);
-    let mut sim = Simulator::new(world, behaviors::circle);
+    let mut sim = Simulator::new(world, behaviors::avoid_obstacles);
     sim.add_robot(Robot::new_at(-1.0, 0.0));
-    sim.add_robot(Robot::new_at(1.0, -0.5));
+    sim.add_robot(Robot::new_at(1.0, -4.0));
 
     let app = App::new(sim);
 
     if let Err(e) = eframe::run_native(
-        env!("CARGO_PKG_NAME"),
+        concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|_cc| Ok(Box::new(app))),
     ) {

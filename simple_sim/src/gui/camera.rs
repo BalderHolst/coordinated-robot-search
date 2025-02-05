@@ -32,6 +32,10 @@ impl Camera {
         self.pos = self.home;
     }
 
+    pub fn origin(&self) -> Pos2 {
+        self.world_to_viewport(Pos2::ZERO)
+    }
+
     pub fn scaled<X>(&self, x: X) -> X
     where
         X: std::ops::Mul<f32, Output = X>,
