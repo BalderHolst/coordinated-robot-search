@@ -1,9 +1,12 @@
-use eframe::egui::{Pos2, Rgba, Vec2};
+use std::f32::consts::PI;
+
+use eframe::egui::{Pos2, Vec2};
 use robcore;
 
 use crate::grid::{Cell, Grid};
 
 const LIDAR_RANGE: f32 = 5.0;
+const LIDAR_RAYS: usize = 40;
 
 pub struct World {
     grid: Grid,
@@ -12,8 +15,8 @@ pub struct World {
 }
 
 impl World {
-    const CELLS_PR_METER: f32 = 10.0;
-    const RAY_CAST_STEP: f32 = 0.10;
+    const CELLS_PR_METER: f32 = 100.0;
+    const RAY_CAST_STEP: f32 = 0.5;
 
     pub fn new(width: f32, height: f32) -> Self {
         let grid_width = (width * Self::CELLS_PR_METER).ceil() as usize;
@@ -200,10 +203,9 @@ impl Simulator {
         // Update robot lidar data
         let mut lidar_data = Vec::with_capacity(self.robots.len());
         for robot in &self.robots {
-            let points = (0..360)
-                .step_by(10)
-                .map(|angle| {
-                    let angle = angle as f32 * std::f32::consts::PI / 180.0;
+            let points = (0..LIDAR_RAYS)
+                .map(|n| {
+                    let angle = n as f32  / LIDAR_RAYS as f32 * 2.0 * PI;
                     let distance = self.cast_ray(robot.pos, robot.angle + angle);
                     robcore::LidarPoint { angle, distance }
                 })

@@ -4,8 +4,8 @@ use super::camera::Camera;
 use eframe::{
     self,
     egui::{
-        self, pos2, Align2, Color32, FontFamily, FontId, Frame, Key, Margin, Painter, Pos2, Rect,
-        Rgba, Sense, Shape, Stroke, TextureHandle, TextureOptions, Vec2,
+        self, pos2, Align, Align2, Color32, FontFamily, FontId, Frame, Key, Margin, Painter, Pos2,
+        Rect, Rgba, Sense, Shape, Stroke, Style, TextureHandle, TextureOptions, Vec2,
     },
     epaint::{Hsva, PathShape, PathStroke},
     CreationContext,
@@ -164,6 +164,10 @@ impl eframe::App for App {
                             self.focused = Some(n);
                         });
                     }
+
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(format!("FPS: {:.1}", 1.0 / ctx.input(|i| i.stable_dt)));
+                    });
                 });
             });
 
@@ -188,14 +192,16 @@ impl eframe::App for App {
 
                 ui.horizontal(|ui| {
                     ui.heading(format!("Robot [{n}]"));
-                    match self.follow {
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| match self
+                        .follow
+                    {
                         Some(_) => ui.button("Unfollow").clicked().then(|| {
                             self.follow = None;
                         }),
                         None => ui.button("Follow").clicked().then(|| {
                             self.follow = Some(n);
                         }),
-                    }
+                    });
                 });
 
                 ui.separator();
