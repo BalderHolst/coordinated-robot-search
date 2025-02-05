@@ -4,8 +4,8 @@ use super::camera::Camera;
 use eframe::{
     self,
     egui::{
-        self, pos2, Color32, Frame, Key, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape,
-        TextureHandle, TextureOptions, Vec2,
+        self, pos2, Align2, Color32, FontFamily, FontId, Frame, Key, Margin, Painter, Pos2, Rect,
+        Rgba, Sense, Shape, Stroke, TextureHandle, TextureOptions, Vec2,
     },
     epaint::{Hsva, PathShape, PathStroke},
     CreationContext,
@@ -13,12 +13,34 @@ use eframe::{
 use robcore::Robot;
 
 const FPS: f32 = 60.0;
+const ROBOT_COLOR: Hsva = Hsva {
+    h: 1.2,
+    s: 0.2,
+    v: 0.8,
+    a: 1.0,
+};
+
+struct VisOpts {
+    show_lidar: bool,
+    show_velocity: bool,
+}
+
+impl Default for VisOpts {
+    fn default() -> Self {
+        Self {
+            show_lidar: true,
+            show_velocity: true,
+        }
+    }
+}
 
 pub struct App {
     pub cam: Camera,
     pub sim: Simulator,
     focused: Option<usize>,
+    follow: Option<usize>,
     world_texture: TextureHandle,
+    vis_opts: VisOpts,
 }
 
 impl App {
@@ -36,7 +58,9 @@ impl App {
             cam: Camera::new(Pos2::ZERO),
             sim,
             focused: None,
+            follow: None,
             world_texture,
+            vis_opts: VisOpts::default(),
         }
     }
 
@@ -44,7 +68,7 @@ impl App {
         for (n, robot) in self.sim.robots.iter().enumerate() {
             let pos = self.cam.world_to_viewport(robot.pos);
 
-            if self.focused == Some(n) {
+            if self.vis_opts.show_lidar && self.focused == Some(n) {
                 for point in &robot.get_lidar_data().0 {
                     let end = pos
                         + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
@@ -58,29 +82,54 @@ impl App {
                 }
             }
 
-            // Draw velocity vector (arrow)
-            let vel = Vec2::angled(robot.angle) * robot.vel;
-            let end = pos + self.cam.scaled(vel);
-            let stroke_width = self.cam.scaled(0.05);
-            let stroke = PathStroke::new(stroke_width, robot.color);
-            painter.circle_filled(end, stroke_width / 2.0, robot.color);
-            painter.line_segment([pos, end], stroke.clone());
-            painter.line_segment(
-                [
-                    end,
-                    end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2),
-                ],
-                stroke.clone(),
-            );
-            painter.line_segment(
-                [
-                    end,
-                    end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2),
-                ],
+            // Draw robot (as a circle)
+            let stroke = match self.focused {
+                Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
+                _ => Stroke::NONE,
+            };
+            painter.circle(
+                pos,
+                self.cam.scaled(self.sim.robot_size),
+                ROBOT_COLOR,
                 stroke,
             );
 
-            painter.circle_filled(pos, self.cam.scaled(self.sim.robot_size), robot.color);
+            // Draw velocity vector (arrow)
+            if self.vis_opts.show_velocity {
+                let vel = Vec2::angled(robot.angle) * robot.vel;
+                let end = pos + self.cam.scaled(vel);
+                let stroke_width = self.cam.scaled(0.05);
+                let stroke = PathStroke::new(stroke_width, ROBOT_COLOR);
+                painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
+                painter.line_segment([pos, end], stroke.clone());
+                painter.line_segment(
+                    [
+                        end,
+                        end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2),
+                    ],
+                    stroke.clone(),
+                );
+                painter.line_segment(
+                    [
+                        end,
+                        end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2),
+                    ],
+                    stroke,
+                );
+            }
+
+            // Draw id of robot
+            let font_id = FontId {
+                size: self.cam.scaled(0.3),
+                family: FontFamily::Monospace,
+            };
+            painter.text(
+                pos,
+                Align2::CENTER_CENTER,
+                n.to_string(),
+                font_id,
+                Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
+            );
         }
     }
 }
@@ -118,15 +167,48 @@ impl eframe::App for App {
                 });
             });
 
+        egui::TopBottomPanel::bottom("bottom-bar")
+            .frame(Frame {
+                inner_margin: Margin::symmetric(4.0, 4.0),
+                fill: Hsva::new(0.0, 0.0, 0.005, 1.0).into(),
+                ..Default::default()
+            })
+            .show(ctx, |ui| {
+                ui.horizontal(|ui| {
+                    ui.label("Global Visualization Options:");
+                    ui.toggle_value(&mut self.vis_opts.show_velocity, "Show Velocities");
+                });
+            });
+
         egui::SidePanel::right("right-panel")
             .resizable(true)
             .show_animated(ctx, self.focused.is_some(), |ui| {
                 let n = self.focused.unwrap_or(0);
                 let robot = &self.sim.robots[n];
-                ui.heading(format!("Robot [{n}]"));
+
+                ui.horizontal(|ui| {
+                    ui.heading(format!("Robot [{n}]"));
+                    match self.follow {
+                        Some(_) => ui.button("Unfollow").clicked().then(|| {
+                            self.follow = None;
+                        }),
+                        None => ui.button("Follow").clicked().then(|| {
+                            self.follow = Some(n);
+                        }),
+                    }
+                });
+
+                ui.separator();
                 ui.label(format!("Speed: {:.3}", robot.vel));
                 ui.label(format!("Angle: {:.3}", robot.angle));
                 ui.label(format!("Position: {:?}", robot.pos));
+                ui.separator();
+
+                ui.label("Visualization Options");
+                ui.toggle_value(&mut self.vis_opts.show_lidar, "Show Lidar");
+
+                // Keep new size for next frame
+                ui.allocate_space(ui.available_size());
             });
 
         egui::CentralPanel::default()
@@ -149,20 +231,32 @@ impl eframe::App for App {
                     self.cam.world_to_viewport(*min),
                     self.cam.world_to_viewport(*max),
                 ]);
+
+                let moved = self.cam.update(ui, &resp);
+
+                if moved && self.follow.is_some() {
+                    self.follow = None;
+                }
+
+                if let Some(f) = self.follow {
+                    self.cam.pos = self.sim.robots[f].pos;
+                }
+
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                 painter.image(self.world_texture.id(), world_rect, uv, Color32::WHITE);
 
-                self.cam.update(ui, &resp);
-
                 // Step simulation
                 ui.input(|i| {
-                    self.sim.step(i.unstable_dt);
+                    self.sim.step(i.stable_dt);
                 });
 
                 // Handle Keys
                 ui.input(|i| {
-                    bind_down!(i; Key::Escape => self.focused = None);
+                    bind_down!(i; Key::Escape => {
+                        self.focused = None;
+                        self.follow = None;
+                    });
                 });
 
                 // Handle clicks
@@ -171,16 +265,23 @@ impl eframe::App for App {
                         return;
                     };
                     let pos = self.cam.canvas_to_world(pos);
-                    let mut found = false;
+
+                    // Check if we clicked on a robot
+                    let mut found = None;
                     for (n, robot) in self.sim.robots.iter().enumerate() {
                         if (robot.pos - pos).length() < self.sim.robot_size * 1.5 {
                             self.focused = Some(n);
-                            found = true;
+                            found = Some(n);
                             break;
                         }
                     }
-                    if !found {
-                        self.focused = None;
+                    self.focused = found;
+
+                    // If we were following a robot, follow the clicked one
+                    if self.follow.is_some() {
+                        if let Some(f) = self.focused {
+                            self.follow = Some(f);
+                        }
                     }
                 });
 

@@ -89,7 +89,6 @@ pub struct Robot {
     pub vel: f32,
     pub angle: f32,
     pub avel: f32,
-    pub color: Rgba,
     pub lidar: robcore::LidarData,
 }
 
@@ -100,7 +99,6 @@ impl Robot {
             vel: 0.0,
             angle: 0.0,
             avel: 0.0,
-            color: Rgba::WHITE,
             lidar: robcore::LidarData(vec![]),
         }
     }

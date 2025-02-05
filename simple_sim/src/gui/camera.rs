@@ -4,8 +4,8 @@ use crate::{bind_down, bind_pressed};
 
 #[derive(Debug)]
 pub struct Camera {
+    pub pos: Pos2,
     home: Pos2,
-    pos: Pos2,
     scale: f32,
     viewport: Rect,
 }
@@ -64,7 +64,9 @@ impl Camera {
         self.viewport = viewport;
     }
 
-    pub fn update(&mut self, ui: &Ui, resp: &Response) {
+    pub fn update(&mut self, ui: &Ui, resp: &Response) -> bool {
+        let mut moved = false;
+
         // Zoom
         if resp.hovered() {
             ui.input(|i| {
@@ -77,6 +79,7 @@ impl Camera {
 
         // Drag view
         if resp.dragged() {
+            moved = true;
             let delta = self.canvas_to_rel(resp.drag_delta());
             self.pos -= delta;
         }
@@ -90,11 +93,17 @@ impl Camera {
             bind_down!(i; Key::ArrowUp,    Key::W => velocity.y -= 1.0);
             bind_down!(i; Key::ArrowDown,  Key::S => velocity.y += 1.0);
 
-            bind_pressed!(i; Key::H => self.home());
+            bind_pressed!(i; Key::H => {
+                moved = true;
+                self.home()
+            });
 
             if velocity != Vec2::ZERO {
+                moved = true;
                 self.pos += velocity * 0.001 * self.scale;
             }
         });
+
+        moved
     }
 }
