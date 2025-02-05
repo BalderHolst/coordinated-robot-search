@@ -17,7 +17,7 @@ pub fn run(args: Args) {
     let mut sim = Simulator::new(world, args.behavior.get_fn());
     sim.add_robot(Robot::new_at(-1.0, 0.0));
     sim.add_robot(Robot::new_at(1.0, -4.0));
-    sim.add_robot(Robot::new_at(1.0, 4.0));
+    sim.add_robot(Robot::new_at(-1.2, 4.0));
 
     let app = App::new(sim);
 

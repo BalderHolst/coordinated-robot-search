@@ -43,11 +43,23 @@ impl App {
                 }
             }
 
+            // Draw velocity vector (arrow)
             let vel = Vec2::angled(robot.angle) * robot.vel;
             let end = pos + self.cam.scaled(vel);
+            let stroke_width = self.cam.scaled(0.05);
+            let stroke = PathStroke::new(stroke_width, robot.color);
+            painter.circle_filled(end, stroke_width/2.0, robot.color);
             painter.line_segment(
                 [pos, end],
-                PathStroke::new(self.cam.scaled(0.05), robot.color),
+                stroke.clone(),
+            );
+            painter.line_segment(
+                [end, end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2)],
+                stroke.clone(),
+            );
+            painter.line_segment(
+                [end, end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2)],
+                stroke,
             );
 
             painter.circle_filled(pos, self.cam.scaled(self.sim.robot_size), robot.color);
