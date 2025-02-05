@@ -13,7 +13,7 @@ pub struct World {
 
 impl World {
     const CELLS_PR_METER: f32 = 10.0;
-    const RAY_CAST_STEP: f32 = 0.1;
+    const RAY_CAST_STEP: f32 = 0.10;
 
     pub fn new(width: f32, height: f32) -> Self {
         let grid_width = (width * Self::CELLS_PR_METER).ceil() as usize;
@@ -24,6 +24,10 @@ impl World {
             width,
             height,
         }
+    }
+
+    pub fn size(&self) -> Vec2 {
+        Vec2::new(self.width, self.height)
     }
 
     pub fn bounds(&self) -> (Pos2, Pos2) {
@@ -38,15 +42,25 @@ impl World {
         (min, max)
     }
 
+    fn world_to_grid(&self, pos: Pos2) -> Pos2 {
+        ((pos + self.size() / 2.0) * Self::CELLS_PR_METER).floor()
+    }
+
     pub fn get_cell(&self, pos: Pos2) -> Cell {
-        let x = (pos.x * Self::CELLS_PR_METER).floor();
-        let y = (pos.y * Self::CELLS_PR_METER).floor();
-        let (min, max) = self.bounds();
-        if pos.x < min.x || pos.x > max.x || pos.y < min.y || pos.y > max.y {
+        if pos.x < self.width / -2.0
+            || pos.x > self.width / 2.0
+            || pos.y < self.height / -2.0
+            || pos.y > self.height / 2.0
+        {
             return Cell::OutOfBounds;
         }
-        let x = x as usize;
-        let y = y as usize;
+        let pos = self.world_to_grid(pos);
+        debug_assert!(pos.x >= 0.0, "x: {}", pos.x);
+        debug_assert!(pos.y >= 0.0, "y: {}", pos.y);
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        debug_assert!(x <= self.grid.width(), "x: {}, width: {}", x, self.grid.width());
+        debug_assert!(y <= self.grid.height(), "y: {}, height: {}", y, self.grid.height());
         self.grid.get(x, y)
     }
 
@@ -56,6 +70,17 @@ impl World {
 
     pub fn height(&self) -> f32 {
         self.height
+    }
+
+    pub fn grid(&self) -> &Grid {
+        &self.grid
+    }
+
+    pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: Cell) {
+        let width = width * Self::CELLS_PR_METER;
+        let start = self.world_to_grid(start);
+        let end = self.world_to_grid(end);
+        self.grid.line(start, end, width, cell);
     }
 }
 

@@ -3,8 +3,8 @@ use crate::{bind_down, sim::Simulator};
 use super::camera::Camera;
 use eframe::{
     self,
-    egui::{self, Frame, Key, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape, Vec2},
-    epaint::{Hsva, PathShape, PathStroke},
+    egui::{self, pos2, Color32, Frame, Key, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape, TextureHandle, TextureOptions, Vec2},
+    epaint::{Hsva, PathShape, PathStroke}, CreationContext,
 };
 use robcore::Robot;
 
@@ -14,14 +14,21 @@ pub struct App {
     pub cam: Camera,
     pub sim: Simulator,
     focused: Option<usize>,
+    world_texture: TextureHandle,
 }
 
 impl App {
-    pub fn new(sim: Simulator) -> Self {
+    pub fn new(sim: Simulator, cc: &CreationContext) -> Self {
+        let world_image = sim.world.grid().get_image();
+        let world_texture = cc.egui_ctx.load_texture("world-grid-image", world_image, TextureOptions {
+            magnification: egui::TextureFilter::Nearest,
+            ..Default::default()
+        });
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
             focused: None,
+            world_texture,
         }
     }
 
@@ -61,6 +68,7 @@ impl App {
                 [end, end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2)],
                 stroke,
             );
+
 
             painter.circle_filled(pos, self.cam.scaled(self.sim.robot_size), robot.color);
         }
@@ -132,6 +140,8 @@ impl eframe::App for App {
                     self.cam.world_to_viewport(*max),
                 ]);
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
+                let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                painter.image(self.world_texture.id(), world_rect, uv, Color32::WHITE);
 
                 self.cam.update(ui, &resp);
 
