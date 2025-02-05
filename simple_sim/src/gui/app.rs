@@ -3,8 +3,12 @@ use crate::{bind_down, sim::Simulator};
 use super::camera::Camera;
 use eframe::{
     self,
-    egui::{self, pos2, Color32, Frame, Key, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape, TextureHandle, TextureOptions, Vec2},
-    epaint::{Hsva, PathShape, PathStroke}, CreationContext,
+    egui::{
+        self, pos2, Color32, Frame, Key, Margin, Painter, Pos2, Rect, Rgba, Sense, Shape,
+        TextureHandle, TextureOptions, Vec2,
+    },
+    epaint::{Hsva, PathShape, PathStroke},
+    CreationContext,
 };
 use robcore::Robot;
 
@@ -20,10 +24,14 @@ pub struct App {
 impl App {
     pub fn new(sim: Simulator, cc: &CreationContext) -> Self {
         let world_image = sim.world.grid().get_image();
-        let world_texture = cc.egui_ctx.load_texture("world-grid-image", world_image, TextureOptions {
-            magnification: egui::TextureFilter::Nearest,
-            ..Default::default()
-        });
+        let world_texture = cc.egui_ctx.load_texture(
+            "world-grid-image",
+            world_image,
+            TextureOptions {
+                magnification: egui::TextureFilter::Nearest,
+                ..Default::default()
+            },
+        );
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
@@ -55,20 +63,22 @@ impl App {
             let end = pos + self.cam.scaled(vel);
             let stroke_width = self.cam.scaled(0.05);
             let stroke = PathStroke::new(stroke_width, robot.color);
-            painter.circle_filled(end, stroke_width/2.0, robot.color);
+            painter.circle_filled(end, stroke_width / 2.0, robot.color);
+            painter.line_segment([pos, end], stroke.clone());
             painter.line_segment(
-                [pos, end],
+                [
+                    end,
+                    end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2),
+                ],
                 stroke.clone(),
             );
             painter.line_segment(
-                [end, end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2)],
-                stroke.clone(),
-            );
-            painter.line_segment(
-                [end, end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2)],
+                [
+                    end,
+                    end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2),
+                ],
                 stroke,
             );
-
 
             painter.circle_filled(pos, self.cam.scaled(self.sim.robot_size), robot.color);
         }
@@ -153,6 +163,25 @@ impl eframe::App for App {
                 // Handle Keys
                 ui.input(|i| {
                     bind_down!(i; Key::Escape => self.focused = None);
+                });
+
+                // Handle clicks
+                resp.clicked().then(|| {
+                    let Some(pos) = resp.interact_pointer_pos() else {
+                        return;
+                    };
+                    let pos = self.cam.canvas_to_world(pos);
+                    let mut found = false;
+                    for (n, robot) in self.sim.robots.iter().enumerate() {
+                        if (robot.pos - pos).length() < self.sim.robot_size * 1.5 {
+                            self.focused = Some(n);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found {
+                        self.focused = None;
+                    }
                 });
 
                 self.draw_robots(&painter);
