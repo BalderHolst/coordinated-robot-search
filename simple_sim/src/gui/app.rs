@@ -133,7 +133,7 @@ impl App {
 
             // Draw velocity vector (arrow)
             if self.vis_opts.show_velocity {
-                let vel = Vec2::angled(robot.angle) * robot.vel;
+                let vel = Vec2::angled(robot.angle) * (robot.vel + self.sim.robot_radius);
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
                 let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
