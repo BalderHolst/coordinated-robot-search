@@ -99,23 +99,9 @@ impl App {
                 let vel = Vec2::angled(robot.angle) * robot.vel;
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
-                let stroke = PathStroke::new(stroke_width, ROBOT_COLOR);
+                let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
                 painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
-                painter.line_segment([pos, end], stroke.clone());
-                painter.line_segment(
-                    [
-                        end,
-                        end - self.cam.scaled(Vec2::angled(robot.angle - 0.5) * 0.2),
-                    ],
-                    stroke.clone(),
-                );
-                painter.line_segment(
-                    [
-                        end,
-                        end - self.cam.scaled(Vec2::angled(robot.angle + 0.5) * 0.2),
-                    ],
-                    stroke,
-                );
+                painter.arrow(pos, end - pos, stroke);
             }
 
             // Draw id of robot
