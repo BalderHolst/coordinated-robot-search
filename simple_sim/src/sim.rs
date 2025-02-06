@@ -8,6 +8,7 @@ use crate::grid::{Cell, Grid};
 const LIDAR_RANGE: f32 = 5.0;
 const LIDAR_RAYS: usize = 40;
 
+#[derive(Clone)]
 pub struct World {
     grid: Grid,
     width: f32,
@@ -107,6 +108,7 @@ impl World {
     }
 }
 
+#[derive(Clone)]
 pub struct Robot {
     pub pos: Pos2,
     pub vel: f32,
@@ -157,21 +159,28 @@ impl robcore::Robot for Robot {
     }
 }
 
+#[derive(Clone)]
 pub struct Simulator {
     pub robots: Vec<Robot>,
     pub robot_radius: f32,
     pub world: World,
+    pub sps: f32,
     behavior: for<'a> fn(&'a mut (dyn robcore::Robot + 'a)),
 }
 
 impl Simulator {
-    pub fn new(world: World, behavior: for<'a> fn(&'a mut (dyn robcore::Robot + 'a))) -> Self {
+    pub fn new(world: World, sps: f32, behavior: for<'a> fn(&'a mut (dyn robcore::Robot + 'a))) -> Self {
         Self {
             robots: vec![],
             robot_radius: 0.3,
             behavior,
             world,
+            sps,
         }
+    }
+
+    fn dt(&self) -> f32 {
+        1.0 / self.sps
     }
 
     pub fn add_robot(&mut self, robot: Robot) {
@@ -277,7 +286,9 @@ impl Simulator {
         }
     }
 
-    pub fn step(&mut self, dt: f32) {
+    pub fn step(&mut self) {
+        let dt = self.dt();
+
         // Call the behavior function for each robot
         for robot in &mut self.robots {
             (self.behavior)(robot);

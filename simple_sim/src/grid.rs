@@ -25,6 +25,7 @@ impl Cell {
     }
 }
 
+#[derive(Clone)]
 pub struct Grid {
     cells: Vec<Cell>,
     width: usize,

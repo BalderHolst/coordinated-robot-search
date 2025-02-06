@@ -1,6 +1,8 @@
+use std::{sync::{Arc, Mutex}, thread};
+
 use crate::{bind_down, sim::Simulator};
 
-use super::camera::Camera;
+use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
 use eframe::{
     self,
     egui::{
@@ -12,7 +14,6 @@ use eframe::{
 };
 use robcore::Robot;
 
-const FPS: f32 = 60.0;
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
     s: 0.2,
@@ -35,6 +36,9 @@ impl Default for VisOpts {
 }
 
 pub struct App {
+    sim_bg: Arc<Mutex<Simulator>>,
+    actual_sps: Arc<Mutex<f32>>,
+    target_sps: Arc<Mutex<f32>>,
     pub cam: Camera,
     pub sim: Simulator,
     focused: Option<usize>,
@@ -45,6 +49,36 @@ pub struct App {
 
 impl App {
     pub fn new(sim: Simulator, cc: &CreationContext) -> Self {
+        let sim_bg = Arc::new(Mutex::new(sim));
+        let sim = sim_bg.lock().unwrap().clone();
+
+        let actual_sps = Arc::new(Mutex::new(TARGET_SPS));
+        let target_sps = Arc::new(Mutex::new(TARGET_SPS));
+
+        {
+            let sim_bg = sim_bg.clone();
+            let actual_sps = actual_sps.clone();
+            let target_sps = target_sps.clone();
+            thread::spawn(move || loop {
+                let frame_start = std::time::Instant::now();
+                if let Ok(mut sim) = sim_bg.lock() {
+                    sim.step();
+                }
+
+                let step_time = frame_start.elapsed();
+
+                let target_sps = target_sps.lock().unwrap();
+                let target_time = std::time::Duration::from_secs_f32(1.0 / *target_sps);
+                let remaining = target_time.checked_sub(step_time).unwrap_or_default();
+                thread::sleep(remaining);
+
+                if let Ok(mut actual_sps) = actual_sps.try_lock() {
+                    *actual_sps = 1.0 / frame_start.elapsed().as_secs_f32();
+                }
+
+            });
+        }
+
         let world_image = sim.world.grid().get_image();
         let world_texture = cc.egui_ctx.load_texture(
             "world-grid-image",
@@ -57,6 +91,9 @@ impl App {
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
+            sim_bg,
+            actual_sps,
+            target_sps,
             focused: None,
             follow: None,
             world_texture,
@@ -152,7 +189,11 @@ impl eframe::App for App {
                     }
 
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(format!("FPS: {:.1}", 1.0 / ctx.input(|i| i.stable_dt)));
+                        ui.label(format!("FPS: {:.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
+
+                        if let Ok(sps) = self.actual_sps.lock() {
+                            ui.label(format!("SPS: {:.0}", sps));
+                        }
                     });
                 });
             });
@@ -209,14 +250,13 @@ impl eframe::App for App {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ui.ctx().request_repaint_after_secs(1.0 / FPS);
+                ui.ctx().request_repaint_after_secs(1.0 / TARGET_FPS);
 
                 let size = ui.available_size_before_wrap();
                 let (resp, painter) = ui.allocate_painter(size, Sense::click_and_drag());
 
                 let viewport = ui.ctx().input(|i| i.screen_rect());
                 self.cam.set_viewport(viewport);
-
 
                 // Draw world area
                 let (min, max) = &self.sim.world.bounds();
@@ -239,10 +279,10 @@ impl eframe::App for App {
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                 painter.image(self.world_texture.id(), world_rect, uv, Color32::WHITE);
 
-                // Step simulation
-                ui.input(|i| {
-                    self.sim.step(i.stable_dt);
-                });
+                // Get simulation
+                if let Ok(sim) = self.sim_bg.lock() {
+                    self.sim = sim.clone();
+                }
 
                 // Handle Keys
                 ui.input(|i| {
