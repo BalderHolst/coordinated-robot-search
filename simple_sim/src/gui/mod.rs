@@ -1,8 +1,12 @@
+use std::f32::consts::PI;
+
 use app::App;
 use eframe::egui::{self, pos2};
 
 use crate::{
-    cli::Args, grid::Cell, sim::{Robot, Simulator, World}
+    cli::Args,
+    grid::Cell,
+    sim::{Robot, Simulator, World},
 };
 
 mod app;
@@ -22,9 +26,10 @@ pub fn run(args: Args) {
             let mut world = World::new(10.0, 10.0);
             world.line(pos2(-1.5, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
             let mut sim = Simulator::new(world, args.behavior.get_fn());
-            sim.add_robot(Robot::new_at(-1.0, 1.0));
-            sim.add_robot(Robot::new_at(1.0, -4.0));
-            sim.add_robot(Robot::new_at(-1.2, 4.0));
+            sim.add_robot(Robot::new_at(-2.0, -2.0, 1.0));
+            sim.add_robot(Robot::new_at(-1.0, 1.0, 0.0));
+            sim.add_robot(Robot::new_at(2.2, 1.1, PI));
+            // sim.add_robot(Robot::new_at(0.0, 0.01, 0.0));
             let app = App::new(sim, cc);
             Ok(Box::new(app))
         }),

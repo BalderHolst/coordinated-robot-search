@@ -89,7 +89,7 @@ impl App {
             };
             painter.circle(
                 pos,
-                self.cam.scaled(self.sim.robot_size),
+                self.cam.scaled(self.sim.robot_radius),
                 ROBOT_COLOR,
                 stroke,
             );
@@ -217,6 +217,7 @@ impl eframe::App for App {
                 let viewport = ui.ctx().input(|i| i.screen_rect());
                 self.cam.set_viewport(viewport);
 
+
                 // Draw world area
                 let (min, max) = &self.sim.world.bounds();
                 let world_rect = Rect::from_points(&[
@@ -261,7 +262,7 @@ impl eframe::App for App {
                     // Check if we clicked on a robot
                     let mut found = None;
                     for (n, robot) in self.sim.robots.iter().enumerate() {
-                        if (robot.pos - pos).length() < self.sim.robot_size * 1.5 {
+                        if (robot.pos - pos).length() < self.sim.robot_radius * 1.5 {
                             self.focused = Some(n);
                             found = Some(n);
                             break;

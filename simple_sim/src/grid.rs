@@ -1,4 +1,7 @@
-use eframe::{egui::{Color32, ColorImage, Pos2, Rgba}, epaint::Hsva};
+use eframe::{
+    egui::{Color32, ColorImage, Pos2, Rgba},
+    epaint::Hsva,
+};
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub enum Cell {
@@ -88,16 +91,26 @@ impl Grid {
         }
     }
 
-    pub fn circle(&mut self, center: Pos2, radius: f32, cell: Cell) {
+    pub fn circle_iter(&self, center: Pos2, radius: f32) -> impl Iterator<Item = (usize, usize)>  {
         let radius2 = radius * radius;
-        for y in (center.y - radius).ceil() as usize..=(center.y + radius).floor() as usize {
-            for x in (center.x - radius).ceil() as usize..=(center.x + radius).floor() as usize {
-                let pos = Pos2 { x: x as f32, y: y as f32 };
-                if (pos - center).length().powf(2.0) <= radius2 {
-                    self.set(x, y, cell);
-                }
-            }
-        }
+        ((center.y - radius).ceil() as usize..=(center.y + radius).floor() as usize)
+            .flat_map(move |y| {
+                ((center.x - radius).ceil() as usize..=(center.x + radius).floor() as usize)
+                    .filter(move |x| {
+                        let pos = Pos2 {
+                            x: *x as f32,
+                            y: y as f32,
+                        };
+                        (pos - center).length().powf(2.0) <= radius2
+                    })
+                    .map(move |x| (x, y))
+            })
+    }
+
+    pub fn circle(&mut self, center: Pos2, radius: f32, cell: Cell) {
+        self.circle_iter(center, radius).for_each(|(x, y)| {
+            self.set(x, y, cell);
+        });
     }
 
     pub fn get_image(&self) -> ColorImage {

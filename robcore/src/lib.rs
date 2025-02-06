@@ -12,6 +12,17 @@ pub struct LidarPoint {
     pub distance: f32,
 }
 
+fn normalize_angle(angle: f32) -> f32 {
+    let mut angle = angle;
+    while angle < -std::f32::consts::PI {
+        angle += 2.0 * std::f32::consts::PI;
+    }
+    while angle > std::f32::consts::PI {
+        angle -= 2.0 * std::f32::consts::PI;
+    }
+    angle
+}
+
 #[derive(Debug, Clone)]
 pub struct LidarData(pub Vec<LidarPoint>);
 
@@ -52,6 +63,20 @@ pub mod behaviors {
         });
     }
 
+    pub fn only_straight(robot: &mut dyn Robot) {
+        robot.set_control(Control {
+            speed: 1.0,
+            steer: 0.0,
+        });
+    }
+
+    pub fn nothing(robot: &mut dyn Robot) {
+        robot.set_control(Control {
+            speed: 0.0,
+            steer: 0.0,
+        });
+    }
+
     pub fn move_to_center(robot: &mut dyn Robot) {
         let pos = robot.get_pos();
         let steer = f32::atan2(-pos.y, -pos.x);
@@ -60,6 +85,7 @@ pub mod behaviors {
 
     pub fn avoid_obstacles(robot: &mut dyn Robot) {
         const MIN_DISTANCE: f32 = 3.0;
+        const FOV: f32 = PI / 1.8;
 
         let lidar = robot.get_lidar_data();
 
@@ -72,8 +98,11 @@ pub mod behaviors {
             distance: f32::INFINITY,
         };
         for point in lidar.0 {
-            if point.distance < min_point.distance {
-                min_point = point;
+            let angle = normalize_angle(point.angle);
+            if angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV {
+                if point.distance < min_point.distance {
+                    min_point = point;
+                }
             }
         }
 

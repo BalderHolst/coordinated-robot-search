@@ -10,6 +10,8 @@ pub struct Args {
 pub enum Behavior {
     Circle,
     AvoidObstacles,
+    OnlyStraight,
+    Nothing,
 }
 
 impl Behavior {
@@ -17,6 +19,8 @@ impl Behavior {
         match self {
             Behavior::Circle => robcore::behaviors::circle,
             Behavior::AvoidObstacles => robcore::behaviors::avoid_obstacles,
+            Behavior::OnlyStraight => robcore::behaviors::only_straight,
+            Behavior::Nothing => robcore::behaviors::nothing,
         }
     }
 }
