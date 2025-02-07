@@ -86,7 +86,6 @@ impl Camera {
 
         // Keys
         ui.input(|i| {
-
             let mut velocity = Vec2::ZERO;
             bind_down!(i; Key::ArrowRight, Key::D => velocity.x += 1.0);
             bind_down!(i; Key::ArrowLeft,  Key::A => velocity.x -= 1.0);

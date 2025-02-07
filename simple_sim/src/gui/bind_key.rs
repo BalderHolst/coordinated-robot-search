@@ -14,7 +14,6 @@ macro_rules! bind_down    {
     }
 }
 
-
 #[macro_export]
 macro_rules! bind_pressed {
     ($input:expr; $($key:expr),+ => $e:expr) => {

@@ -1,4 +1,7 @@
-use eframe::{egui::{Color32, Pos2, Vec2}, epaint::Hsva};
+use eframe::{
+    egui::{Color32, Pos2, Vec2},
+    epaint::Hsva,
+};
 
 use crate::grid::Grid;
 
@@ -36,7 +39,6 @@ pub struct World {
 }
 
 impl World {
-
     pub fn new(width: f32, height: f32) -> Self {
         let grid_width = (width * CELLS_PR_METER).ceil() as usize;
         let grid_height = (height * CELLS_PR_METER).ceil() as usize;

@@ -1,9 +1,9 @@
 use clap::Parser;
 
+mod cli;
+mod grid;
 mod gui;
 mod sim;
-mod grid;
-mod cli;
 mod world;
 
 fn main() {

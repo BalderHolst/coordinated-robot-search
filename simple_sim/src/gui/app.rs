@@ -9,7 +9,8 @@ use std::{
 use crate::{
     bind_down, bind_pressed,
     grid::Grid,
-    sim::{Simulator, CAMERA_FOV}, world::Cell,
+    sim::{Simulator, CAMERA_FOV},
+    world::Cell,
 };
 
 use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
