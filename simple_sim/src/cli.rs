@@ -8,19 +8,21 @@ pub struct Args {
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 pub enum Behavior {
-    Circle,
-    AvoidObstacles,
-    OnlyStraight,
     Nothing,
+    Circle,
+    OnlyStraight,
+    AvoidObstacles,
+    TowardSpace,
 }
 
 impl Behavior {
     pub fn get_fn(&self) -> fn(&mut dyn robcore::Robot) {
         match self {
-            Behavior::Circle => robcore::behaviors::circle,
-            Behavior::AvoidObstacles => robcore::behaviors::avoid_obstacles,
-            Behavior::OnlyStraight => robcore::behaviors::only_straight,
-            Behavior::Nothing => robcore::behaviors::nothing,
+            Self::Nothing => robcore::behaviors::nothing,
+            Self::Circle => robcore::behaviors::circle,
+            Self::OnlyStraight => robcore::behaviors::only_straight,
+            Self::AvoidObstacles => robcore::behaviors::avoid_obstacles,
+            Self::TowardSpace => robcore::behaviors::toward_space,
         }
     }
 }

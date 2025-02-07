@@ -23,7 +23,7 @@ pub struct CamPoint {
 #[derive(Debug, Clone)]
 pub struct CamData(pub Vec<CamPoint>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LidarPoint {
     pub angle: f32,
     pub distance: f32,
@@ -118,6 +118,38 @@ pub mod behaviors {
             steer = how_close * (min_point.angle - PI).signum();
             speed *= 1.0 - how_close;
         }
+
+        robot.set_control(Control { speed, steer });
+    }
+
+    /// Steers towards the furthest point in the lidar data that is closest to the heading of the robot.
+    pub fn toward_space(robot: &mut dyn Robot) {
+        const MAX_SPEED: f32 = 1.0;
+        const MAX_STEER: f32 = 10.0;
+
+        let LidarData(mut points) = robot.get_lidar_data().clone();
+
+        points.iter_mut().for_each(|point| {
+            point.angle = normalize_angle(point.angle);
+            if point.angle > PI {
+                point.angle -= 2.0 * PI;
+            }
+        });
+
+        points.sort_by(|a, b| a.angle.abs().partial_cmp(&b.angle.abs()).unwrap());
+
+        let mut furthest_point = LidarPoint::default();
+        for point in points {
+            if point.distance > furthest_point.distance {
+                furthest_point = point;
+            }
+        }
+
+        let steer = furthest_point.angle / PI;
+        let speed = 1.0 - steer;
+
+        let speed = speed * MAX_SPEED;
+        let steer = steer * MAX_STEER;
 
         robot.set_control(Control { speed, steer });
     }
