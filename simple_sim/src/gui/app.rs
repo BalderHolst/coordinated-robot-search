@@ -109,14 +109,9 @@ impl App {
         }
 
         let world_image = grid_to_image(sim.world.grid());
-        let world_texture = cc.egui_ctx.load_texture(
-            "world-grid-image",
-            world_image,
-            TextureOptions {
-                magnification: egui::TextureFilter::Nearest,
-                ..Default::default()
-            },
-        );
+        let world_texture =
+            cc.egui_ctx
+                .load_texture("world-grid-image", world_image, TextureOptions::default());
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
