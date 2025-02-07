@@ -1,6 +1,6 @@
 use std::{
     sync::{
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicBool, Ordering},
         Arc, Mutex,
     },
     thread,
@@ -9,7 +9,7 @@ use std::{
 use crate::{
     bind_down, bind_pressed,
     grid::Grid,
-    sim::{Cell, Simulator, CAMERA_FOV},
+    sim::{Simulator, CAMERA_FOV}, world::Cell,
 };
 
 use super::{camera::Camera, TARGET_FPS, TARGET_SPS};

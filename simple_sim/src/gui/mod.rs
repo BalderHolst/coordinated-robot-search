@@ -5,7 +5,7 @@ use eframe::egui::{self, pos2};
 
 use crate::{
     cli::Args,
-    sim::{Cell, Robot, Simulator, World},
+    sim::{Robot, Simulator}, world::{Cell, World},
 };
 
 mod app;
