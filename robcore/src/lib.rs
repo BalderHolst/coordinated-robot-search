@@ -105,10 +105,8 @@ pub mod behaviors {
         };
         for point in &lidar.0 {
             let angle = normalize_angle(point.angle);
-            if angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV {
-                if point.distance < min_point.distance {
-                    min_point = point.clone();
-                }
+            if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV) && point.distance < min_point.distance {
+                min_point = point.clone();
             }
         }
 
