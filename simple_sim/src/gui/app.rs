@@ -6,7 +6,7 @@ use std::{
     thread,
 };
 
-use crate::{bind_down, sim::Simulator};
+use crate::{bind_down, bind_pressed, sim::Simulator};
 
 use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
 use eframe::{
@@ -323,6 +323,11 @@ impl eframe::App for App {
                     bind_down!(i; Key::Escape => {
                         self.focused = None;
                         self.follow = None;
+                    });
+
+                    bind_pressed!(i; Key::Space => {
+                        let paused = self.paused.load(Ordering::Relaxed);
+                        self.paused.store(!paused, Ordering::Relaxed);
                     });
                 });
 
