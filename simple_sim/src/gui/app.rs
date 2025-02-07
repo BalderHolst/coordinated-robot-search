@@ -1,4 +1,10 @@
-use std::{sync::{Arc, Mutex}, thread};
+use std::{
+    sync::{
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+        Arc, Mutex,
+    },
+    thread,
+};
 
 use crate::{bind_down, sim::Simulator};
 
@@ -37,8 +43,10 @@ impl Default for VisOpts {
 
 pub struct App {
     sim_bg: Arc<Mutex<Simulator>>,
-    actual_sps: Arc<Mutex<f32>>,
-    target_sps: Arc<Mutex<f32>>,
+    actual_sps_bg: Arc<Mutex<f32>>,
+    target_sps_bg: Arc<Mutex<f32>>,
+    target_sps: usize,
+    paused: Arc<AtomicBool>,
     pub cam: Camera,
     pub sim: Simulator,
     focused: Option<usize>,
@@ -52,14 +60,23 @@ impl App {
         let sim_bg = Arc::new(Mutex::new(sim));
         let sim = sim_bg.lock().unwrap().clone();
 
-        let actual_sps = Arc::new(Mutex::new(TARGET_SPS));
-        let target_sps = Arc::new(Mutex::new(TARGET_SPS));
+        let actual_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
+        let target_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
+        let paused = Arc::new(AtomicBool::new(false));
 
         {
             let sim_bg = sim_bg.clone();
-            let actual_sps = actual_sps.clone();
-            let target_sps = target_sps.clone();
+            let actual_sps = actual_sps_bg.clone();
+            let target_sps = target_sps_bg.clone();
+            let paused = paused.clone();
             thread::spawn(move || loop {
+                let target_sps = *target_sps.lock().unwrap();
+                let paused = paused.load(Ordering::Relaxed);
+                if paused || target_sps == 0.0 {
+                    thread::sleep(std::time::Duration::from_secs_f32(1.0 / TARGET_FPS));
+                    continue;
+                }
+
                 let frame_start = std::time::Instant::now();
                 if let Ok(mut sim) = sim_bg.lock() {
                     sim.step();
@@ -67,15 +84,13 @@ impl App {
 
                 let step_time = frame_start.elapsed();
 
-                let target_sps = target_sps.lock().unwrap();
-                let target_time = std::time::Duration::from_secs_f32(1.0 / *target_sps);
+                let target_time = std::time::Duration::from_secs_f32(1.0 / target_sps);
                 let remaining = target_time.checked_sub(step_time).unwrap_or_default();
                 thread::sleep(remaining);
 
                 if let Ok(mut actual_sps) = actual_sps.try_lock() {
                     *actual_sps = 1.0 / frame_start.elapsed().as_secs_f32();
                 }
-
             });
         }
 
@@ -92,8 +107,10 @@ impl App {
             cam: Camera::new(Pos2::ZERO),
             sim,
             sim_bg,
-            actual_sps,
-            target_sps,
+            target_sps: TARGET_SPS as usize,
+            paused,
+            actual_sps_bg,
+            target_sps_bg,
             focused: None,
             follow: None,
             world_texture,
@@ -190,8 +207,7 @@ impl eframe::App for App {
 
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
                         ui.label(format!("FPS: {:.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
-
-                        if let Ok(sps) = self.actual_sps.lock() {
+                        if let Ok(sps) = self.actual_sps_bg.lock() {
                             ui.label(format!("SPS: {:.0}", sps));
                         }
                     });
@@ -208,6 +224,24 @@ impl eframe::App for App {
                 ui.horizontal(|ui| {
                     ui.label("Global Visualization Options:");
                     ui.toggle_value(&mut self.vis_opts.show_velocity, "Show Velocities");
+
+                    // SPS Slider
+                    let prev_target_sps = self.target_sps;
+                    ui.label("SPS:");
+                    ui.add(
+                        egui::Slider::new(&mut self.target_sps, 0..=240)
+                            .clamping(egui::SliderClamping::Never),
+                    );
+                    if prev_target_sps != self.target_sps {
+                        *self.target_sps_bg.lock().unwrap() = self.target_sps as f32;
+                    }
+
+                    let paused = self.paused.load(Ordering::Relaxed);
+                    ui.button(if paused { "Resume" } else { "Pause" })
+                        .clicked()
+                        .then(|| {
+                            self.paused.store(!paused, Ordering::Relaxed);
+                        });
                 });
             });
 
