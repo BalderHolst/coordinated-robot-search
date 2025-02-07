@@ -25,6 +25,12 @@
                 })
             ];
 
+            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+                wayland
+                libGL
+                libxkbcommon
+            ]);
+
             shellHool = ''
                 # Setup git hooks
                 git config core.hooksPath .hooks
