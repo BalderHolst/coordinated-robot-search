@@ -6,14 +6,19 @@ use std::{
     thread,
 };
 
-use crate::{bind_down, bind_pressed, sim::Simulator};
+use crate::{
+    bind_down, bind_pressed,
+    grid::Grid,
+    sim::{Cell, Simulator, CAMERA_FOV},
+};
 
 use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
 use eframe::{
     self,
     egui::{
-        self, pos2, Align, Align2, Color32, FontFamily, FontId, Frame, Key, Margin, Painter, Pos2,
-        Rect, Rgba, Sense, Shape, Stroke, Style, TextureHandle, TextureOptions, Vec2,
+        self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, Key, Margin,
+        Painter, Pos2, Rect, Rgba, Sense, Shape, Stroke, Style, TextureHandle, TextureOptions,
+        Vec2,
     },
     epaint::{Hsva, PathShape, PathStroke},
     CreationContext,
@@ -55,6 +60,15 @@ pub struct App {
     vis_opts: VisOpts,
 }
 
+fn grid_to_image(grid: &Grid<Cell>) -> ColorImage {
+    let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
+    image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
+        let (x, y) = (i % grid.width(), i / grid.width());
+        *pixel = grid.get(x, y).color();
+    });
+    image
+}
+
 impl App {
     pub fn new(sim: Simulator, cc: &CreationContext) -> Self {
         let sim_bg = Arc::new(Mutex::new(sim));
@@ -94,7 +108,7 @@ impl App {
             });
         }
 
-        let world_image = sim.world.grid().get_image();
+        let world_image = grid_to_image(sim.world.grid());
         let world_texture = cc.egui_ctx.load_texture(
             "world-grid-image",
             world_image,
@@ -122,6 +136,7 @@ impl App {
         for (n, robot) in self.sim.robots.iter().enumerate() {
             let pos = self.cam.world_to_viewport(robot.pos);
 
+            // Draw lidar rays
             if self.vis_opts.show_lidar && self.focused == Some(n) {
                 for point in &robot.get_lidar_data().0 {
                     let end = pos
@@ -134,6 +149,36 @@ impl App {
                         ),
                     );
                 }
+            }
+
+            // Draw camera rays
+            for point in &robot.get_cam_data().0 {
+                let width = self.cam.scaled(0.20) * point.propability;
+                let color = Hsva::new(0.0 * 2.0, 0.8, 0.8, point.propability);
+                let end = pos + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(1.0);
+                painter.line(vec![pos, end], PathStroke::new(width, color));
+            }
+
+            // Draw FOV
+            const FOV_INIDICATOR_LEN: f32 = 0.1;
+            const FOV_INIDICATOR_WIDTH: f32 = 0.02;
+            {
+                let left = Vec2::angled(robot.angle - CAMERA_FOV / 2.0);
+                painter.line_segment(
+                    [
+                        pos,
+                        pos + left * self.cam.scaled(self.sim.robot_radius + FOV_INIDICATOR_LEN),
+                    ],
+                    PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                );
+                let right = Vec2::angled(robot.angle + CAMERA_FOV / 2.0);
+                painter.line_segment(
+                    [
+                        pos,
+                        pos + right * self.cam.scaled(self.sim.robot_radius + FOV_INIDICATOR_LEN),
+                    ],
+                    PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                );
             }
 
             // Draw robot (as a circle)

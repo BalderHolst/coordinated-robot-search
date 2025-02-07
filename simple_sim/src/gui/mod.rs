@@ -5,8 +5,7 @@ use eframe::egui::{self, pos2};
 
 use crate::{
     cli::Args,
-    grid::Cell,
-    sim::{Robot, Simulator, World},
+    sim::{Cell, Robot, Simulator, World},
 };
 
 mod app;
@@ -29,15 +28,21 @@ pub fn run(args: Args) {
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
+
+            // Set up world
             let mut world = World::new(10.0, 10.0);
-            world.line(pos2(-1.5, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
+            world.line(pos2(-2.0, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
+            world.line(pos2(-2.0, 0.0), pos2(-2.0, -2.0), 0.2, Cell::Wall);
+            world.circle(pos2(0.0, 3.0), 0.08, Cell::SearchItem);
+
+            // Set up simulator
             let mut sim = Simulator::new(world, TARGET_SPS, args.behavior.get_fn());
             sim.add_robot(Robot::new_at(-2.0, -2.0, 1.0));
             sim.add_robot(Robot::new_at(-1.0, 1.0, 0.0));
             sim.add_robot(Robot::new_at(2.2, 1.1, PI));
 
+            // Create app
             let app = App::new(sim, cc);
-
             Ok(Box::new(app))
         }),
     ) {
