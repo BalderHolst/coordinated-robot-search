@@ -18,10 +18,9 @@ use eframe::{
     self,
     egui::{
         self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, Key, Margin,
-        Painter, Pos2, Rect, Rgba, Sense, Shape, Stroke, Style, TextureHandle, TextureOptions,
-        Vec2,
+        Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureHandle, TextureOptions, Vec2,
     },
-    epaint::{Hsva, PathShape, PathStroke},
+    epaint::{Hsva, PathStroke},
     CreationContext,
 };
 use robcore::Robot;

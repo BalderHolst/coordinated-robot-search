@@ -53,7 +53,7 @@ impl robcore::Robot for Robot {
         &self.lidar
     }
 
-    fn post(&self, msg: robcore::Message) {
+    fn post(&self, _msg: robcore::Message) {
         todo!()
     }
 

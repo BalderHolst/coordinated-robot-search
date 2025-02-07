@@ -1,3 +1,5 @@
+#![allow(dead_code)] // TODO: Remove this
+
 use clap::Parser;
 
 mod cli;

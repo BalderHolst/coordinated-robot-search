@@ -10,13 +10,13 @@ macro_rules! bind {
 #[macro_export]
 macro_rules! bind_down    {
     ($input:expr; $($key:expr),+ => $e:expr) => {
-        crate::bind!($input; key_down, $($key),+ => $e)
+        $crate::bind!($input; key_down, $($key),+ => $e)
     }
 }
 
 #[macro_export]
 macro_rules! bind_pressed {
     ($input:expr; $($key:expr),+ => $e:expr) => {
-        crate::bind!($input; key_pressed, $($key),+ => $e)
+        $crate::bind!($input; key_pressed, $($key),+ => $e)
     }
 }
