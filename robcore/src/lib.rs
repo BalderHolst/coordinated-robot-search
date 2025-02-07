@@ -1,17 +1,5 @@
 pub use emath::{Pos2, Vec2};
 
-#[derive(Debug, Clone)]
-pub struct Message;
-
-#[derive(Debug, Clone)]
-pub struct CamData;
-
-#[derive(Debug, Clone)]
-pub struct LidarPoint {
-    pub angle: f32,
-    pub distance: f32,
-}
-
 fn normalize_angle(angle: f32) -> f32 {
     let mut angle = angle;
     while angle < -std::f32::consts::PI {
@@ -21,6 +9,24 @@ fn normalize_angle(angle: f32) -> f32 {
         angle -= 2.0 * std::f32::consts::PI;
     }
     angle
+}
+
+#[derive(Debug, Clone)]
+pub struct Message;
+
+#[derive(Debug, Clone)]
+pub struct CamPoint {
+    pub angle: f32,
+    pub propability: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct CamData(pub Vec<CamPoint>);
+
+#[derive(Debug, Clone)]
+pub struct LidarPoint {
+    pub angle: f32,
+    pub distance: f32,
 }
 
 #[derive(Debug, Clone)]
@@ -36,10 +42,10 @@ pub trait Robot {
     fn get_pos(&self) -> Pos2;
 
     /// Get the data from the camera. Angles and probability of objects.
-    fn get_cam_data(&self) -> CamData;
+    fn get_cam_data(&self) -> &CamData;
 
     /// Get the data from the lidar. Distance to objects.
-    fn get_lidar_data(&self) -> LidarData;
+    fn get_lidar_data(&self) -> &LidarData;
 
     /// Send a message to the other robots.
     fn post(&self, msg: Message);
@@ -97,11 +103,11 @@ pub mod behaviors {
             angle: 0.0,
             distance: f32::INFINITY,
         };
-        for point in lidar.0 {
+        for point in &lidar.0 {
             let angle = normalize_angle(point.angle);
             if angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV {
                 if point.distance < min_point.distance {
-                    min_point = point;
+                    min_point = point.clone();
                 }
             }
         }

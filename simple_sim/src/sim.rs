@@ -115,6 +115,7 @@ pub struct Robot {
     pub angle: f32,
     pub avel: f32,
     pub lidar: robcore::LidarData,
+    pub cam: robcore::CamData,
 }
 
 impl Robot {
@@ -125,6 +126,7 @@ impl Robot {
             vel: 0.0,
             avel: 0.0,
             lidar: robcore::LidarData(vec![]),
+            cam: robcore::CamData(vec![]),
         }
     }
 }
@@ -137,12 +139,12 @@ impl robcore::Robot for Robot {
         }
     }
 
-    fn get_cam_data(&self) -> robcore::CamData {
-        todo!()
+    fn get_cam_data(&self) -> &robcore::CamData {
+        &self.cam
     }
 
-    fn get_lidar_data(&self) -> robcore::LidarData {
-        self.lidar.clone()
+    fn get_lidar_data(&self) -> &robcore::LidarData {
+        &self.lidar
     }
 
     fn post(&self, msg: robcore::Message) {
