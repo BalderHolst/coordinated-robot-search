@@ -11,7 +11,6 @@
                     inherit system;
                     overlays = [ inputs.nix-ros-overlay.overlays.default ];
                 };
-                lib = nixpkgs.lib;
             in {
         devShells.default = pkgs.mkShell {
             packages = with pkgs; [
