@@ -10,12 +10,18 @@ ros2 pkg create --build-type ament_cmake --license Apache-2.0 --node-name my_nod
 
 Build workspace
 
+```bash
+colcon build --symlink-install
+```
+
 - `symlink-install` allows the installed files to be changed by changing
   the files in the source space (e.g. Python files or other non-compiled resources)
   for faster iteration.
 
+  Build everything for a package
+
 ```bash
-colcon build --symlink-install
+colcon build --packages-up-to YOUR_PACKAGE
 ```
 
 Install dependencies from `ros2_ws`
@@ -28,7 +34,7 @@ rosdep install --from-paths src -y --ignore-src
 
 ### Map
 
-Save a map to a file
+Manually save a map to a file
 
 ```bash
 ros2 run nav2_map_server map_saver_cli -f path/filename
