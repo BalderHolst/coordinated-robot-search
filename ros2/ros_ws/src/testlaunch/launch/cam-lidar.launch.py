@@ -1,3 +1,20 @@
+# Copyright (C) 2023 Open Source Robotics Foundation
+# Copyright (C) 2023 Open Navigation LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""This is all-in-one launch script intended for use by nav2 developers."""
+
 import os
 import tempfile
 
@@ -23,8 +40,10 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     # Get the launch directory
-    sim_dir = get_package_share_directory("testlaunch")
+    sim_dir = get_package_share_directory("nav2_minimal_tb4_sim")
+    desc_dir = get_package_share_directory("nav2_minimal_tb4_description")
     launch_dir = os.path.join(sim_dir, "launch")
+    test_dir = get_package_share_directory("testlaunch")
 
     # Create the launch configuration variables
     namespace = LaunchConfiguration("namespace")
@@ -37,8 +56,8 @@ def generate_launch_description():
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
     pose = {
-        "x": LaunchConfiguration("x_pose", default="-8.00"),
-        "y": LaunchConfiguration("y_pose", default="0.00"),
+        "x": LaunchConfiguration("x_pose", default="3.870"),
+        "y": LaunchConfiguration("y_pose", default="2.690"),
         "z": LaunchConfiguration("z_pose", default="0.01"),
         "R": LaunchConfiguration("roll", default="0.00"),
         "P": LaunchConfiguration("pitch", default="0.00"),
@@ -65,10 +84,10 @@ def generate_launch_description():
         default_value="True",
         description="Use simulation (Gazebo) clock if true",
     )
-
+    # /home/balling/projects/coordinated-robot-search/ros2/ros_ws/src/testlaunch/configs/rviz/config.rviz
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         "rviz_config_file",
-        default_value=os.path.join(desc_dir, "rviz", "config.rviz"),
+        default_value=os.path.join(test_dir, "configs", "rviz", "config.rviz"),
         description="Full path to the RVIZ config file to use",
     )
 
@@ -189,5 +208,28 @@ def generate_launch_description():
 
     # Create the launch description and populate
     ld = LaunchDescription()
+
+    # Declare the launch options
+    ld.add_action(declare_namespace_cmd)
+    ld.add_action(declare_use_sim_time_cmd)
+
+    ld.add_action(declare_rviz_config_file_cmd)
+    ld.add_action(declare_use_simulator_cmd)
+    ld.add_action(declare_use_robot_state_pub_cmd)
+    ld.add_action(declare_simulator_cmd)
+    ld.add_action(declare_world_cmd)
+    ld.add_action(declare_robot_name_cmd)
+    ld.add_action(declare_robot_sdf_cmd)
+
+    ld.add_action(set_env_vars_resources)
+    ld.add_action(world_sdf_xacro)
+    ld.add_action(remove_temp_sdf_file)
+    ld.add_action(gz_robot)
+    ld.add_action(gazebo_server)
+    ld.add_action(gazebo_client)
+
+    # Add the actions to launch all of the navigation nodes
+    ld.add_action(start_robot_state_publisher_cmd)
+    ld.add_action(rviz_cmd)
 
     return ld
