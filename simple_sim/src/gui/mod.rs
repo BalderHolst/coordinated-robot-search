@@ -5,7 +5,7 @@ use eframe::egui::{self, pos2};
 
 use crate::{
     cli::Args,
-    sim::{Robot, Simulator},
+    sim::{Agent, Simulator},
     world::{Cell, World},
 };
 
@@ -37,9 +37,9 @@ pub fn run(args: Args) {
 
             // Set up simulator
             let mut sim = Simulator::new(world, TARGET_SPS, args.behavior.get_fn());
-            sim.add_robot(Robot::new_at(-2.0, -2.0, 1.0));
-            sim.add_robot(Robot::new_at(-1.0, 1.0, 0.0));
-            sim.add_robot(Robot::new_at(2.2, 1.1, PI));
+            sim.add_robot(Agent::new_at(-2.0, -2.0, 1.0));
+            sim.add_robot(Agent::new_at(-1.0, 1.0, 0.0));
+            sim.add_robot(Agent::new_at(2.2, 1.1, PI));
 
             // Create app
             let app = App::new(sim, cc);

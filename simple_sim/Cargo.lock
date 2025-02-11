@@ -879,7 +879,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d72e9c39f6e11a2e922d04a34ec5e7ef522ea3f5a1acfca7a19d16ad5fe50f5"
 dependencies = [
  "bytemuck",
- "emath 0.30.0",
+ "emath",
 ]
 
 [[package]]
@@ -926,7 +926,7 @@ checksum = "252d52224d35be1535d7fd1d6139ce071fb42c9097773e79f7665604f5596b5e"
 dependencies = [
  "accesskit",
  "ahash",
- "emath 0.30.0",
+ "emath",
  "epaint",
  "log",
  "nohash-hasher",
@@ -1000,12 +1000,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "emath"
-version = "0.31.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "55b7b6be5ad1d247f11738b0e4699d9c20005ed366f2c29f5ec1f8e1de180bc2"
-
-[[package]]
 name = "endi"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1042,7 +1036,7 @@ dependencies = [
  "ahash",
  "bytemuck",
  "ecolor",
- "emath 0.30.0",
+ "emath",
  "epaint_default_fonts",
  "log",
  "nohash-hasher",
@@ -2407,7 +2401,7 @@ checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
 name = "robcore"
 version = "0.1.0"
 dependencies = [
- "emath 0.31.0",
+ "emath",
 ]
 
 [[package]]

@@ -1,5 +1,7 @@
 use clap::{self, Parser};
 
+pub type BehaviorFn = fn(&mut robcore::Robot) -> robcore::Control;
+
 #[derive(Parser)]
 pub struct Args {
     #[arg(index = 1)]
@@ -16,7 +18,7 @@ pub enum Behavior {
 }
 
 impl Behavior {
-    pub fn get_fn(&self) -> fn(&mut dyn robcore::Robot) {
+    pub fn get_fn(&self) -> BehaviorFn {
         match self {
             Self::Nothing => robcore::behaviors::nothing,
             Self::Circle => robcore::behaviors::circle,

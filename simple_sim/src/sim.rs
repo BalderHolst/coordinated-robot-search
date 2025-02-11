@@ -3,7 +3,10 @@ use std::f32::consts::PI;
 use eframe::egui::{Pos2, Vec2};
 use robcore::{self, CamPoint};
 
-use crate::world::{Cell, World, CELLS_PR_METER};
+use crate::{
+    cli::BehaviorFn,
+    world::{Cell, World, CELLS_PR_METER},
+};
 
 const LIDAR_RAYS: usize = 40;
 const LIDAR_RANGE: f32 = 5.0;
@@ -15,75 +18,42 @@ pub const CAMERA_FOV: f32 = PI / 2.0;
 const RAY_CAST_STEP: f32 = 0.5 / CELLS_PR_METER;
 
 #[derive(Clone)]
-pub struct Robot {
-    pub pos: Pos2,
-    pub vel: f32,
-    pub angle: f32,
-    pub avel: f32,
-    pub lidar: robcore::LidarData,
-    pub cam: robcore::CamData,
+pub struct Agent {
+    pub robot: robcore::Robot,
+    pub control: robcore::Control,
 }
 
-impl Robot {
+impl Agent {
     pub fn new_at(x: f32, y: f32, angle: f32) -> Self {
-        Self {
+        let robot = robcore::Robot {
             pos: Pos2 { x, y },
             angle,
-            vel: 0.0,
-            avel: 0.0,
-            lidar: robcore::LidarData(vec![]),
-            cam: robcore::CamData(vec![]),
-        }
-    }
-}
-
-impl robcore::Robot for Robot {
-    fn get_pos(&self) -> robcore::Pos2 {
-        robcore::Pos2 {
-            x: self.pos.x,
-            y: self.pos.y,
+            ..Default::default()
+        };
+        Self {
+            robot,
+            control: robcore::Control::default(),
         }
     }
 
-    fn get_cam_data(&self) -> &robcore::CamData {
-        &self.cam
-    }
-
-    fn get_lidar_data(&self) -> &robcore::LidarData {
-        &self.lidar
-    }
-
-    fn post(&self, _msg: robcore::Message) {
-        todo!()
-    }
-
-    fn recv(&mut self) -> Vec<robcore::Message> {
-        todo!()
-    }
-
-    fn set_control(&mut self, control: robcore::Control) {
-        self.vel = control.speed;
-        self.avel = control.steer;
+    pub fn pos(&self) -> Pos2 {
+        self.robot.pos
     }
 }
 
 #[derive(Clone)]
 pub struct Simulator {
-    pub robots: Vec<Robot>,
+    pub agents: Vec<Agent>,
     pub robot_radius: f32,
     pub world: World,
     pub sps: f32,
-    behavior: for<'a> fn(&'a mut (dyn robcore::Robot + 'a)),
+    behavior: BehaviorFn,
 }
 
 impl Simulator {
-    pub fn new(
-        world: World,
-        sps: f32,
-        behavior: for<'a> fn(&'a mut (dyn robcore::Robot + 'a)),
-    ) -> Self {
+    pub fn new(world: World, sps: f32, behavior: BehaviorFn) -> Self {
         Self {
-            robots: vec![],
+            agents: vec![],
             robot_radius: 0.3,
             behavior,
             world,
@@ -95,8 +65,8 @@ impl Simulator {
         1.0 / self.sps
     }
 
-    pub fn add_robot(&mut self, robot: Robot) {
-        self.robots.push(robot);
+    pub fn add_robot(&mut self, robot: Agent) {
+        self.agents.push(robot);
     }
 
     fn cast_ray(&self, pos: Pos2, angle: f32, max_range: f32) -> (f32, Option<Cell>) {
@@ -112,8 +82,8 @@ impl Simulator {
 
             // Check for collisions with other robots
             if distance > self.robot_radius {
-                for robot in &self.robots {
-                    if (robot.pos - pos).length() < self.robot_radius {
+                for robot in &self.agents {
+                    if (robot.pos() - pos).length() < self.robot_radius {
                         return (distance, None);
                     }
                 }
@@ -127,27 +97,27 @@ impl Simulator {
     }
 
     fn resolve_robot_collisions(&mut self) {
-        for i in 0..self.robots.len() {
-            for j in i + 1..self.robots.len() {
-                let robot1 = &self.robots[i];
-                let robot2 = &self.robots[j];
-                if (robot1.pos - robot2.pos).length() < self.robot_radius * 2.0 {
-                    let diff = robot1.pos - robot2.pos;
+        for i in 0..self.agents.len() {
+            for j in i + 1..self.agents.len() {
+                let robot1 = &self.agents[i];
+                let robot2 = &self.agents[j];
+                if (robot1.pos() - robot2.pos()).length() < self.robot_radius * 2.0 {
+                    let diff = robot1.pos() - robot2.pos();
                     let overlap = self.robot_radius * 2.0 - diff.length();
                     let dir = diff.normalized() * overlap / 2.0;
-                    self.robots[i].pos += dir;
-                    self.robots[j].pos -= dir;
+                    self.agents[i].robot.pos += dir;
+                    self.agents[j].robot.pos -= dir;
                 }
             }
         }
     }
 
     fn resolve_world_collisions(&mut self) {
-        for robot in &mut self.robots {
+        for robot in &mut self.agents {
             // Look in a circle around the robot
             let radius = self.robot_radius * CELLS_PR_METER * 1.4;
 
-            let center = self.world.world_to_grid(robot.pos);
+            let center = self.world.world_to_grid(robot.pos());
             let mut nudge = Vec2::ZERO;
             let mut nudgers = 0;
             for (x, y) in self.world.grid().circle_iter(center, radius) {
@@ -157,7 +127,7 @@ impl Simulator {
                         x: x as f32,
                         y: y as f32,
                     });
-                    let diff = robot.pos - cell_center;
+                    let diff = robot.pos() - cell_center;
 
                     let overlap = self.robot_radius - diff.length() + 0.5 / CELLS_PR_METER;
                     if overlap < 0.0 {
@@ -177,24 +147,24 @@ impl Simulator {
 
             if nudgers > 0 {
                 // Only nudge in the direction with most difference
-                robot.pos += nudge / nudgers as f32;
+                robot.robot.pos += nudge / nudgers as f32;
             }
         }
     }
 
     fn resolve_border_collisions(&mut self) {
-        for robot in &mut self.robots {
-            if robot.pos.x - self.robot_radius < -self.world.width() / 2.0 {
-                robot.pos.x = -self.world.width() / 2.0 + self.robot_radius;
+        for robot in &mut self.agents {
+            if robot.robot.pos.x - self.robot_radius < -self.world.width() / 2.0 {
+                robot.robot.pos.x = -self.world.width() / 2.0 + self.robot_radius;
             }
-            if robot.pos.x + self.robot_radius > self.world.width() / 2.0 {
-                robot.pos.x = self.world.width() / 2.0 - self.robot_radius;
+            if robot.robot.pos.x + self.robot_radius > self.world.width() / 2.0 {
+                robot.robot.pos.x = self.world.width() / 2.0 - self.robot_radius;
             }
-            if robot.pos.y - self.robot_radius < -self.world.height() / 2.0 {
-                robot.pos.y = -self.world.height() / 2.0 + self.robot_radius;
+            if robot.robot.pos.y - self.robot_radius < -self.world.height() / 2.0 {
+                robot.robot.pos.y = -self.world.height() / 2.0 + self.robot_radius;
             }
-            if robot.pos.y + self.robot_radius > self.world.height() / 2.0 {
-                robot.pos.y = self.world.height() / 2.0 - self.robot_radius;
+            if robot.robot.pos.y + self.robot_radius > self.world.height() / 2.0 {
+                robot.robot.pos.y = self.world.height() / 2.0 - self.robot_radius;
             }
         }
     }
@@ -203,12 +173,15 @@ impl Simulator {
         let dt = self.dt();
 
         // Call the behavior function for each robot
-        for robot in &mut self.robots {
-            (self.behavior)(robot);
+        for agent in &mut self.agents {
+            agent.control = (self.behavior)(&mut agent.robot);
+            agent.robot.vel = agent.control.speed;
+            agent.robot.avel = agent.control.steer;
         }
 
         // Update the position of each robot
-        for robot in self.robots.iter_mut() {
+        for agent in self.agents.iter_mut() {
+            let robot = &mut agent.robot;
             let vel = Vec2::angled(robot.angle) * robot.vel;
 
             robot.pos += vel * dt;
@@ -220,8 +193,9 @@ impl Simulator {
         self.resolve_world_collisions();
 
         // Update robot lidar data
-        let mut lidar_data = Vec::with_capacity(self.robots.len());
-        for robot in &self.robots {
+        let mut lidar_data = Vec::with_capacity(self.agents.len());
+        for agent in &self.agents {
+            let robot = &agent.robot;
             let points = (0..LIDAR_RAYS)
                 .map(|n| {
                     let angle = n as f32 / LIDAR_RAYS as f32 * 2.0 * PI;
@@ -233,11 +207,12 @@ impl Simulator {
         }
 
         // Update robot camera
-        let mut cam_data = Vec::with_capacity(self.robots.len());
+        let mut cam_data = Vec::with_capacity(self.agents.len());
 
         const ANGLE_STEP: f32 = CAMERA_FOV / (CAMERA_RAYS - 1) as f32;
 
-        for robot in &self.robots {
+        for agent in &self.agents {
+            let robot = &agent.robot;
             let points = (0..CAMERA_RAYS)
                 .filter_map(|n| {
                     let angle = n as f32 * ANGLE_STEP - CAMERA_FOV / 2.0;
@@ -293,7 +268,8 @@ impl Simulator {
 
         // Actually update the robots
         let data = lidar_data.into_iter().zip(cam_data);
-        for (robot, (lidar, cam)) in self.robots.iter_mut().zip(data) {
+        for (agent, (lidar, cam)) in self.agents.iter_mut().zip(data) {
+            let robot = &mut agent.robot;
             robot.lidar = lidar;
             robot.cam = cam;
         }

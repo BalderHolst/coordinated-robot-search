@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub use emath::{Pos2, Vec2};
 
 fn normalize_angle(angle: f32) -> f32 {
@@ -20,7 +22,7 @@ pub struct CamPoint {
     pub propability: f32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CamData(pub Vec<CamPoint>);
 
 #[derive(Debug, Clone, Default)]
@@ -29,32 +31,49 @@ pub struct LidarPoint {
     pub distance: f32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct LidarData(pub Vec<LidarPoint>);
 
+#[derive(Debug, Clone, Default)]
 pub struct Control {
     pub speed: f32,
     pub steer: f32,
 }
 
-pub trait Robot {
-    /// Get the position of the robot
-    fn get_pos(&self) -> Pos2;
+#[derive(Debug, Clone, Default)]
+pub struct Robot {
+    /// The position of the robot
+    pub pos: Pos2,
 
-    /// Get the data from the camera. Angles and probability of objects.
-    fn get_cam_data(&self) -> &CamData;
+    /// The velocity of the robot
+    pub vel: f32,
 
-    /// Get the data from the lidar. Distance to objects.
-    fn get_lidar_data(&self) -> &LidarData;
+    /// The angle of the robot
+    pub angle: f32,
+
+    /// The angular velocity of the robot
+    pub avel: f32,
+
+    /// The data from the camera. Angles and probability of objects.
+    pub cam: CamData,
+    /// The data from the lidar. Distance to objects.
+    pub lidar: LidarData,
+    /// The messages from the other robots since the last call.
+    pub incomming_msg: Vec<Message>,
+    /// The messages to be sent to the other robots.
+    pub outgoing_msg: Vec<Message>,
+}
+
+impl Robot {
+    /// Get the messages from the other robots since the last call.
+    pub(crate) fn recv(&self) -> &Vec<Message> {
+        &self.incomming_msg
+    }
 
     /// Send a message to the other robots.
-    fn post(&self, msg: Message);
-
-    /// Get the messages from the other robots since the last call.
-    fn recv(&mut self) -> Vec<Message>;
-
-    /// Set the control signal for the robot. "Move the robot like this".
-    fn set_control(&mut self, control: Control);
+    pub(crate) fn post(&mut self, msg: Message) {
+        self.outgoing_msg.push(msg);
+    }
 }
 
 pub mod behaviors {
@@ -62,38 +81,36 @@ pub mod behaviors {
 
     use super::*;
 
-    pub fn circle(robot: &mut dyn Robot) {
-        robot.set_control(Control {
+    pub fn circle(_robot: &mut Robot) -> Control {
+        Control {
             speed: 1.0,
             steer: 0.5,
-        });
+        }
     }
 
-    pub fn only_straight(robot: &mut dyn Robot) {
-        robot.set_control(Control {
+    pub fn only_straight(_robot: &mut Robot) -> Control {
+        Control {
             speed: 1.0,
             steer: 0.0,
-        });
+        }
     }
 
-    pub fn nothing(robot: &mut dyn Robot) {
-        robot.set_control(Control {
+    pub fn nothing(_robot: &mut Robot) -> Control {
+        Control {
             speed: 0.0,
             steer: 0.0,
-        });
+        }
     }
 
-    pub fn move_to_center(robot: &mut dyn Robot) {
-        let pos = robot.get_pos();
+    pub fn move_to_center(robot: &mut Robot) -> Control {
+        let pos = robot.pos;
         let steer = f32::atan2(-pos.y, -pos.x);
-        robot.set_control(Control { speed: 1.0, steer });
+        Control { speed: 1.0, steer }
     }
 
-    pub fn avoid_obstacles(robot: &mut dyn Robot) {
+    pub fn avoid_obstacles(robot: &mut Robot) -> Control {
         const MIN_DISTANCE: f32 = 3.0;
         const FOV: f32 = PI / 1.8;
-
-        let lidar = robot.get_lidar_data();
 
         let mut steer = 0.0;
         let mut speed = 1.0;
@@ -103,7 +120,9 @@ pub mod behaviors {
             angle: 0.0,
             distance: f32::INFINITY,
         };
-        for point in &lidar.0 {
+
+        let LidarData(lidar) = &robot.lidar;
+        for point in lidar {
             let angle = normalize_angle(point.angle);
             if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV)
                 && point.distance < min_point.distance
@@ -119,15 +138,15 @@ pub mod behaviors {
             speed *= 1.0 - how_close;
         }
 
-        robot.set_control(Control { speed, steer });
+        Control { speed, steer }
     }
 
     /// Steers towards the furthest point in the lidar data that is closest to the heading of the robot.
-    pub fn toward_space(robot: &mut dyn Robot) {
+    pub fn toward_space(robot: &mut Robot) -> Control {
         const MAX_SPEED: f32 = 1.0;
         const MAX_STEER: f32 = 10.0;
 
-        let LidarData(mut points) = robot.get_lidar_data().clone();
+        let LidarData(mut points) = robot.lidar.clone();
 
         points.iter_mut().for_each(|point| {
             point.angle = normalize_angle(point.angle);
@@ -151,6 +170,6 @@ pub mod behaviors {
         let speed = speed * MAX_SPEED;
         let steer = steer * MAX_STEER;
 
-        robot.set_control(Control { speed, steer });
+        Control { speed, steer }
     }
 }

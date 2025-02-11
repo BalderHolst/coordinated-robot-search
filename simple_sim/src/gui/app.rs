@@ -23,7 +23,6 @@ use eframe::{
     epaint::{Hsva, PathStroke},
     CreationContext,
 };
-use robcore::Robot;
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
@@ -128,12 +127,13 @@ impl App {
     }
 
     fn draw_robots(&mut self, painter: &Painter) {
-        for (n, robot) in self.sim.robots.iter().enumerate() {
+        for (n, agent) in self.sim.agents.iter().enumerate() {
+            let robot = &agent.robot;
             let pos = self.cam.world_to_viewport(robot.pos);
 
             // Draw lidar rays
             if self.vis_opts.show_lidar && self.focused == Some(n) {
-                for point in &robot.get_lidar_data().0 {
+                for point in &robot.lidar.0 {
                     let end = pos
                         + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
                     painter.line(
@@ -147,7 +147,7 @@ impl App {
             }
 
             // Draw camera rays
-            for point in &robot.get_cam_data().0 {
+            for point in &robot.cam.0 {
                 let width = self.cam.scaled(0.20) * point.propability;
                 let color = Hsva::new(0.0 * 2.0, 0.8, 0.8, point.propability);
                 let end = pos + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(1.0);
@@ -239,7 +239,7 @@ impl eframe::App for App {
                         self.focused = None;
                     });
 
-                    for (n, _robot) in self.sim.robots.iter().enumerate() {
+                    for (n, _robot) in self.sim.agents.iter().enumerate() {
                         ui.button(format!("Robot [{n}]")).clicked().then(|| {
                             self.focused = Some(n);
                         });
@@ -289,7 +289,7 @@ impl eframe::App for App {
             .resizable(true)
             .show_animated(ctx, self.focused.is_some(), |ui| {
                 let n = self.focused.unwrap_or(0);
-                let robot = &self.sim.robots[n];
+                let robot = &self.sim.agents[n].robot;
 
                 ui.horizontal(|ui| {
                     ui.heading(format!("Robot [{n}]"));
@@ -346,7 +346,7 @@ impl eframe::App for App {
                 }
 
                 if let Some(f) = self.follow {
-                    self.cam.pos = self.sim.robots[f].pos;
+                    self.cam.pos = self.sim.agents[f].pos();
                 }
 
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
@@ -380,7 +380,8 @@ impl eframe::App for App {
 
                     // Check if we clicked on a robot
                     let mut found = None;
-                    for (n, robot) in self.sim.robots.iter().enumerate() {
+                    for (n, agent) in self.sim.agents.iter().enumerate() {
+                        let robot = &agent.robot;
                         if (robot.pos - pos).length() < self.sim.robot_radius * 1.5 {
                             self.focused = Some(n);
                             found = Some(n);
