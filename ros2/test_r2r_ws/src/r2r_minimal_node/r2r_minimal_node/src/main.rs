@@ -1,5 +1,4 @@
 use futures::{future, StreamExt};
-use r2r;
 use r2r::geometry_msgs::msg::Accel;
 use r2r::r2r_minimal_node_msgs::srv::HelloWorld;
 
