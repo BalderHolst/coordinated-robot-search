@@ -8,7 +8,6 @@ use std::{
 
 use crate::{
     bind_down, bind_pressed,
-    grid::Grid,
     sim::{Simulator, CAMERA_FOV},
     world::Cell,
 };
@@ -59,7 +58,7 @@ pub struct App {
     vis_opts: VisOpts,
 }
 
-fn grid_to_image(grid: &Grid<Cell>) -> ColorImage {
+fn grid_to_image(grid: &robcore::Grid<Cell>) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());

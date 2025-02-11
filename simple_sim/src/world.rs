@@ -3,7 +3,7 @@ use eframe::{
     epaint::Hsva,
 };
 
-use crate::grid::Grid;
+use robcore::Grid;
 
 pub const CELLS_PR_METER: f32 = 50.0;
 

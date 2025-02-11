@@ -1,4 +1,4 @@
-use eframe::egui::Pos2;
+use emath::Pos2;
 
 #[derive(Clone)]
 pub struct Grid<C> {

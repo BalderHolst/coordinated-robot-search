@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
 pub use emath::{Pos2, Vec2};
+pub use grid::Grid;
+
+pub mod grid;
 
 fn normalize_angle(angle: f32) -> f32 {
     let mut angle = angle;

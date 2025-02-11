@@ -3,7 +3,6 @@
 use clap::Parser;
 
 mod cli;
-mod grid;
 mod gui;
 mod sim;
 mod world;
