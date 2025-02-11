@@ -48,12 +48,14 @@ pub struct Simulator {
     pub world: World,
     pub sps: f32,
     behavior: BehaviorFn,
+    messages: Vec<robcore::Message>,
 }
 
 impl Simulator {
     pub fn new(world: World, sps: f32, behavior: BehaviorFn) -> Self {
         Self {
             agents: vec![],
+            messages: vec![],
             robot_radius: 0.3,
             behavior,
             world,
@@ -65,8 +67,10 @@ impl Simulator {
         1.0 / self.sps
     }
 
-    pub fn add_robot(&mut self, robot: Agent) {
-        self.agents.push(robot);
+    pub fn add_robot(&mut self, mut agent: Agent) {
+        let id = self.agents.len() as u32;
+        agent.robot.id = robcore::RobotId::new(id);
+        self.agents.push(agent);
     }
 
     fn cast_ray(&self, pos: Pos2, angle: f32, max_range: f32) -> (f32, Option<Cell>) {
@@ -186,6 +190,23 @@ impl Simulator {
 
             robot.pos += vel * dt;
             robot.angle += robot.avel * dt;
+        }
+
+        // Handle messages
+        let messages: Vec<_> = self
+            .agents
+            .iter_mut()
+            .flat_map(|agent| agent.robot.outgoing_msg.drain(..))
+            .collect();
+        for message in &messages {
+            println!("[{}] {}", message.from.as_u32(), message.kind);
+        }
+        for robot in &mut self.agents {
+            robot.robot.incomming_msg = messages
+                .iter()
+                .filter(|m| m.from != robot.robot.id)
+                .cloned()
+                .collect();
         }
 
         self.resolve_robot_collisions();

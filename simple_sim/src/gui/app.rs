@@ -131,7 +131,7 @@ impl App {
             let pos = self.cam.world_to_viewport(robot.pos);
 
             // Draw lidar rays
-            if self.vis_opts.show_lidar && self.focused == Some(n) {
+            if self.vis_opts.show_lidar {
                 for point in &robot.lidar.0 {
                     let end = pos
                         + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
@@ -139,7 +139,7 @@ impl App {
                         vec![pos, end],
                         PathStroke::new(
                             self.cam.scaled(0.01),
-                            Hsva::new(point.distance / self.sim.world.width() * 2.0, 0.8, 0.8, 1.0),
+                            Hsva::new(point.distance / self.sim.world.width() * 2.0, 0.8, 0.8, 0.5),
                         ),
                     );
                 }
@@ -205,7 +205,7 @@ impl App {
             painter.text(
                 pos,
                 Align2::CENTER_CENTER,
-                n.to_string(),
+                robot.id.as_u32().to_string(),
                 font_id,
                 Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
             );
@@ -238,7 +238,7 @@ impl eframe::App for App {
                         self.focused = None;
                     });
 
-                    for (n, _robot) in self.sim.agents.iter().enumerate() {
+                    for (n, _) in self.sim.agents.iter().enumerate() {
                         ui.button(format!("Robot [{n}]")).clicked().then(|| {
                             self.focused = Some(n);
                         });
@@ -263,6 +263,7 @@ impl eframe::App for App {
                 ui.horizontal(|ui| {
                     ui.label("Global Visualization Options:");
                     ui.toggle_value(&mut self.vis_opts.show_velocity, "Show Velocities");
+                    ui.toggle_value(&mut self.vis_opts.show_lidar, "Show Lidar");
 
                     // SPS Slider
                     let prev_target_sps = self.target_sps;

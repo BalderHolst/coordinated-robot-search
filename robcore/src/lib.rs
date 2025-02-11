@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::fmt::Display;
+
 pub use emath::{Pos2, Vec2};
 pub use grid::Grid;
 
@@ -16,8 +18,41 @@ fn normalize_angle(angle: f32) -> f32 {
     angle
 }
 
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+pub struct RobotId(u32);
+
+impl Copy for RobotId {}
+
+impl RobotId {
+    pub fn new(id: u32) -> Self {
+        Self(id)
+    }
+
+    pub fn as_u32(&self) -> u32 {
+        self.0
+    }
+}
+
 #[derive(Debug, Clone)]
-pub struct Message;
+pub enum MessageKind {
+    String(String),
+    Debug(String),
+}
+
+impl Display for MessageKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            MessageKind::String(s) => write!(f, "{}", s),
+            MessageKind::Debug(s) => write!(f, "DEBUG: {}", s),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Message {
+    pub from: RobotId,
+    pub kind: MessageKind,
+}
 
 #[derive(Debug, Clone)]
 pub struct CamPoint {
@@ -45,6 +80,9 @@ pub struct Control {
 
 #[derive(Debug, Clone, Default)]
 pub struct Robot {
+    /// The id of the robot
+    pub id: RobotId,
+
     /// The position of the robot
     pub pos: Pos2,
 
@@ -74,8 +112,11 @@ impl Robot {
     }
 
     /// Send a message to the other robots.
-    pub(crate) fn post(&mut self, msg: Message) {
-        self.outgoing_msg.push(msg);
+    pub(crate) fn post(&mut self, msg: MessageKind) {
+        self.outgoing_msg.push(Message {
+            from: self.id,
+            kind: msg,
+        });
     }
 }
 
@@ -139,6 +180,24 @@ pub mod behaviors {
             let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
             steer = how_close * (min_point.angle - PI).signum();
             speed *= 1.0 - how_close;
+        }
+
+        let CamData(cam) = robot.cam.clone();
+        for point in cam.iter() {
+            robot.post(MessageKind::String(format!(
+                "Found point of interest at angle {:.2} with propability {:.2}!",
+                point.angle, point.propability
+            )));
+        }
+
+        for msg in robot.recv().clone() {
+            if matches!(msg.kind, MessageKind::Debug(_)) {
+                continue;
+            }
+            robot.post(MessageKind::Debug(format!(
+                "Received message from robot {}.",
+                msg.from.as_u32(),
+            )));
         }
 
         Control { speed, steer }
