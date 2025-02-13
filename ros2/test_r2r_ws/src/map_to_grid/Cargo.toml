@@ -12,4 +12,3 @@ inherits = "release"
 [dependencies]
 r2r = "0.9"
 futures = "0.3"
-tokio = { version = "1", features = ["full"] }

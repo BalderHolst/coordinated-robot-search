@@ -1,0 +1,11 @@
+[package]
+name = "rossim"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+robcore = { path = "../robcore/" }
+eframe = { version = "0.30" }
+clap = { version = "4.5.28", features = ["derive"] }
+r2r = "0.9"
+futures = "0.3"
