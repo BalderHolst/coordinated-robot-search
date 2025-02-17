@@ -99,7 +99,7 @@ impl World {
             y,
             self.grid.height()
         );
-        self.grid.get(x, y)
+        self.grid.get(x as i64, y as i64)
     }
 
     pub fn width(&self) -> f32 {
