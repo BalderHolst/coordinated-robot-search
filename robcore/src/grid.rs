@@ -19,7 +19,7 @@ impl<C> Default for Grid<C> {
     }
 }
 
-impl<C: Clone + Copy + Default> Grid<C> {
+impl<C: GridCell> Grid<C> {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             cells: vec![C::default(); width * height],
@@ -40,7 +40,7 @@ impl<C: Clone + Copy + Default> Grid<C> {
         self.cells
             .get(y * self.width + x)
             .cloned()
-            .unwrap_or_default()
+            .unwrap_or_else(C::out_of_bounds)
     }
 
     pub fn set(&mut self, x: usize, y: usize, cell: C) {
@@ -104,3 +104,36 @@ impl<C> Debug for Grid<C> {
         writeln!(f, "Grid({}x{})", self.width, self.height)
     }
 }
+
+pub trait GridCell: Clone + Copy + Default {
+    fn out_of_bounds() -> Self;
+}
+
+macro_rules! impl_grid_cell {
+    ($($t:ty),*) => {
+        $(
+            impl GridCell for $t {
+                fn out_of_bounds() -> Self {
+                    Self::default()
+                }
+            }
+        )*
+    };
+}
+
+impl_grid_cell![
+    (),
+    bool,
+    u8,
+    u16,
+    u32,
+    u64,
+    u128,
+    i8,
+    i16,
+    i32,
+    i64,
+    i128,
+    f32,
+    f64
+];

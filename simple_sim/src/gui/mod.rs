@@ -30,7 +30,7 @@ pub fn run(args: Args) {
         options,
         Box::new(|cc| {
             // Set up world
-            let mut world = World::new(10.0, 10.0);
+            let mut world = World::new(10.0, 10.0, 0.02);
             world.line(pos2(-2.0, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
             world.line(pos2(-2.0, 0.0), pos2(-2.0, -2.0), 0.2, Cell::Wall);
             world.circle(pos2(0.0, 3.0), 0.08, Cell::SearchItem);

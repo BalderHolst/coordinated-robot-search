@@ -224,6 +224,7 @@ impl Simulator {
                     robcore::LidarPoint { angle, distance }
                 })
                 .collect();
+
             lidar_data.push(robcore::LidarData(points));
         }
 
