@@ -62,7 +62,7 @@ fn grid_to_image(grid: &robcore::Grid<Cell>) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());
-        *pixel = grid.get(x as i64, y as i64).color();
+        *pixel = grid.get(x, y).color();
     });
     image
 }
