@@ -1,8 +1,8 @@
+use std::fmt::Debug;
+
 use emath::{Pos2, Vec2};
 
-use crate::grid::GridCell;
-
-use super::Grid;
+use crate::grid::{iter_circle, Grid, GridCell};
 
 #[derive(Clone)]
 pub struct ScaledGrid<C: GridCell> {
@@ -10,6 +10,17 @@ pub struct ScaledGrid<C: GridCell> {
     width: f32,
     height: f32,
     cell_size: f32,
+}
+
+impl<C: GridCell> Default for ScaledGrid<C> {
+    fn default() -> Self {
+        Self {
+            grid: Grid::default(),
+            width: 0.0,
+            height: 0.0,
+            cell_size: 1.0,
+        }
+    }
 }
 
 impl<C: GridCell> ScaledGrid<C> {
@@ -65,7 +76,7 @@ impl<C: GridCell> ScaledGrid<C> {
         (pos + Vec2::splat(0.5)) * self.cell_size - self.size() / 2.0
     }
 
-    pub fn get_cell(&self, pos: Pos2) -> C {
+    pub fn get(&self, pos: Pos2) -> C {
         if pos.x < self.width / -2.0
             || pos.x > self.width / 2.0
             || pos.y < self.height / -2.0
@@ -74,23 +85,33 @@ impl<C: GridCell> ScaledGrid<C> {
             return C::out_of_bounds();
         }
         let pos = self.world_to_grid(pos);
-        debug_assert!(pos.x >= 0.0, "x: {}", pos.x);
-        debug_assert!(pos.y >= 0.0, "y: {}", pos.y);
+        debug_assert!(pos.x >= 0.0);
+        debug_assert!(pos.y >= 0.0);
         let x = pos.x as usize;
         let y = pos.y as usize;
-        debug_assert!(
-            x <= self.grid.width(),
-            "x: {}, width: {}",
-            x,
-            self.grid.width()
-        );
-        debug_assert!(
-            y <= self.grid.height(),
-            "y: {}, height: {}",
-            y,
-            self.grid.height()
-        );
+        debug_assert!(x <= self.grid.width());
+        debug_assert!(y <= self.grid.height());
         self.grid.get(x, y)
+    }
+
+    pub fn set(&mut self, pos: Pos2, cell: C) {
+        if pos.x < self.width / -2.0
+            || pos.x > self.width / 2.0
+            || pos.y < self.height / -2.0
+            || pos.y > self.height / 2.0
+        {
+            return;
+        }
+        let pos = self.world_to_grid(pos);
+        debug_assert!(pos.x >= 0.0);
+        debug_assert!(pos.y >= 0.0);
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        debug_assert!(x <= self.grid.width());
+        debug_assert!(y <= self.grid.height());
+        if x < self.grid.width() && y < self.grid.height() {
+            self.grid.set(x, y, cell);
+        }
     }
 
     pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
@@ -104,5 +125,24 @@ impl<C: GridCell> ScaledGrid<C> {
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
         self.grid.circle(center, radius, cell);
+    }
+
+    pub fn iter_circle(&self, center: Pos2, radius: f32) -> impl Iterator<Item = (Pos2, C)> + '_ {
+        let radius = radius / self.cell_size;
+        let center = self.world_to_grid(center);
+        iter_circle(center, radius).map(move |(x, y)| {
+            let pos = self.grid_to_world(Pos2::new(x as f32, y as f32));
+            (pos, self.grid.get(x, y))
+        })
+    }
+}
+
+impl<C: GridCell> Debug for ScaledGrid<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "ScaledGrid({}x{} at {})",
+            self.width, self.height, self.cell_size
+        )
     }
 }

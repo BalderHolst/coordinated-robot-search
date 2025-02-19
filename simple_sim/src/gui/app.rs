@@ -58,7 +58,7 @@ pub struct App {
     vis_opts: VisOpts,
 }
 
-fn grid_to_image(grid: &robcore::Grid<Cell>) -> ColorImage {
+fn grid_to_image(grid: &robcore::grid::Grid<Cell>) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());

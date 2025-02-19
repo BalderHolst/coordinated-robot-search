@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use eframe::egui::{Pos2, Vec2};
-use robcore::{self, CamPoint};
+use robcore::{self, grid::iter_circle, scaled_grid::ScaledGrid, CamPoint};
 
 use crate::{
     cli::BehaviorFn,
@@ -70,6 +70,8 @@ impl Simulator {
     pub fn add_robot(&mut self, mut agent: Agent) {
         let id = self.agents.len() as u32;
         agent.robot.id = robcore::RobotId::new(id);
+        agent.robot.search_grid =
+            ScaledGrid::new(self.world.width(), self.world.height(), self.world.scale());
         self.agents.push(agent);
     }
 
@@ -79,7 +81,7 @@ impl Simulator {
         let step = RAY_CAST_STEP * Vec2::angled(angle);
 
         while distance < max_range {
-            let cell = self.world.get_cell(pos);
+            let cell = self.world.get(pos);
             if !cell.is_empty() {
                 return (distance, Some(cell));
             }
@@ -124,7 +126,7 @@ impl Simulator {
             let center = self.world.world_to_grid(robot.pos());
             let mut nudge = Vec2::ZERO;
             let mut nudgers = 0;
-            for (x, y) in self.world.grid().circle_iter(center, radius) {
+            for (x, y) in iter_circle(center, radius) {
                 let cell = self.world.grid().get(x, y);
                 if !cell.is_empty() {
                     let cell_center = self.world.grid_to_world(Pos2 {

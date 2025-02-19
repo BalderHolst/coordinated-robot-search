@@ -3,7 +3,7 @@
 use std::fmt::Display;
 
 pub use emath::{Pos2, Vec2};
-pub use grid::Grid;
+use scaled_grid::ScaledGrid;
 
 pub mod grid;
 pub mod scaled_grid;
@@ -116,7 +116,7 @@ pub struct Robot {
     pub outgoing_msg: Vec<Message>,
 
     /// Grid containing probabilities of objects in the environment.
-    pub search_grid: Grid<f32>,
+    pub search_grid: ScaledGrid<f32>,
 }
 
 impl Robot {
@@ -260,16 +260,18 @@ pub mod behaviors {
         let CamData(mut cam) = robot.cam.clone();
         cam.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
 
-        for (x, y) in robot
+        for (pos, mut cell) in robot
             .search_grid
-            .circle_iter(robot.pos, robot.cam_range / GRID_SCALE)
+            .iter_circle(robot.pos, robot.cam_range / GRID_SCALE)
+            .collect::<Vec<_>>()
+            .into_iter()
         {
-            let angle = f32::atan2(y as f32, x as f32) - robot.angle;
+            let offset = pos - robot.pos;
+
+            let angle = offset.angle() - robot.angle;
             if angle.abs() > robot.cam_fov / 2.0 {
                 continue;
             }
-
-            let mut cell = robot.search_grid.get(x, y);
 
             for point in cam.iter() {
                 let angle_diff = (point.angle - angle).abs();
@@ -281,7 +283,7 @@ pub mod behaviors {
             }
             cell -= 0.1; // We cool down of nothing is found
 
-            robot.search_grid.set(x, y, cell);
+            robot.search_grid.set(pos, cell);
         }
 
         println!("Cam data: {:?}", cam);
