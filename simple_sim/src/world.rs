@@ -2,8 +2,6 @@ use eframe::{egui::Color32, epaint::Hsva};
 
 use robcore::{grid::GridCell, scaled_grid::ScaledGrid};
 
-pub const CELLS_PR_METER: f32 = 50.0;
-
 #[derive(Clone, Copy, Default, PartialEq, Debug)]
 pub enum Cell {
     #[default]

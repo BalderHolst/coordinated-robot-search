@@ -5,17 +5,11 @@ use robcore::{self, grid::iter_circle, scaled_grid::ScaledGrid, CamPoint};
 
 use crate::{
     cli::BehaviorFn,
-    world::{Cell, World, CELLS_PR_METER},
+    world::{Cell, World},
 };
 
 const LIDAR_RAYS: usize = 40;
-const LIDAR_RANGE: f32 = 5.0;
-
 const CAMERA_RAYS: usize = 20;
-const CAMERA_RANGE: f32 = 3.0;
-pub const CAMERA_FOV: f32 = PI / 2.0;
-
-const RAY_CAST_STEP: f32 = 0.5 / CELLS_PR_METER;
 
 /// The factor of the world size to use as the search grid size
 const SEARCH_GRID_FACTOR: f32 = 0.25;
@@ -136,7 +130,7 @@ impl Simulator {
     fn resolve_world_collisions(&mut self) {
         for agent in &mut self.agents {
             // Look in a circle around the robot
-            let radius = agent.robot.diameter / 2.0 * CELLS_PR_METER * 1.4;
+            let radius = agent.robot.diameter / 2.0 * 1.4 / self.world.scale();
 
             let center = self.world.world_to_grid(agent.pos());
             let mut nudge = Vec2::ZERO;
@@ -150,7 +144,8 @@ impl Simulator {
                     });
                     let diff = agent.pos() - cell_center;
 
-                    let overlap = agent.robot.diameter / 2.0 - diff.length() + 0.5 / CELLS_PR_METER;
+                    let overlap =
+                        agent.robot.diameter / 2.0 - diff.length() + 0.5 * self.world.scale();
                     if overlap < 0.0 {
                         continue;
                     }
@@ -243,7 +238,7 @@ impl Simulator {
                         robot.pos,
                         robot.angle + angle,
                         robot.diameter / 2.0,
-                        LIDAR_RANGE,
+                        robot.lidar_range,
                     );
                     robcore::LidarPoint { angle, distance }
                 })
@@ -254,22 +249,22 @@ impl Simulator {
         // Update robot camera
         let mut cam_data = Vec::with_capacity(self.agents.len());
 
-        const ANGLE_STEP: f32 = CAMERA_FOV / (CAMERA_RAYS - 1) as f32;
-
         for agent in &self.agents {
             let robot = &agent.robot;
+            let angle_step = robot.cam_fov / (CAMERA_RAYS - 1) as f32;
+            let (_, max_camera_range) = robot.cam_range;
             let points = (0..CAMERA_RAYS)
                 .filter_map(|n| {
-                    let angle = n as f32 * ANGLE_STEP - CAMERA_FOV / 2.0;
+                    let angle = n as f32 * angle_step - robot.cam_fov / 2.0;
                     let (distance, cell) = self.cast_ray(
                         robot.pos,
                         robot.angle + angle,
                         robot.diameter / 2.0,
-                        CAMERA_RANGE,
+                        max_camera_range,
                     );
                     match cell {
                         Some(Cell::SearchItem) => {
-                            let propability = (CAMERA_RANGE - distance) / CAMERA_RANGE;
+                            let propability = (max_camera_range - distance) / max_camera_range;
                             Some((n, robcore::CamPoint { angle, propability }))
                         }
                         _ => None,

@@ -110,6 +110,8 @@ pub struct Robot {
 
     /// The data from the lidar. Distance to objects.
     pub lidar: LidarData,
+
+    /// Range of the lidar sensor (in meters)
     pub lidar_range: f32,
 
     /// The messages from the other robots since the last call.
@@ -135,7 +137,7 @@ impl Default for Robot {
             cam_range: (0.8, 3.0),
             cam_fov: PI / 2.0,
             lidar: Default::default(),
-            lidar_range: Default::default(),
+            lidar_range: 5.0,
             incomming_msg: Default::default(),
             outgoing_msg: Default::default(),
             search_grid: Default::default(),

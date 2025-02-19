@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     bind_down, bind_pressed,
-    sim::{Agent, Simulator, CAMERA_FOV},
+    sim::{Agent, Simulator},
     world::Cell,
 };
 
@@ -182,7 +182,7 @@ impl App {
             const FOV_INIDICATOR_LEN: f32 = 0.1;
             const FOV_INIDICATOR_WIDTH: f32 = 0.02;
             {
-                let left = Vec2::angled(robot.angle - CAMERA_FOV / 2.0);
+                let left = Vec2::angled(robot.angle - robot.cam_fov / 2.0);
                 painter.line_segment(
                     [
                         pos,
@@ -190,7 +190,7 @@ impl App {
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
-                let right = Vec2::angled(robot.angle + CAMERA_FOV / 2.0);
+                let right = Vec2::angled(robot.angle + robot.cam_fov / 2.0);
                 painter.line_segment(
                     [
                         pos,
