@@ -16,8 +16,8 @@ use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
 use eframe::{
     self,
     egui::{
-        self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, Key, Margin,
-        Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureHandle, TextureOptions, Vec2,
+        self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, ImageData, Key,
+        Margin, Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureId, TextureOptions, Vec2,
     },
     epaint::{Hsva, PathStroke},
     CreationContext,
@@ -54,7 +54,7 @@ pub struct App {
     pub sim: Simulator,
     focused: Option<usize>,
     follow: Option<usize>,
-    world_texture: TextureHandle,
+    world_texture: TextureId,
     vis_opts: VisOpts,
 }
 
@@ -107,9 +107,17 @@ impl App {
         }
 
         let world_image = grid_to_image(sim.world.grid());
-        let world_texture =
-            cc.egui_ctx
-                .load_texture("world-grid-image", world_image, TextureOptions::default());
+        let world_image = ImageData::from(world_image);
+
+        let texture_manager = &cc.egui_ctx.tex_manager();
+        let mut texture_manager = texture_manager.write();
+
+        let world_texture = texture_manager.alloc(
+            "world-grid-image".to_string(),
+            world_image,
+            TextureOptions::default(),
+        );
+
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
@@ -351,7 +359,7 @@ impl eframe::App for App {
 
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-                painter.image(self.world_texture.id(), world_rect, uv, Color32::WHITE);
+                painter.image(self.world_texture, world_rect, uv, Color32::WHITE);
 
                 // Get simulation
                 if let Ok(sim) = self.sim_bg.lock() {
