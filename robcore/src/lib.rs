@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::fmt::Display;
+use std::{f32::consts::PI, fmt::Display};
 
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
@@ -79,7 +79,7 @@ pub struct Control {
     pub steer: f32,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Robot {
     /// The id of the robot
     pub id: RobotId,
@@ -96,11 +96,14 @@ pub struct Robot {
     /// The angular velocity of the robot
     pub avel: f32,
 
+    /// Size of the robot
+    pub diameter: f32,
+
     /// The data from the camera. Angles and probability of objects.
     pub cam: CamData,
 
-    /// Range of camera object detection
-    pub cam_range: f32,
+    /// Range (min and max distance) of camera object detection (in meters)
+    pub cam_range: (f32, f32),
 
     /// Field of view of the camera
     pub cam_fov: f32,
@@ -117,6 +120,27 @@ pub struct Robot {
 
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
+}
+
+impl Default for Robot {
+    fn default() -> Self {
+        Self {
+            id: Default::default(),
+            pos: Default::default(),
+            vel: Default::default(),
+            angle: Default::default(),
+            avel: Default::default(),
+            diameter: 0.5,
+            cam: Default::default(),
+            cam_range: (0.8, 3.0),
+            cam_fov: PI / 2.0,
+            lidar: Default::default(),
+            lidar_range: Default::default(),
+            incomming_msg: Default::default(),
+            outgoing_msg: Default::default(),
+            search_grid: Default::default(),
+        }
+    }
 }
 
 impl Robot {
@@ -250,43 +274,55 @@ pub mod behaviors {
     }
 
     pub fn search(robot: &mut Robot) -> Control {
-        const MAX_HEAT: f32 = 1000.0;
-        const MIN_HEAT: f32 = -1000.0;
-
-        const GRID_SCALE: f32 = 0.1;
+        const MAX_HEAT: f32 = 100.0;
+        const MIN_HEAT: f32 = -100.0;
 
         const HEAT_WIDTH: f32 = PI / 4.0;
 
-        let CamData(mut cam) = robot.cam.clone();
-        cam.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
+        let CamData(cam) = robot.cam.clone();
+        let (min_distance, max_distance) = robot.cam_range;
 
-        for (pos, mut cell) in robot
+        let cone = robot
             .search_grid
-            .iter_circle(robot.pos, robot.cam_range / GRID_SCALE)
-            .collect::<Vec<_>>()
-            .into_iter()
-        {
-            let offset = pos - robot.pos;
-
-            let angle = offset.angle() - robot.angle;
-            if angle.abs() > robot.cam_fov / 2.0 {
-                continue;
-            }
-
-            for point in cam.iter() {
-                let angle_diff = (point.angle - angle).abs();
-                let weight = HEAT_WIDTH - angle_diff;
-                if weight <= 0.0 {
-                    continue;
+            .iter_circle(robot.pos, robot.cam_range.1)
+            .filter(|(point, _cell)| {
+                let offset = *point - robot.pos;
+                if offset.length() < min_distance {
+                    return false;
                 }
-                cell += point.propability * weight;
-            }
-            cell -= 0.1; // We cool down of nothing is found
+                let angle = offset.angle() - robot.angle;
+                let angle = normalize_angle(angle);
+                angle.abs() < robot.cam_fov / 2.0
+            })
+            .collect::<Vec<_>>();
 
-            robot.search_grid.set(pos, cell);
+        for (point, mut cell) in cone {
+            cell -= 0.1;
+            robot.search_grid.set(point, cell);
         }
 
-        println!("Cam data: {:?}", cam);
+        let step_size = robot.search_grid.scale();
+        for cam_point in cam {
+            let angle = robot.angle + cam_point.angle;
+            let dir = Vec2::angled(angle);
+
+            let r = step_size * 2.0;
+            let mut distance = min_distance + r / 2.0;
+            while distance < max_distance - r / 2.0 {
+                let pos = robot.pos + dir * distance;
+
+                for (point, mut cell) in robot.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
+                    cell += cam_point.propability;
+                    robot.search_grid.set(point, cell);
+                }
+
+                let mut cell = robot.search_grid.get(pos);
+                cell += cam_point.propability;
+                cell = cell.clamp(MIN_HEAT, MAX_HEAT);
+                robot.search_grid.set(pos, cell);
+                distance += step_size;
+            }
+        }
 
         Control {
             speed: 0.0,

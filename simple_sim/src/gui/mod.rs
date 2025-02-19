@@ -30,7 +30,7 @@ pub fn run(args: Args) {
         options,
         Box::new(|cc| {
             // Set up world
-            let mut world = World::new(10.0, 10.0, 0.02);
+            let mut world = World::new(10.0, 10.0, 0.05);
             world.line(pos2(-2.0, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
             world.line(pos2(-2.0, 0.0), pos2(-2.0, -2.0), 0.2, Cell::Wall);
             world.circle(pos2(0.0, 3.0), 0.08, Cell::SearchItem);
@@ -38,8 +38,8 @@ pub fn run(args: Args) {
             // Set up simulator
             let mut sim = Simulator::new(world, TARGET_SPS, args.behavior.get_fn());
             sim.add_robot(Agent::new_at(-2.0, -2.0, 1.0));
-            sim.add_robot(Agent::new_at(-1.0, 1.0, 0.0));
             sim.add_robot(Agent::new_at(2.2, 1.1, PI));
+            sim.add_robot(Agent::new_at(-1.0, 1.0, 0.0));
 
             // Create app
             let app = App::new(sim, cc);

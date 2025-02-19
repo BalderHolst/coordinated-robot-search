@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     bind_down, bind_pressed,
-    sim::{Simulator, CAMERA_FOV},
+    sim::{Agent, Simulator, CAMERA_FOV},
     world::Cell,
 };
 
@@ -17,11 +17,13 @@ use eframe::{
     self,
     egui::{
         self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, ImageData, Key,
-        Margin, Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureId, TextureOptions, Vec2,
+        Margin, Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureFilter, TextureId, TextureOptions,
+        Vec2,
     },
-    epaint::{Hsva, PathStroke},
+    epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
 };
+use robcore::grid::GridCell;
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
@@ -44,6 +46,12 @@ impl Default for VisOpts {
     }
 }
 
+/// Textures used by the app
+struct AppTextures {
+    world: TextureId,
+    search_grid: Option<TextureId>,
+}
+
 pub struct App {
     sim_bg: Arc<Mutex<Simulator>>,
     actual_sps_bg: Arc<Mutex<f32>>,
@@ -54,15 +62,18 @@ pub struct App {
     pub sim: Simulator,
     focused: Option<usize>,
     follow: Option<usize>,
-    world_texture: TextureId,
     vis_opts: VisOpts,
+    textures: AppTextures,
 }
 
-fn grid_to_image(grid: &robcore::grid::Grid<Cell>) -> ColorImage {
+fn grid_to_image<C: GridCell>(
+    grid: &robcore::grid::Grid<C>,
+    color: impl Fn(C) -> Color32,
+) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());
-        *pixel = grid.get(x, y).color();
+        *pixel = color(grid.get(x, y));
     });
     image
 }
@@ -106,7 +117,7 @@ impl App {
             });
         }
 
-        let world_image = grid_to_image(sim.world.grid());
+        let world_image = grid_to_image(sim.world.grid(), |c| c.color());
         let world_image = ImageData::from(world_image);
 
         let texture_manager = &cc.egui_ctx.tex_manager();
@@ -115,7 +126,10 @@ impl App {
         let world_texture = texture_manager.alloc(
             "world-grid-image".to_string(),
             world_image,
-            TextureOptions::default(),
+            TextureOptions {
+                magnification: TextureFilter::Nearest,
+                ..Default::default()
+            },
         );
 
         Self {
@@ -128,8 +142,11 @@ impl App {
             target_sps_bg,
             focused: None,
             follow: None,
-            world_texture,
             vis_opts: VisOpts::default(),
+            textures: AppTextures {
+                world: world_texture,
+                search_grid: None,
+            },
         }
     }
 
@@ -169,7 +186,7 @@ impl App {
                 painter.line_segment(
                     [
                         pos,
-                        pos + left * self.cam.scaled(self.sim.robot_radius + FOV_INIDICATOR_LEN),
+                        pos + left * self.cam.scaled(robot.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
@@ -177,7 +194,7 @@ impl App {
                 painter.line_segment(
                     [
                         pos,
-                        pos + right * self.cam.scaled(self.sim.robot_radius + FOV_INIDICATOR_LEN),
+                        pos + right * self.cam.scaled(robot.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
@@ -190,14 +207,14 @@ impl App {
             };
             painter.circle(
                 pos,
-                self.cam.scaled(self.sim.robot_radius),
+                self.cam.scaled(robot.diameter / 2.0),
                 ROBOT_COLOR,
                 stroke,
             );
 
             // Draw velocity vector (arrow)
             if self.vis_opts.show_velocity {
-                let vel = Vec2::angled(robot.angle) * (robot.vel + self.sim.robot_radius);
+                let vel = Vec2::angled(robot.angle) * (robot.vel + robot.diameter * 0.5);
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
                 let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
@@ -217,6 +234,59 @@ impl App {
                 font_id,
                 Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
             );
+        }
+
+        // Draw search grid
+        for (n, Agent { robot, .. }) in self.sim.agents.iter().enumerate() {
+            if Some(n) == self.focused {
+                let (min, max) = self.sim.world.bounds();
+                let min = self.cam.world_to_viewport(min);
+                let max = self.cam.world_to_viewport(max);
+                let canvas = Rect::from_min_max(min, max);
+
+                let mut min: f32 = 0.0;
+                let mut max: f32 = 0.0;
+                for (_, _, cell) in robot.search_grid.grid().iter() {
+                    min = min.min(cell);
+                    max = max.max(cell);
+                }
+
+                const COOL_COLOR: Color32 = Color32::BLUE;
+                const UNCERTAIN_COLOR: Color32 = Color32::WHITE;
+                const WARM_COLOR: Color32 = Color32::YELLOW;
+                const HOT_COLOR: Color32 = Color32::RED;
+
+                const THRESHOLD: f32 = 10.0;
+
+                let image = grid_to_image(robot.search_grid.grid(), |c| {
+                    match c >= 0.0 {
+                        true => WARM_COLOR.lerp_to_gamma(HOT_COLOR, c / max),
+                        false => UNCERTAIN_COLOR.lerp_to_gamma(COOL_COLOR, c / min),
+                    }
+                    .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
+                });
+
+                let texture_manager = &painter.ctx().tex_manager();
+                let mut texture_manager = texture_manager.write();
+
+                let id = match self.textures.search_grid {
+                    Some(id) => {
+                        texture_manager.set(id, ImageDelta::full(image, TextureOptions::default()));
+                        id
+                    }
+                    None => texture_manager.alloc(
+                        "search-grid-image".to_string(),
+                        ImageData::from(image),
+                        TextureOptions {
+                            magnification: TextureFilter::Nearest,
+                            ..Default::default()
+                        },
+                    ),
+                };
+
+                let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                painter.image(id, canvas, uv, Color32::from_white_alpha(128));
+            }
         }
     }
 }
@@ -359,7 +429,7 @@ impl eframe::App for App {
 
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-                painter.image(self.world_texture, world_rect, uv, Color32::WHITE);
+                painter.image(self.textures.world, world_rect, uv, Color32::WHITE);
 
                 // Get simulation
                 if let Ok(sim) = self.sim_bg.lock() {
@@ -390,7 +460,7 @@ impl eframe::App for App {
                     let mut found = None;
                     for (n, agent) in self.sim.agents.iter().enumerate() {
                         let robot = &agent.robot;
-                        if (robot.pos - pos).length() < self.sim.robot_radius * 1.5 {
+                        if (robot.pos - pos).length() < robot.diameter * 0.75 {
                             self.focused = Some(n);
                             found = Some(n);
                             break;
