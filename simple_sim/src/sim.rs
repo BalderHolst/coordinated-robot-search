@@ -17,6 +17,9 @@ pub const CAMERA_FOV: f32 = PI / 2.0;
 
 const RAY_CAST_STEP: f32 = 0.5 / CELLS_PR_METER;
 
+/// The factor of the world size to use as the search grid size
+const SEARCH_GRID_FACTOR: f32 = 0.25;
+
 #[derive(Clone)]
 pub struct Agent {
     pub robot: robcore::Robot,
@@ -68,8 +71,11 @@ impl Simulator {
     pub fn add_robot(&mut self, mut agent: Agent) {
         let id = self.agents.len() as u32;
         agent.robot.id = robcore::RobotId::new(id);
-        agent.robot.search_grid =
-            ScaledGrid::new(self.world.width(), self.world.height(), self.world.scale());
+        agent.robot.search_grid = ScaledGrid::new(
+            self.world.width(),
+            self.world.height(),
+            self.world.scale() / SEARCH_GRID_FACTOR,
+        );
         self.agents.push(agent);
     }
 
