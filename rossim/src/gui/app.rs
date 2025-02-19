@@ -4,12 +4,14 @@ use std::{
         Arc, Mutex,
     },
     thread,
+    time::Duration,
 };
 
 use crate::{
     bind_down, bind_pressed,
+    ros2::Ros2,
     sim::{Simulator, CAMERA_FOV},
-    world::Cell,
+    world::{self, Cell},
 };
 
 use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
@@ -56,7 +58,7 @@ pub struct App {
     follow: Option<usize>,
     world_texture: TextureHandle,
     vis_opts: VisOpts,
-    ros2: r2r::Node,
+    // ros2: Ros2,
 }
 
 fn grid_to_image(grid: &robcore::Grid<Cell>) -> ColorImage {
@@ -108,9 +110,15 @@ impl App {
         }
 
         let world_image = grid_to_image(sim.world.grid());
-        let world_texture =
-            cc.egui_ctx
-                .load_texture("world-grid-image", world_image, TextureOptions::default());
+        // let world_texture =
+        //     cc.egui_ctx
+        //         .load_texture("world-grid-image", world_image, TextureOptions::default());
+        let world_texture = cc.egui_ctx.tex_manager().write().load_from_image(
+            "world-grid-image",
+            world_image,
+            TextureOptions::default(),
+        );
+        // let ros2 = Ros2::new();
         Self {
             cam: Camera::new(Pos2::ZERO),
             sim,
@@ -123,6 +131,7 @@ impl App {
             follow: None,
             world_texture,
             vis_opts: VisOpts::default(),
+            // ros2,
         }
     }
 
@@ -216,6 +225,10 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Run ros2
+        // self.ros2.node.spin_once(Duration::from_secs(0));
+        // self.ros2.pool.run_until_stalled();
+
         egui::TopBottomPanel::top("top-bar")
             .frame(Frame {
                 inner_margin: Margin::symmetric(4.0, 4.0),

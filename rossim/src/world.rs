@@ -5,7 +5,7 @@ use eframe::{
 
 use robcore::Grid;
 
-pub const CELLS_PR_METER: f32 = 1.0;
+pub const CELLS_PR_METER: f32 = 50.0;
 
 #[derive(Clone, Copy, Default, PartialEq)]
 pub enum Cell {

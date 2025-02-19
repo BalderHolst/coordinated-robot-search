@@ -3,6 +3,14 @@ name = "rossim"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "sim"
+path = "src/main.rs"
+
+[[bin]]
+name = "ros2"
+path = "src/main_ros.rs"
+
 [dependencies]
 robcore = { path = "../robcore/" }
 eframe = { version = "0.30" }

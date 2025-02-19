@@ -1,17 +1,23 @@
+use std::{
+    borrow::BorrowMut,
+    sync::{Arc, Mutex},
+};
+
 use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
 use r2r::QosProfile;
-use robcore::Pos2;
+// use robcore::Pos2;
 
-use crate::world::{self, Cell, World};
+// use crate::world::{self, Cell, World};
 
 pub struct Ros2 {
-    node: r2r::Node,
-    map: Option<r2r::nav_msgs::msg::OccupancyGrid>,
-    pool: LocalPool,
+    pub node: r2r::Node,
+    pub pool: LocalPool,
+    pub map: Arc<Mutex<Option<r2r::nav_msgs::msg::OccupancyGrid>>>,
+    had_map_update: Arc<Mutex<bool>>,
 }
 
 impl Ros2 {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let ctx = r2r::Context::create().unwrap();
         let mut node = r2r::Node::create(ctx, "echolist", "").unwrap();
         let qos = QosProfile::default()
@@ -22,7 +28,13 @@ impl Ros2 {
             .subscribe::<r2r::nav_msgs::msg::OccupancyGrid>("/map", qos)
             .unwrap();
 
+        let map = Arc::new(Mutex::new(None));
+        let map_cp = Arc::clone(&map);
+        let had_map_update = Arc::new(Mutex::new(false));
+        let had_map_update_cp = Arc::clone(&had_map_update);
+
         let pool = LocalPool::new();
+        println!("Pool created");
 
         // task that every other time forwards message to topic2
         pool.spawner()
@@ -39,10 +51,14 @@ impl Ros2 {
                     // };
                     // p.publish(&send).unwrap();
                     if let Some(msg) = sub.next().await {
+                        let mut map_updated = had_map_update_cp.lock().unwrap();
+                        *map_updated = true;
+
                         println!(
                             "Map info: {},{}:{}",
                             msg.info.height, msg.info.width, msg.info.resolution
                         );
+                        map_cp.lock().unwrap().replace(msg);
                     } else {
                         println!("Broken");
                         break;
@@ -52,29 +68,46 @@ impl Ros2 {
             .unwrap();
         Self {
             node,
-            map: None,
             pool,
+            map,
+            had_map_update,
         }
     }
-    fn to_world(&self) -> Option<world::World> {
-        if let Some(map) = &self.map {
-            let width = map.info.width as f32;
-            let height = map.info.height as f32;
-            let mut world = World::new(width, height);
-            for x in 0..width as usize {
-                for y in 0..height as usize {
-                    let cell = match map.data[y as usize * width as usize + x as usize] {
-                        0 => Cell::Wall,
-                        100 => Cell::Empty,
-                        -1 => Cell::OutOfBounds,
-                        _ => Cell::OutOfBounds,
-                    };
-                    world.set_cell(Pos2::new(x as f32, y as f32), cell);
+
+    pub fn had_map_update(&self) -> bool {
+        if let Ok(mut map_updated) = self.had_map_update.lock() {
+            let is_updated = *map_updated;
+            match is_updated {
+                true => {
+                    **map_updated.borrow_mut() = false;
+                    true
                 }
+                false => false,
             }
-            Some(world)
         } else {
-            None
+            false
         }
     }
+    // fn map_to_world(&self) -> Option<world::World> {
+    //     let map = self.map.lock().unwrap();
+    //     if let Some(map) = map.as_ref() {
+    //         let width = map.info.width;
+    //         let height = map.info.height;
+    //         let mut world = World::new(width as f32, height as f32);
+    //         for x in 0..width {
+    //             for y in 0..height {
+    //                 let cell = match map.data[(y * width + x) as usize] {
+    //                     0 => Cell::Empty,
+    //                     100 => Cell::Wall,
+    //                     -1 => Cell::OutOfBounds,
+    //                     _ => Cell::OutOfBounds,
+    //                 };
+    //                 world.set_cell(Pos2::new(x as f32, y as f32), cell);
+    //             }
+    //         }
+    //         Some(world)
+    //     } else {
+    //         None
+    //     }
+    // }
 }
