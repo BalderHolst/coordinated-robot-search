@@ -97,12 +97,25 @@ pub struct Robot {
 
     /// The data from the camera. Angles and probability of objects.
     pub cam: CamData,
+
+    /// Range of camera object detection
+    pub cam_range: f32,
+
+    /// Field of view of the camera
+    pub cam_fov: f32,
+
     /// The data from the lidar. Distance to objects.
     pub lidar: LidarData,
+    pub lidar_range: f32,
+
     /// The messages from the other robots since the last call.
     pub incomming_msg: Vec<Message>,
+
     /// The messages to be sent to the other robots.
     pub outgoing_msg: Vec<Message>,
+
+    /// Grid containing probabilities of objects in the environment.
+    pub search_grid: Grid<f32>,
 }
 
 impl Robot {
@@ -233,5 +246,48 @@ pub mod behaviors {
         let steer = steer * MAX_STEER;
 
         Control { speed, steer }
+    }
+
+    pub fn search(robot: &mut Robot) -> Control {
+        const MAX_HEAT: f32 = 1000.0;
+        const MIN_HEAT: f32 = -1000.0;
+
+        const GRID_SCALE: f32 = 0.1;
+
+        const HEAT_WIDTH: f32 = PI / 4.0;
+
+        let CamData(mut cam) = robot.cam.clone();
+        cam.sort_by(|a, b| a.angle.partial_cmp(&b.angle).unwrap());
+
+        for (x, y) in robot
+            .search_grid
+            .circle_iter(robot.pos, robot.cam_range / GRID_SCALE)
+        {
+            let angle = f32::atan2(y as f32, x as f32) - robot.angle;
+            if angle.abs() > robot.cam_fov / 2.0 {
+                continue;
+            }
+
+            let mut cell = robot.search_grid.get(x, y);
+
+            for point in cam.iter() {
+                let angle_diff = (point.angle - angle).abs();
+                let weight = HEAT_WIDTH - angle_diff;
+                if weight <= 0.0 {
+                    continue;
+                }
+                cell += point.propability * weight;
+            }
+            cell -= 0.1; // We cool down of nothing is found
+
+            robot.search_grid.set(x, y, cell);
+        }
+
+        println!("Cam data: {:?}", cam);
+
+        Control {
+            speed: 0.0,
+            steer: 0.1,
+        }
     }
 }

@@ -15,6 +15,7 @@ pub enum Behavior {
     OnlyStraight,
     AvoidObstacles,
     TowardSpace,
+    Search,
 }
 
 impl Behavior {
@@ -25,6 +26,7 @@ impl Behavior {
             Self::OnlyStraight => robcore::behaviors::only_straight,
             Self::AvoidObstacles => robcore::behaviors::avoid_obstacles,
             Self::TowardSpace => robcore::behaviors::toward_space,
+            Self::Search => robcore::behaviors::search,
         }
     }
 }

@@ -12,6 +12,17 @@ pub struct Grid<C> {
     height: usize,
 }
 
+impl<C> Default for Grid<C> {
+    fn default() -> Self {
+        Self {
+            offset: (0, 0),
+            cells: vec![],
+            width: 0,
+            height: 0,
+        }
+    }
+}
+
 impl<C: Clone + Copy + Default> Grid<C> {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
@@ -103,7 +114,7 @@ impl<C: Clone + Copy + Default> Grid<C> {
         if x >= max_x {
             let diff = (x - max_x + 1) as usize;
             let (xo, yo) = self.offset;
-            let mut new_grid = Self::with_offset(self.width + diff as usize, self.height, xo, yo);
+            let mut new_grid = Self::with_offset(self.width + diff, self.height, xo, yo);
             for (x, y, cell) in self.iter() {
                 new_grid.set(x, y, cell);
             }
@@ -175,33 +186,11 @@ impl<C: Clone + Copy + Default> Grid<C> {
     }
 }
 
-macro_rules! impl_debug_for {
-    ($ty:ident; $w:expr => $fmt:expr) => {
-        impl Debug for Grid<$ty> {
-            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                let mut s = String::new();
-                let (xo, yo) = self.offset;
-                for y in 0..self.height {
-                    for x in 0..self.width {
-                        let cell = self.get(x as Coord - xo as Coord, y as Coord - yo as Coord);
-                        s.extend($fmt(cell).to_string().chars());
-                    }
-                    s.push('\n');
-                }
-                write!(f, "{}", s)
-            }
-        }
-    };
-}
-
-macro_rules! impl_debug_for_numbers {
-    [$($ty:ident)+] => {
-        $(impl_debug_for!($ty; 3 => |cell| format!("{:3}", cell));)+
+impl<C> Debug for Grid<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "Grid({}x{})", self.width, self.height)
     }
 }
-
-impl_debug_for_numbers![u8 i8 u16 i16 u32 i32 u64 i64 usize isize];
-impl_debug_for!(bool; 2 => |cell| if cell { "##" } else { "~~" });
 
 #[cfg(test)]
 mod tests {
@@ -218,22 +207,14 @@ mod tests {
 
         assert_eq!(grid.get(0, 0), true);
 
-        println!("{:?}", grid);
-
         grid.set(-5, 0, true);
         assert_eq!(grid.get(-5, 0), true);
-
-        println!("{:?}", grid);
 
         grid.set(0, 11, true);
         assert_eq!(grid.get(0, 11), true);
 
-        println!("{:?}", grid);
-
         grid.set(15, 11, true);
         assert_eq!(grid.get(15, 11), true);
-
-        println!("{:?}", grid);
 
         assert_eq!(grid.get(0, 0), true);
     }
