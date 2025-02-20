@@ -17,7 +17,8 @@ from launch.actions import (
 from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, TextSubstitution
+from launch.substitutions import Command, LaunchConfiguration, TextSubstitution
+from launch_ros.actions import Node
 from nav2_common.launch import ParseMultiRobotPose
 
 
@@ -49,6 +50,15 @@ def generate_launch_description():
         "headless",
         default_value="True",
         description="Whether to start Gazebo headless",
+    )
+
+    robot_sdf = LaunchConfiguration("robot_sdf")
+    declare_robot_sdf_cmd = DeclareLaunchArgument(
+        "robot_sdf",
+        default_value=os.path.join(
+            desc_dir, "urdf", "standard", "turtlebot4.urdf.xacro"
+        ),
+        description="Full path to robot sdf file to spawn the robot in gazebo",
     )
     # use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     # declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
@@ -101,6 +111,7 @@ def generate_launch_description():
     #     default_value="1",
     #     description="Number of robots to spawn",
     # )
+    remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
     ########### Gazebo Simulation ###########
     world_sdf = tempfile.mktemp(prefix="nav2_", suffix=".sdf")
@@ -144,6 +155,7 @@ def generate_launch_description():
 
     # Define commands for launching the navigation instances
     bringup_cmd_group = []
+    robot_state_pubs = []
     for robot_name in robots_list:
         init_pose = robots_list[robot_name]
         group = GroupAction(
@@ -167,32 +179,43 @@ def generate_launch_description():
                 #         "rviz_config": rviz_config_file,
                 #     }.items(),
                 # ),
-                # IncludeLaunchDescription(
-                #     PythonLaunchDescriptionSource(
-                #         os.path.join(bringup_dir, "launch", "tb3_simulation_launch.py")
-                #     ),
-                #     launch_arguments={
-                #         "namespace": robot_name,
-                #         "use_namespace": "True",
-                #         "map": map_yaml_file,
-                #         "use_sim_time": "True",
-                #         "params_file": params_file,
-                #         "autostart": autostart,
-                #         "use_rviz": "False",
-                #         "use_simulator": "False",
-                #         "headless": "False",
-                #         "use_robot_state_pub": use_robot_state_pub,
-                #         "x_pose": TextSubstitution(text=str(init_pose["x"])),
-                #         "y_pose": TextSubstitution(text=str(init_pose["y"])),
-                #         "z_pose": TextSubstitution(text=str(init_pose["z"])),
-                #         "roll": TextSubstitution(text=str(init_pose["roll"])),
-                #         "pitch": TextSubstitution(text=str(init_pose["pitch"])),
-                #         "yaw": TextSubstitution(text=str(init_pose["yaw"])),
-                #         "robot_name": TextSubstitution(text=robot_name),
-                #     }.items(),
-                # ),
+                IncludeLaunchDescription(
+                    PythonLaunchDescriptionSource(
+                        os.path.join(sim_dir, "launch", "spawn_tb4.launch.py")
+                    ),
+                    launch_arguments={
+                        "namespace": robot_name,
+                        "use_simulator": "true",
+                        "use_sim_time": "true",
+                        "robot_name": "turtlebot4",
+                        # "robot_sdf": robot_sdf,
+                        "x_pose": f"{robots_list[robot_name]['x']}",
+                        "y_pose": f"{robots_list[robot_name]['y']}",
+                        "z_pose": f"{robots_list[robot_name]['z']}",
+                        "roll": f"{robots_list[robot_name]['roll']}",
+                        "pitch": f"{robots_list[robot_name]['pitch']}",
+                        "yaw": f"{robots_list[robot_name]['yaw']}",
+                    }.items(),
+                ),
             ]
         )
+
+        robot_state_pub = Node(
+            package="robot_state_publisher",
+            executable="robot_state_publisher",
+            name="robot_state_publisher",
+            namespace=robot_name,
+            output="screen",
+            parameters=[
+                {
+                    "use_sim_time": "true",
+                    "robot_description": Command(["xacro", " ", robot_sdf]),
+                }
+            ],
+            remappings=remappings,
+        )
+
+        robot_state_pubs.append(robot_state_pub)
         bringup_cmd_group.append(group)
 
     set_env_vars_resources = AppendEnvironmentVariable(
@@ -208,6 +231,7 @@ def generate_launch_description():
     # Declare the launch options
     ld.add_action(declare_world_cmd)
     # ld.add_action(declare_map_yaml_cmd)
+    ld.add_action(declare_robot_sdf_cmd)
     ld.add_action(declare_headless_cmd)
     # ld.add_action(declare_use_robot_state_pub_cmd)
     # ld.add_action(declare_use_rviz_cmd)
@@ -248,6 +272,8 @@ def generate_launch_description():
 
     # Spawn robots
     for cmd in bringup_cmd_group:
+        ld.add_action(cmd)
+    for cmd in robot_state_pubs:
         ld.add_action(cmd)
 
     return ld
