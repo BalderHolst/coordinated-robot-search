@@ -52,23 +52,6 @@ pub fn avoid_obstacles(robot: &mut Robot, time: Instant) -> Control {
         speed *= 1.0 - how_close;
     }
 
-    let CamData(cam) = robot.cam.clone();
-    for point in cam.iter() {
-        robot.post(MessageKind::String(format!(
-            "Found point of interest at angle {:.2} with propability {:.2}!",
-            point.angle, point.propability
-        )));
-    }
-
-    for msg in robot.recv().clone() {
-        if matches!(msg.kind, MessageKind::Debug(_)) {
-            continue;
-        }
-        robot.post(MessageKind::Debug(format!(
-            "Received message from robot {}.",
-            msg.from.as_u32(),
-        )));
-    }
-
+    robot.clear_processed();
     Control { speed, steer }
 }

@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{f32::consts::PI, fmt::Display, ops::Range, time::Instant};
+use std::{collections::HashSet, f32::consts::PI, fmt::Display, ops::Range, time::Instant};
 
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
@@ -36,17 +36,23 @@ impl RobotId {
 }
 
 #[derive(Debug, Clone)]
+pub struct Cone {
+    center: Pos2,
+    radius: Range<f32>,
+    angle: f32,
+    fov: f32,
+}
+
+#[derive(Debug, Clone)]
+pub struct Line {
+    start: Pos2,
+    end: Pos2,
+}
+
+#[derive(Debug, Clone)]
 pub enum MessageKind {
-    Cone {
-        center: Pos2,
-        radius: Range<f32>,
-        angle: f32,
-        fov: f32,
-    },
-    Line {
-        start: Pos2,
-        end: Pos2,
-    },
+    Cone { cone: Cone, diff: f32 },
+    Line { line: Line, diff: f32 },
     String(String),
     Debug(String),
 }
@@ -54,14 +60,18 @@ pub enum MessageKind {
 impl Display for MessageKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            MessageKind::Line { start, end } => write!(f, "Line: {} -> {}", start, end),
+            MessageKind::Line { line, .. } => write!(f, "Line: {} -> {}", line.start, line.end),
             MessageKind::String(s) => write!(f, "{}", s),
             MessageKind::Debug(s) => write!(f, "DEBUG: {}", s),
             MessageKind::Cone {
-                center,
-                radius,
-                angle,
-                fov,
+                cone:
+                    Cone {
+                        center,
+                        radius,
+                        angle,
+                        fov,
+                    },
+                ..
             } => write!(
                 f,
                 "Cone: center: {}, radius: {:?}, angle: {}, fov: {}",
@@ -75,6 +85,12 @@ impl Display for MessageKind {
 pub struct Message {
     pub from: RobotId,
     pub kind: MessageKind,
+}
+
+#[derive(Debug, Clone)]
+pub struct RecvMessage {
+    msg: Message,
+    processed: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -125,7 +141,7 @@ pub struct Robot {
     pub cam: CamData,
 
     /// Range (min and max distance) of camera object detection (in meters)
-    pub cam_range: (f32, f32),
+    pub cam_range: Range<f32>,
 
     /// Field of view of the camera
     pub cam_fov: f32,
@@ -138,6 +154,7 @@ pub struct Robot {
 
     /// The messages from the other robots since the last call.
     pub incomming_msg: Vec<Message>,
+    pub processed_msgs: HashSet<usize>,
 
     /// The messages to be sent to the other robots.
     pub outgoing_msg: Vec<Message>,
@@ -157,11 +174,12 @@ impl Default for Robot {
             avel: Default::default(),
             diameter: 0.5,
             cam: Default::default(),
-            cam_range: (0.8, 3.0),
+            cam_range: 0.8..3.0,
             cam_fov: PI / 2.0,
             lidar: Default::default(),
             lidar_range: 5.0,
             incomming_msg: Default::default(),
+            processed_msgs: Default::default(),
             outgoing_msg: Default::default(),
             search_grid: Default::default(),
             last_search_grid_update: Instant::now(),
@@ -171,8 +189,28 @@ impl Default for Robot {
 
 impl Robot {
     /// Get the messages from the other robots since the last call.
-    pub(crate) fn recv(&self) -> &Vec<Message> {
-        &self.incomming_msg
+    pub(crate) fn recv(&mut self) -> impl Iterator<Item = (usize, &Message)> {
+        self.incomming_msg
+            .iter()
+            .enumerate()
+            .filter(|(i, msg)| !self.processed_msgs.contains(i) && msg.from != self.id)
+    }
+
+    /// Mark a message as processed.
+    pub(crate) fn set_processed(&mut self, idx: usize) {
+        self.processed_msgs.insert(idx);
+    }
+
+    pub(crate) fn clear_processed(&mut self) {
+        self.incomming_msg = self
+            .incomming_msg
+            .iter()
+            .cloned()
+            .enumerate()
+            .filter(|(i, _)| !self.processed_msgs.contains(i))
+            .map(|(_, msg)| msg)
+            .collect();
+        self.processed_msgs.clear();
     }
 
     /// Send a message to the other robots.
@@ -183,10 +221,45 @@ impl Robot {
         });
     }
 
-    pub(crate) fn update_search_grid(&mut self, time: Instant) {
-        const MAX_HEAT: f32 = 100.0;
-        const MIN_HEAT: f32 = -100.0;
+    pub(crate) fn update_search_cone(&mut self, cone: &Cone, diff: f32) {
+        let cone_iter = self
+            .search_grid
+            .iter_circle(cone.center, cone.radius.end)
+            .filter(|(point, _cell)| {
+                let offset = *point - cone.center;
+                if offset.length() < cone.radius.start {
+                    return false;
+                }
+                let angle = offset.angle() - cone.angle;
+                let angle = normalize_angle(angle);
+                angle.abs() < cone.fov / 2.0
+            })
+            .collect::<Vec<_>>();
 
+        for (point, mut cell) in cone_iter {
+            cell -= diff;
+            self.search_grid.set(point, cell);
+        }
+    }
+
+    pub(crate) fn update_search_line(&mut self, line: &Line, diff: f32) {
+        let dir = (line.end - line.start).normalized();
+        let step_size = self.search_grid.scale();
+        let r = step_size * 2.0;
+        let mut distance = self.cam_range.start + r / 2.0;
+        while distance < self.cam_range.end - r / 2.0 {
+            let pos = line.start + dir * distance;
+
+            for (point, mut cell) in self.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
+                cell += diff;
+                self.search_grid.set(point, cell);
+            }
+
+            distance += step_size;
+        }
+    }
+
+    pub(crate) fn update_search_grid(&mut self, time: Instant) {
         const HEAT_WIDTH: f32 = PI / 4.0;
 
         // How often to update the search grid (multiplied on all changes to the cells)
@@ -198,44 +271,48 @@ impl Robot {
         self.last_search_grid_update = time;
 
         let CamData(cam) = self.cam.clone();
-        let (min_distance, max_distance) = self.cam_range;
 
-        let cone = self
-            .search_grid
-            .iter_circle(self.pos, self.cam_range.1)
-            .filter(|(point, _cell)| {
-                let offset = *point - self.pos;
-                if offset.length() < min_distance {
-                    return false;
-                }
-                let angle = offset.angle() - self.angle;
-                let angle = normalize_angle(angle);
-                angle.abs() < self.cam_fov / 2.0
-            })
-            .collect::<Vec<_>>();
+        let cone = Cone {
+            center: self.pos,
+            radius: self.cam_range.clone(),
+            angle: self.angle,
+            fov: self.cam_fov,
+        };
 
-        for (point, mut cell) in cone {
-            cell -= 0.1 * UPDATE_INTERVAL;
-            self.search_grid.set(point, cell);
+        {
+            let diff = 1.0 * UPDATE_INTERVAL;
+            self.update_search_cone(&cone, diff);
+            self.post(MessageKind::Cone { cone, diff });
         }
 
-        let step_size = self.search_grid.scale();
         for cam_point in cam {
             let angle = self.angle + cam_point.angle;
             let dir = Vec2::angled(angle);
+            let start = self.pos + dir * self.cam_range.start;
+            let end = self.pos + dir * self.cam_range.end;
+            let line = Line { start, end };
 
-            let r = step_size * 2.0;
-            let mut distance = min_distance + r / 2.0;
-            while distance < max_distance - r / 2.0 {
-                let pos = self.pos + dir * distance;
+            let diff = 2.0 * cam_point.propability * UPDATE_INTERVAL;
+            self.update_search_line(&line, diff);
+            self.post(MessageKind::Line { line, diff });
+        }
 
-                for (point, mut cell) in self.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
-                    cell += cam_point.propability * UPDATE_INTERVAL;
-                    cell = cell.clamp(MIN_HEAT, MAX_HEAT);
-                    self.search_grid.set(point, cell);
+        // Read incoming messages
+        for (msg_id, msg) in self
+            .recv()
+            .map(|(id, msg)| (id, msg.kind.clone()))
+            .collect::<Vec<_>>()
+        {
+            match msg {
+                MessageKind::Cone { cone, diff } => {
+                    self.update_search_cone(&cone, diff);
+                    self.set_processed(msg_id);
                 }
-
-                distance += step_size;
+                MessageKind::Line { line, diff } => {
+                    self.update_search_line(&line, diff);
+                    self.set_processed(msg_id);
+                }
+                _ => {}
             }
         }
     }

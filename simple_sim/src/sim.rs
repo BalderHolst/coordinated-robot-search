@@ -222,15 +222,18 @@ impl Simulator {
             .iter_mut()
             .flat_map(|agent| agent.robot.outgoing_msg.drain(..))
             .collect();
+
         for message in &messages {
             println!("[{}] {}", message.from.as_u32(), message.kind);
         }
+
         for robot in &mut self.agents {
-            robot.robot.incomming_msg = messages
-                .iter()
-                .filter(|m| m.from != robot.robot.id)
-                .cloned()
-                .collect();
+            robot.robot.incomming_msg.extend(
+                messages
+                    .iter()
+                    .filter(|m| m.from != robot.robot.id)
+                    .cloned(),
+            );
         }
 
         self.resolve_robot_collisions();
@@ -263,7 +266,7 @@ impl Simulator {
         for agent in &self.agents {
             let robot = &agent.robot;
             let angle_step = robot.cam_fov / (CAMERA_RAYS - 1) as f32;
-            let (_, max_camera_range) = robot.cam_range;
+            let max_camera_range = robot.cam_range.end;
             let points = (0..CAMERA_RAYS)
                 .filter_map(|n| {
                     let angle = n as f32 * angle_step - robot.cam_fov / 2.0;
