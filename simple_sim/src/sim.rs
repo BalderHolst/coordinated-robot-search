@@ -1,4 +1,7 @@
-use std::f32::consts::PI;
+use std::{
+    f32::consts::PI,
+    time::{Duration, Instant},
+};
 
 use eframe::egui::{Pos2, Vec2};
 use robcore::{self, grid::iter_circle, scaled_grid::ScaledGrid, CamPoint};
@@ -45,6 +48,8 @@ pub struct Simulator {
     pub sps: f32,
     behavior: BehaviorFn,
     messages: Vec<robcore::Message>,
+    start_time: Instant,
+    time: f32,
 }
 
 impl Simulator {
@@ -55,6 +60,8 @@ impl Simulator {
             behavior,
             world,
             sps,
+            start_time: Instant::now(),
+            time: 0.0,
         }
     }
 
@@ -193,7 +200,9 @@ impl Simulator {
 
         // Call the behavior function for each robot
         for agent in &mut self.agents {
-            agent.control = (self.behavior)(&mut agent.robot);
+            let time = Duration::from_secs_f32(self.time);
+            let time = self.start_time + time;
+            agent.control = (self.behavior)(&mut agent.robot, time);
             agent.robot.vel = agent.control.speed;
             agent.robot.avel = agent.control.steer;
         }
@@ -320,5 +329,7 @@ impl Simulator {
             robot.lidar = lidar;
             robot.cam = cam;
         }
+
+        self.time += dt;
     }
 }

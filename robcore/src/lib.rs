@@ -1,10 +1,11 @@
 #![allow(dead_code)]
 
-use std::{f32::consts::PI, fmt::Display};
+use std::{f32::consts::PI, fmt::Display, ops::Range, time::Instant};
 
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
 
+pub mod behaviors;
 pub mod grid;
 pub mod scaled_grid;
 
@@ -36,6 +37,16 @@ impl RobotId {
 
 #[derive(Debug, Clone)]
 pub enum MessageKind {
+    Cone {
+        center: Pos2,
+        radius: Range<f32>,
+        angle: f32,
+        fov: f32,
+    },
+    Line {
+        start: Pos2,
+        end: Pos2,
+    },
     String(String),
     Debug(String),
 }
@@ -43,8 +54,19 @@ pub enum MessageKind {
 impl Display for MessageKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            MessageKind::Line { start, end } => write!(f, "Line: {} -> {}", start, end),
             MessageKind::String(s) => write!(f, "{}", s),
             MessageKind::Debug(s) => write!(f, "DEBUG: {}", s),
+            MessageKind::Cone {
+                center,
+                radius,
+                angle,
+                fov,
+            } => write!(
+                f,
+                "Cone: center: {}, radius: {:?}, angle: {}, fov: {}",
+                center, radius, angle, fov
+            ),
         }
     }
 }
@@ -122,6 +144,7 @@ pub struct Robot {
 
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
+    pub last_search_grid_update: Instant,
 }
 
 impl Default for Robot {
@@ -141,6 +164,7 @@ impl Default for Robot {
             incomming_msg: Default::default(),
             outgoing_msg: Default::default(),
             search_grid: Default::default(),
+            last_search_grid_update: Instant::now(),
         }
     }
 }
@@ -158,177 +182,61 @@ impl Robot {
             kind: msg,
         });
     }
-}
 
-pub mod behaviors {
-    use std::f32::consts::PI;
-
-    use super::*;
-
-    pub fn circle(_robot: &mut Robot) -> Control {
-        Control {
-            speed: 1.0,
-            steer: 0.5,
-        }
-    }
-
-    pub fn only_straight(_robot: &mut Robot) -> Control {
-        Control {
-            speed: 1.0,
-            steer: 0.0,
-        }
-    }
-
-    pub fn nothing(_robot: &mut Robot) -> Control {
-        Control {
-            speed: 0.0,
-            steer: 0.0,
-        }
-    }
-
-    pub fn move_to_center(robot: &mut Robot) -> Control {
-        let pos = robot.pos;
-        let steer = f32::atan2(-pos.y, -pos.x);
-        Control { speed: 1.0, steer }
-    }
-
-    pub fn avoid_obstacles(robot: &mut Robot) -> Control {
-        const MIN_DISTANCE: f32 = 3.0;
-        const FOV: f32 = PI / 1.8;
-
-        let mut steer = 0.0;
-        let mut speed = 1.0;
-
-        // Find the closest point in front of the robot
-        let mut min_point = LidarPoint {
-            angle: 0.0,
-            distance: f32::INFINITY,
-        };
-
-        let LidarData(lidar) = &robot.lidar;
-        for point in lidar {
-            let angle = normalize_angle(point.angle);
-            if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV)
-                && point.distance < min_point.distance
-            {
-                min_point = point.clone();
-            }
-        }
-
-        // If the closest point is too close, steer away from it
-        if min_point.distance < MIN_DISTANCE {
-            let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
-            steer = how_close * (min_point.angle - PI).signum();
-            speed *= 1.0 - how_close;
-        }
-
-        let CamData(cam) = robot.cam.clone();
-        for point in cam.iter() {
-            robot.post(MessageKind::String(format!(
-                "Found point of interest at angle {:.2} with propability {:.2}!",
-                point.angle, point.propability
-            )));
-        }
-
-        for msg in robot.recv().clone() {
-            if matches!(msg.kind, MessageKind::Debug(_)) {
-                continue;
-            }
-            robot.post(MessageKind::Debug(format!(
-                "Received message from robot {}.",
-                msg.from.as_u32(),
-            )));
-        }
-
-        Control { speed, steer }
-    }
-
-    /// Steers towards the furthest point in the lidar data that is closest to the heading of the robot.
-    pub fn toward_space(robot: &mut Robot) -> Control {
-        const MAX_SPEED: f32 = 1.0;
-        const MAX_STEER: f32 = 10.0;
-
-        let LidarData(mut points) = robot.lidar.clone();
-
-        points.iter_mut().for_each(|point| {
-            point.angle = normalize_angle(point.angle);
-            if point.angle > PI {
-                point.angle -= 2.0 * PI;
-            }
-        });
-
-        points.sort_by(|a, b| a.angle.abs().partial_cmp(&b.angle.abs()).unwrap());
-
-        let mut furthest_point = LidarPoint::default();
-        for point in points {
-            if point.distance > furthest_point.distance {
-                furthest_point = point;
-            }
-        }
-
-        let steer = furthest_point.angle / PI;
-        let speed = 1.0 - steer;
-
-        let speed = speed * MAX_SPEED;
-        let steer = steer * MAX_STEER;
-
-        Control { speed, steer }
-    }
-
-    pub fn search(robot: &mut Robot) -> Control {
+    pub(crate) fn update_search_grid(&mut self, time: Instant) {
         const MAX_HEAT: f32 = 100.0;
         const MIN_HEAT: f32 = -100.0;
 
         const HEAT_WIDTH: f32 = PI / 4.0;
 
-        let CamData(cam) = robot.cam.clone();
-        let (min_distance, max_distance) = robot.cam_range;
+        // How often to update the search grid (multiplied on all changes to the cells)
+        const UPDATE_INTERVAL: f32 = 0.1;
 
-        let cone = robot
+        if (time - self.last_search_grid_update).as_secs_f32() < UPDATE_INTERVAL {
+            return;
+        }
+        self.last_search_grid_update = time;
+
+        let CamData(cam) = self.cam.clone();
+        let (min_distance, max_distance) = self.cam_range;
+
+        let cone = self
             .search_grid
-            .iter_circle(robot.pos, robot.cam_range.1)
+            .iter_circle(self.pos, self.cam_range.1)
             .filter(|(point, _cell)| {
-                let offset = *point - robot.pos;
+                let offset = *point - self.pos;
                 if offset.length() < min_distance {
                     return false;
                 }
-                let angle = offset.angle() - robot.angle;
+                let angle = offset.angle() - self.angle;
                 let angle = normalize_angle(angle);
-                angle.abs() < robot.cam_fov / 2.0
+                angle.abs() < self.cam_fov / 2.0
             })
             .collect::<Vec<_>>();
 
         for (point, mut cell) in cone {
-            cell -= 0.1;
-            robot.search_grid.set(point, cell);
+            cell -= 0.1 * UPDATE_INTERVAL;
+            self.search_grid.set(point, cell);
         }
 
-        let step_size = robot.search_grid.scale();
+        let step_size = self.search_grid.scale();
         for cam_point in cam {
-            let angle = robot.angle + cam_point.angle;
+            let angle = self.angle + cam_point.angle;
             let dir = Vec2::angled(angle);
 
             let r = step_size * 2.0;
             let mut distance = min_distance + r / 2.0;
             while distance < max_distance - r / 2.0 {
-                let pos = robot.pos + dir * distance;
+                let pos = self.pos + dir * distance;
 
-                for (point, mut cell) in robot.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
-                    cell += cam_point.propability;
-                    robot.search_grid.set(point, cell);
+                for (point, mut cell) in self.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
+                    cell += cam_point.propability * UPDATE_INTERVAL;
+                    cell = cell.clamp(MIN_HEAT, MAX_HEAT);
+                    self.search_grid.set(point, cell);
                 }
 
-                let mut cell = robot.search_grid.get(pos);
-                cell += cam_point.propability;
-                cell = cell.clamp(MIN_HEAT, MAX_HEAT);
-                robot.search_grid.set(pos, cell);
                 distance += step_size;
             }
-        }
-
-        Control {
-            speed: 0.0,
-            steer: 0.1,
         }
     }
 }
