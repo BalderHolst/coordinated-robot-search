@@ -79,6 +79,7 @@ impl Simulator {
         angle: f32,
         robot_radius: f32,
         max_range: f32,
+        ignore: &[Cell],
     ) -> (f32, Option<Cell>) {
         let step_size = self.world.scale() * 0.5;
         let direction = Vec2::angled(angle);
@@ -90,7 +91,7 @@ impl Simulator {
 
             let cell = self.world.get(pos);
 
-            if !cell.is_empty() {
+            if !cell.is_empty() && !ignore.contains(&cell) {
                 return (distance, Some(cell));
             }
 
@@ -137,7 +138,7 @@ impl Simulator {
             let mut nudgers = 0;
             for (x, y) in iter_circle(center, radius) {
                 let cell = self.world.grid().get(x, y);
-                if !cell.is_empty() {
+                if matches!(cell, Cell::Wall | Cell::OutOfBounds) {
                     let cell_center = self.world.grid_to_world(Pos2 {
                         x: x as f32,
                         y: y as f32,
@@ -239,6 +240,7 @@ impl Simulator {
                         robot.angle + angle,
                         robot.diameter / 2.0,
                         robot.lidar_range,
+                        &[Cell::SearchItem],
                     );
                     robcore::LidarPoint { angle, distance }
                 })
@@ -261,6 +263,7 @@ impl Simulator {
                         robot.angle + angle,
                         robot.diameter / 2.0,
                         max_camera_range,
+                        &[],
                     );
                     match cell {
                         Some(Cell::SearchItem) => {
