@@ -18,14 +18,12 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command, LaunchConfiguration, TextSubstitution
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap, ComposableNodeContainer
 from nav2_common.launch import ParseMultiRobotPose
 
 
 def generate_launch_description():
     ########### General imports ###########
-    bringup_dir = get_package_share_directory("nav2_bringup")
-    bringup_launch_dir = os.path.join(bringup_dir, "launch")
     sim_dir = get_package_share_directory("nav2_minimal_tb4_sim")
     desc_dir = get_package_share_directory("nav2_minimal_tb4_description")
     multi_robot = get_package_share_directory("multi_robot_control")
@@ -104,14 +102,13 @@ def generate_launch_description():
 
     ########### Robots ###########
     # TODO: Change to params file or LaunchConfiguration
-    n_robots = 2
+    n_robots = 3
     # n_robots = LaunchConfiguration("n_robots")
     # declare_robots_cmd = DeclareLaunchArgument(
     #     "n_robots",
     #     default_value="1",
     #     description="Number of robots to spawn",
     # )
-    remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
     ########### Gazebo Simulation ###########
     world_sdf = tempfile.mktemp(prefix="nav2_", suffix=".sdf")
@@ -143,7 +140,7 @@ def generate_launch_description():
 
     ########### Robot spawn + config ###########
     robots_list = {}
-    for i in range(n_robots):
+    for i in range(n_robots):  # Higher number than n_robots
         robots_list[f"robot_{i}"] = {
             "x": i * 1.0,
             "y": 0.0,
@@ -161,34 +158,21 @@ def generate_launch_description():
         group = GroupAction(
             [
                 LogInfo(
-                    msg=[
-                        "Launching namespace=",
-                        robot_name,
-                        " init_pose=",
-                        str(init_pose),
-                    ]
+                    msg=[f"Launching namespace={robot_name} init_pose={init_pose}"]
                 ),
-                # IncludeLaunchDescription(
-                #     PythonLaunchDescriptionSource(
-                #         os.path.join(launch_dir, "rviz_launch.py")
-                #     ),
-                #     condition=IfCondition(use_rviz),
-                #     launch_arguments={
-                #         "namespace": TextSubstitution(text=robot_name),
-                #         "use_namespace": "True",
-                #         "rviz_config": rviz_config_file,
-                #     }.items(),
-                # ),
+                SetRemap(
+                    src="robot_description", dst=f"/{robot_name}/robot_description"
+                ),
                 IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(
-                        os.path.join(sim_dir, "launch", "spawn_tb4.launch.py")
+                        os.path.join(multi_robot, "launch", "spawn_tb4.launch.py")
                     ),
                     launch_arguments={
                         "namespace": robot_name,
                         "use_simulator": "true",
                         "use_sim_time": "true",
                         "robot_name": "turtlebot4",
-                        # "robot_sdf": robot_sdf,
+                        "robot_sdf": robot_sdf,
                         "x_pose": f"{robots_list[robot_name]['x']}",
                         "y_pose": f"{robots_list[robot_name]['y']}",
                         "z_pose": f"{robots_list[robot_name]['z']}",
@@ -199,6 +183,7 @@ def generate_launch_description():
                 ),
             ]
         )
+        remappings_state_pub = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
         robot_state_pub = Node(
             package="robot_state_publisher",
@@ -208,18 +193,21 @@ def generate_launch_description():
             output="screen",
             parameters=[
                 {
-                    "use_sim_time": "true",
+                    "use_sim_time": True,
                     "robot_description": Command(["xacro", " ", robot_sdf]),
                 }
             ],
-            remappings=remappings,
+            remappings=remappings_state_pub,
         )
 
         robot_state_pubs.append(robot_state_pub)
         bringup_cmd_group.append(group)
 
     set_env_vars_resources = AppendEnvironmentVariable(
-        "GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds")
+        "GZ_SIM_RESOURCE_PATH", os.path.join(multi_robot, "config", "worlds")
+    )
+    set_env_vars_resources2 = AppendEnvironmentVariable(
+        "GZ_SIM_RESOURCE_PATH", str(Path(os.path.join(desc_dir)).parent.resolve())
     )
 
     # Create the launch description and populate
@@ -227,6 +215,7 @@ def generate_launch_description():
 
     # Set environment variables
     ld.add_action(set_env_vars_resources)
+    ld.add_action(set_env_vars_resources2)
 
     # Declare the launch options
     ld.add_action(declare_world_cmd)
