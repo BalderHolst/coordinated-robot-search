@@ -19,6 +19,8 @@ const CAMERA_RAYS: usize = 20;
 /// The factor of the world size to use as the search grid size
 const SEARCH_GRID_FACTOR: f32 = 0.25;
 
+const SIMULATION_DT: f32 = 1.0 / 60.0;
+
 #[derive(Clone)]
 pub struct Agent {
     pub robot: robcore::Robot,
@@ -57,6 +59,7 @@ pub struct Simulator {
     behavior: BehaviorFn,
     messages: Vec<robcore::Message>,
     start_time: Instant,
+    dt: f32,
 }
 
 impl Simulator {
@@ -73,11 +76,8 @@ impl Simulator {
             messages: vec![],
             behavior,
             start_time: Instant::now(),
+            dt: SIMULATION_DT,
         }
-    }
-
-    fn dt(&self) -> f32 {
-        1.0 / self.state.sps
     }
 
     pub fn add_robot(&mut self, mut agent: Agent) {
@@ -208,7 +208,7 @@ impl Simulator {
     }
 
     pub fn step(&mut self) {
-        let dt = self.dt();
+        let dt = self.dt;
 
         // Call the behavior function for each robot
         for agent in &mut self.state.agents {

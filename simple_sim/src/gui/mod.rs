@@ -13,12 +13,6 @@ mod app;
 mod bind_key;
 mod camera;
 
-/// Target frames per second for the gui
-const TARGET_FPS: f32 = 60.0;
-
-/// Target simulation steps per second
-const TARGET_SPS: f32 = 60.0;
-
 pub fn run(args: Args) {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
@@ -36,7 +30,7 @@ pub fn run(args: Args) {
             world.circle(pos2(15.0, 20.0), 0.08, Cell::SearchItem);
 
             // Set up simulator
-            let mut sim = Simulator::new(world, TARGET_SPS, args.behavior.get_fn());
+            let mut sim = Simulator::new(world, args.target_sps, args.behavior.get_fn());
             sim.add_robot(Agent::new_at(-2.0, -2.0, 1.0));
             sim.add_robot(Agent::new_at(2.2, 1.1, PI));
             sim.add_robot(Agent::new_at(-1.0, 1.0, 0.0));

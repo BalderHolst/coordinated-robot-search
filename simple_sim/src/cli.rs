@@ -6,11 +6,24 @@ pub type BehaviorFn = fn(&mut robcore::Robot, Instant) -> robcore::Control;
 
 #[derive(Parser)]
 pub struct Args {
+
+    /// What behavior to run on the robots
     #[arg(index = 1)]
     pub behavior: Behavior,
 
+    /// Start the simulation paused
     #[arg(short, long)]
     pub paused: bool,
+
+    // TODO: This does not work for some reason
+    /// Target frames per second
+    #[arg(long("fps"), default_value = "60")]
+    pub target_fps: f32,
+
+    /// Target simulation steps per second
+    #[arg(long("sps"), default_value = "60")]
+    pub target_sps: f32,
+
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]

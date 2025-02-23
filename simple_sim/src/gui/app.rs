@@ -15,7 +15,7 @@ use crate::{
     world::Cell,
 };
 
-use super::{camera::Camera, TARGET_FPS, TARGET_SPS};
+use super::camera::Camera;
 use eframe::{
     self,
     egui::{
@@ -90,6 +90,7 @@ pub struct App {
     actual_sps_bg: Arc<Mutex<f32>>,
     target_sps_bg: Arc<Mutex<f32>>,
     target_sps: usize,
+    target_fps: f32,
     pub cam: Camera,
     pub sim_state: SimulatorState,
     global_opts: GlobalOptions,
@@ -117,8 +118,8 @@ impl App {
         let sim_bg = Arc::new(Mutex::new(sim));
         let sim_state = sim_bg.lock().unwrap().state.clone();
 
-        let actual_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
-        let target_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
+        let actual_sps_bg = Arc::new(Mutex::new(args.target_sps));
+        let target_sps_bg = Arc::new(Mutex::new(args.target_sps));
         let paused = Arc::new(AtomicBool::new(args.paused));
 
         {
@@ -130,7 +131,7 @@ impl App {
                 let target_sps = *target_sps.lock().unwrap();
                 let paused = paused.load(Ordering::Relaxed);
                 if paused || target_sps == 0.0 {
-                    thread::sleep(std::time::Duration::from_secs_f32(1.0 / TARGET_FPS));
+                    thread::sleep(std::time::Duration::from_secs_f32(1.0 / args.target_fps));
                     continue;
                 }
 
@@ -177,9 +178,10 @@ impl App {
             cam: Camera::new(Pos2::ZERO),
             sim_state,
             sim_bg,
-            target_sps: TARGET_SPS as usize,
+            target_sps: args.target_sps as usize,
             actual_sps_bg,
             target_sps_bg,
+            target_fps: args.target_fps,
             global_opts,
             robot_opts,
             textures: AppTextures {
@@ -617,7 +619,8 @@ impl eframe::App for App {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ui.ctx().request_repaint_after_secs(1.0 / TARGET_FPS);
+
+                ui.ctx().request_repaint_after_secs(1.0 / self.target_fps);
 
                 let size = ui.available_size_before_wrap();
                 let (resp, painter) = ui.allocate_painter(size, Sense::click_and_drag());
