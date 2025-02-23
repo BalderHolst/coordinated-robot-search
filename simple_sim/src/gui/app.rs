@@ -1,4 +1,6 @@
 use std::{
+    collections::HashSet,
+    hash::{self, Hash, Hasher},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
@@ -8,7 +10,8 @@ use std::{
 
 use crate::{
     bind_down, bind_pressed,
-    sim::{Agent, Simulator},
+    cli::Args,
+    sim::{Simulator, SimulatorState},
     world::Cell,
 };
 
@@ -23,7 +26,7 @@ use eframe::{
     epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
 };
-use robcore::grid::GridCell;
+use robcore::{debug::DebugType, grid::GridCell};
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
@@ -32,18 +35,12 @@ const ROBOT_COLOR: Hsva = Hsva {
     a: 1.0,
 };
 
-struct VisOpts {
-    show_lidar: bool,
-    show_velocity: bool,
-}
-
-impl Default for VisOpts {
-    fn default() -> Self {
-        Self {
-            show_lidar: true,
-            show_velocity: true,
-        }
-    }
+fn string_color(s: &str) -> Color32 {
+    let mut hasher = hash::DefaultHasher::new();
+    s.hash(&mut hasher);
+    let hash = hasher.finish();
+    let hue = hash as f32 / u64::MAX as f32;
+    Hsva::new(hue, 0.8, 0.8, 1.0).into()
 }
 
 /// Textures used by the app
@@ -52,17 +49,51 @@ struct AppTextures {
     search_grid: Option<TextureId>,
 }
 
+pub struct GlobalOptions {
+    paused: Arc<AtomicBool>,
+    focused: Option<usize>,
+    follow: Option<usize>,
+    show_velocity: bool,
+}
+
+impl Default for GlobalOptions {
+    fn default() -> Self {
+        Self {
+            paused: Arc::new(AtomicBool::new(false)),
+            focused: None,
+            follow: None,
+            show_velocity: true,
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct RobotOptions {
+    show_lidar: bool,
+    show_search_grid: bool,
+    debug_items: HashSet<String>,
+}
+
+#[allow(clippy::derivable_impls)]
+impl Default for RobotOptions {
+    fn default() -> Self {
+        Self {
+            show_lidar: false,
+            show_search_grid: false,
+            debug_items: Default::default(),
+        }
+    }
+}
+
 pub struct App {
     sim_bg: Arc<Mutex<Simulator>>,
     actual_sps_bg: Arc<Mutex<f32>>,
     target_sps_bg: Arc<Mutex<f32>>,
     target_sps: usize,
-    paused: Arc<AtomicBool>,
     pub cam: Camera,
-    pub sim: Simulator,
-    focused: Option<usize>,
-    follow: Option<usize>,
-    vis_opts: VisOpts,
+    pub sim_state: SimulatorState,
+    global_opts: GlobalOptions,
+    robot_opts: Vec<RobotOptions>,
     textures: AppTextures,
 }
 
@@ -79,13 +110,16 @@ fn grid_to_image<C: GridCell>(
 }
 
 impl App {
-    pub fn new(sim: Simulator, cc: &CreationContext) -> Self {
+    pub fn new(mut sim: Simulator, args: Args, cc: &CreationContext) -> Self {
+        // Step once to get the initial state
+        sim.step();
+
         let sim_bg = Arc::new(Mutex::new(sim));
-        let sim = sim_bg.lock().unwrap().clone();
+        let sim_state = sim_bg.lock().unwrap().state.clone();
 
         let actual_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
         let target_sps_bg = Arc::new(Mutex::new(TARGET_SPS));
-        let paused = Arc::new(AtomicBool::new(false));
+        let paused = Arc::new(AtomicBool::new(args.paused));
 
         {
             let sim_bg = sim_bg.clone();
@@ -117,7 +151,7 @@ impl App {
             });
         }
 
-        let world_image = grid_to_image(sim.world.grid(), |c| c.color());
+        let world_image = grid_to_image(sim_state.world.grid(), |c| c.color());
         let world_image = ImageData::from(world_image);
 
         let texture_manager = &cc.egui_ctx.tex_manager();
@@ -132,17 +166,22 @@ impl App {
             },
         );
 
+        let global_opts = GlobalOptions {
+            paused,
+            ..Default::default()
+        };
+
+        let robot_opts = vec![RobotOptions::default(); sim_state.agents.len()];
+
         Self {
             cam: Camera::new(Pos2::ZERO),
-            sim,
+            sim_state,
             sim_bg,
             target_sps: TARGET_SPS as usize,
-            paused,
             actual_sps_bg,
             target_sps_bg,
-            focused: None,
-            follow: None,
-            vis_opts: VisOpts::default(),
+            global_opts,
+            robot_opts,
             textures: AppTextures {
                 world: world_texture,
                 search_grid: None,
@@ -151,12 +190,14 @@ impl App {
     }
 
     fn draw_robots(&mut self, painter: &Painter) {
-        for (n, agent) in self.sim.agents.iter().enumerate() {
+        for (n, agent) in self.sim_state.agents.iter().enumerate() {
             let robot = &agent.robot;
+            let robot_opts = &self.robot_opts[n];
+
             let pos = self.cam.world_to_viewport(robot.pos);
 
             // Draw lidar rays
-            if self.vis_opts.show_lidar {
+            if robot_opts.show_lidar {
                 for point in &robot.lidar.0 {
                     let end = pos
                         + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
@@ -164,7 +205,12 @@ impl App {
                         vec![pos, end],
                         PathStroke::new(
                             self.cam.scaled(0.01),
-                            Hsva::new(point.distance / self.sim.world.width() * 2.0, 0.8, 0.8, 0.5),
+                            Hsva::new(
+                                point.distance / self.sim_state.world.width() * 2.0,
+                                0.8,
+                                0.8,
+                                0.5,
+                            ),
                         ),
                     );
                 }
@@ -201,7 +247,7 @@ impl App {
             }
 
             // Draw robot (as a circle)
-            let stroke = match self.focused {
+            let stroke = match self.global_opts.focused {
                 Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
                 _ => Stroke::NONE,
             };
@@ -213,7 +259,7 @@ impl App {
             );
 
             // Draw velocity vector (arrow)
-            if self.vis_opts.show_velocity {
+            if self.global_opts.show_velocity {
                 let vel = Vec2::angled(robot.angle) * (robot.vel + robot.diameter * 0.5);
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
@@ -234,12 +280,10 @@ impl App {
                 font_id,
                 Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
             );
-        }
 
-        // Draw search grid
-        for (n, Agent { robot, .. }) in self.sim.agents.iter().enumerate() {
-            if Some(n) == self.focused {
-                let (min, max) = self.sim.world.bounds();
+            // Draw search grid
+            if robot_opts.show_search_grid {
+                let (min, max) = self.sim_state.world.bounds();
                 let min = self.cam.world_to_viewport(min);
                 let max = self.cam.world_to_viewport(max);
                 let canvas = Rect::from_min_max(min, max);
@@ -287,6 +331,138 @@ impl App {
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                 painter.image(id, canvas, uv, Color32::from_white_alpha(128));
             }
+
+            // Draw debug soup
+            let mut numbers = 0;
+            if let Some(soup) = &robot.debug_soup {
+                for (name, data) in soup.iter() {
+                    if !robot_opts.debug_items.contains(name) {
+                        continue;
+                    }
+                    let color = string_color(name);
+                    match data {
+                        DebugType::Vector(vec) => {
+                            let end = pos + self.cam.scaled(*vec);
+                            painter.arrow(
+                                pos,
+                                end - pos,
+                                Stroke::new(self.cam.scaled(0.03), color),
+                            );
+                        }
+                        DebugType::Vectors(vecs) => {
+                            for vec in vecs {
+                                let end = pos + self.cam.scaled(*vec);
+                                painter.arrow(
+                                    pos,
+                                    end - pos,
+                                    Stroke::new(self.cam.scaled(0.01), color.gamma_multiply(0.3)),
+                                );
+                            }
+                        }
+                        DebugType::WeightedVectors(vecs) => {
+                            let max_weight = vecs.iter().map(|(_, w)| w.abs()).sum::<f32>();
+                            for (vec, weight) in vecs {
+                                let alpha = *weight / max_weight;
+                                let color = color.gamma_multiply(1.0 - alpha);
+                                let end = pos + self.cam.scaled(*vec);
+                                painter.arrow(
+                                    pos,
+                                    end - pos,
+                                    Stroke::new(self.cam.scaled(0.01), color),
+                                );
+                            }
+                        }
+                        DebugType::Radius(radius) => {
+                            painter.circle_stroke(
+                                pos,
+                                self.cam.scaled(*radius),
+                                Stroke::new(self.cam.scaled(0.02), color),
+                            );
+                        }
+                        DebugType::Point(p) => {
+                            let p = self.cam.world_to_viewport(*p);
+                            painter.circle_filled(p, self.cam.scaled(0.05), color);
+                        }
+                        DebugType::Points(ps) => {
+                            for p in ps {
+                                let p = self.cam.world_to_viewport(*p);
+                                painter.circle_filled(p, self.cam.scaled(0.03), color);
+                            }
+                        }
+                        DebugType::WeightedPoints(ps) => {
+                            let max_weight =
+                                ps.iter()
+                                    .map(|(_, w)| w)
+                                    .fold(0.0, |acc, w| match *w > acc {
+                                        true => *w,
+                                        false => acc,
+                                    });
+                            let min_weight =
+                                ps.iter()
+                                    .map(|(_, w)| w)
+                                    .fold(0.0, |acc, w| match *w < acc {
+                                        true => *w,
+                                        false => acc,
+                                    });
+                            for (p, w) in ps {
+                                let p = self.cam.world_to_viewport(*p);
+                                let alpha = (*w - min_weight) / (max_weight - min_weight);
+                                let color = color.gamma_multiply(alpha);
+                                painter.circle_filled(p, self.cam.scaled(0.03), color);
+                            }
+                        }
+                        DebugType::NumberPoints(ps) => {
+                            let max_weight =
+                                ps.iter()
+                                    .map(|(_, w)| w)
+                                    .fold(0.0, |acc, w| match *w > acc {
+                                        true => *w,
+                                        false => acc,
+                                    });
+                            let min_weight =
+                                ps.iter()
+                                    .map(|(_, w)| w)
+                                    .fold(0.0, |acc, w| match *w < acc {
+                                        true => *w,
+                                        false => acc,
+                                    });
+                            let font_id = FontId {
+                                size: self.cam.scaled(0.05),
+                                family: FontFamily::Monospace,
+                            };
+                            for (p, w) in ps {
+                                let p = self.cam.world_to_viewport(*p);
+                                let alpha = (*w - min_weight) / (max_weight - min_weight);
+                                let color = color.gamma_multiply(alpha);
+                                painter.text(
+                                    p,
+                                    Align2::CENTER_CENTER,
+                                    format!("{:.1}", w),
+                                    font_id.clone(),
+                                    color,
+                                );
+                            }
+                        }
+                        DebugType::Number(n) => {
+                            let font_id = FontId {
+                                size: self.cam.scaled(0.2),
+                                family: FontFamily::Monospace,
+                            };
+                            painter.text(
+                                pos + Vec2::new(
+                                    0.0,
+                                    -self.cam.scaled(0.5) - numbers as f32 * self.cam.scaled(0.2),
+                                ),
+                                Align2::CENTER_CENTER,
+                                format!("{name}: {n:.3}"),
+                                font_id,
+                                color,
+                            );
+                            numbers += 1;
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -308,17 +484,17 @@ impl eframe::App for App {
                     ));
 
                     ui.button("Home").clicked().then(|| {
-                        self.focused = None;
+                        self.global_opts.focused = None;
                         self.cam.home();
                     });
 
                     ui.button("Unfocus").clicked().then(|| {
-                        self.focused = None;
+                        self.global_opts.focused = None;
                     });
 
-                    for (n, _) in self.sim.agents.iter().enumerate() {
+                    for (n, _) in self.sim_state.agents.iter().enumerate() {
                         ui.button(format!("Robot [{n}]")).clicked().then(|| {
-                            self.focused = Some(n);
+                            self.global_opts.focused = Some(n);
                         });
                     }
 
@@ -340,8 +516,9 @@ impl eframe::App for App {
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
                     ui.label("Global Visualization Options:");
-                    ui.toggle_value(&mut self.vis_opts.show_velocity, "Show Velocities");
-                    ui.toggle_value(&mut self.vis_opts.show_lidar, "Show Lidar");
+                    ui.toggle_value(&mut self.global_opts.show_velocity, "Show Velocities");
+
+                    // TODO: Show all lidar button
 
                     // SPS Slider
                     let prev_target_sps = self.target_sps;
@@ -354,31 +531,33 @@ impl eframe::App for App {
                         *self.target_sps_bg.lock().unwrap() = self.target_sps as f32;
                     }
 
-                    let paused = self.paused.load(Ordering::Relaxed);
+                    let paused = self.global_opts.paused.load(Ordering::Relaxed);
                     ui.button(if paused { "Resume" } else { "Pause" })
                         .clicked()
                         .then(|| {
-                            self.paused.store(!paused, Ordering::Relaxed);
+                            self.global_opts.paused.store(!paused, Ordering::Relaxed);
                         });
                 });
             });
 
         egui::SidePanel::right("right-panel")
             .resizable(true)
-            .show_animated(ctx, self.focused.is_some(), |ui| {
-                let n = self.focused.unwrap_or(0);
-                let robot = &self.sim.agents[n].robot;
+            .show_animated(ctx, self.global_opts.focused.is_some(), |ui| {
+                let n = self.global_opts.focused.unwrap_or(0);
+                let robot = &self.sim_state.agents[n].robot;
+                let robot_opts = &mut self.robot_opts[n];
 
                 ui.horizontal(|ui| {
                     ui.heading(format!("Robot [{n}]"));
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| match self
+                        .global_opts
                         .follow
                     {
                         Some(_) => ui.button("Unfollow").clicked().then(|| {
-                            self.follow = None;
+                            self.global_opts.follow = None;
                         }),
                         None => ui.button("Follow").clicked().then(|| {
-                            self.follow = Some(n);
+                            self.global_opts.follow = Some(n);
                         }),
                     });
                 });
@@ -390,7 +569,43 @@ impl eframe::App for App {
                 ui.separator();
 
                 ui.label("Visualization Options");
-                ui.toggle_value(&mut self.vis_opts.show_lidar, "Show Lidar");
+                ui.toggle_value(&mut robot_opts.show_lidar, "Show Lidar");
+
+                ui.separator();
+                ui.heading("Grids");
+                ui.toggle_value(&mut robot_opts.show_search_grid, "Show Search Grid");
+
+                ui.separator();
+                ui.heading("Debug Items");
+                if let Some(soup) = &robot.debug_soup {
+                    let mut names: Vec<_> = soup.keys().collect();
+                    names.sort();
+                    for name in names {
+                        ui.horizontal(|ui| {
+                            let color = string_color(name);
+
+                            let (_, painter) = ui.allocate_painter(
+                                Vec2::splat(10.0),
+                                Sense {
+                                    click: false,
+                                    drag: false,
+                                    focusable: false,
+                                },
+                            );
+
+                            painter.rect_filled(painter.clip_rect(), 0.0, color);
+
+                            let mut shown = robot_opts.debug_items.contains(name);
+                            let resp = ui.toggle_value(&mut shown, name);
+                            if resp.changed() {
+                                match shown {
+                                    true => robot_opts.debug_items.insert(name.to_string()),
+                                    false => robot_opts.debug_items.remove(name),
+                                };
+                            }
+                        });
+                    }
+                }
 
                 // Keep new size for next frame
                 ui.allocate_space(ui.available_size());
@@ -411,7 +626,7 @@ impl eframe::App for App {
                 self.cam.set_viewport(viewport);
 
                 // Draw world area
-                let (min, max) = &self.sim.world.bounds();
+                let (min, max) = &self.sim_state.world.bounds();
                 let world_rect = Rect::from_points(&[
                     self.cam.world_to_viewport(*min),
                     self.cam.world_to_viewport(*max),
@@ -419,12 +634,12 @@ impl eframe::App for App {
 
                 let moved = self.cam.update(ui, &resp);
 
-                if moved && self.follow.is_some() {
-                    self.follow = None;
+                if moved && self.global_opts.follow.is_some() {
+                    self.global_opts.follow = None;
                 }
 
-                if let Some(f) = self.follow {
-                    self.cam.pos = self.sim.agents[f].pos();
+                if let Some(f) = self.global_opts.follow {
+                    self.cam.pos = self.sim_state.agents[f].pos();
                 }
 
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
@@ -433,19 +648,19 @@ impl eframe::App for App {
 
                 // Get simulation
                 if let Ok(sim) = self.sim_bg.lock() {
-                    self.sim = sim.clone();
+                    self.sim_state = sim.state.clone();
                 }
 
                 // Handle Keys
                 ui.input(|i| {
                     bind_down!(i; Key::Escape => {
-                        self.focused = None;
-                        self.follow = None;
+                        self.global_opts.focused = None;
+                        self.global_opts.follow = None;
                     });
 
                     bind_pressed!(i; Key::Space => {
-                        let paused = self.paused.load(Ordering::Relaxed);
-                        self.paused.store(!paused, Ordering::Relaxed);
+                        let paused = self.global_opts.paused.load(Ordering::Relaxed);
+                        self.global_opts.paused.store(!paused, Ordering::Relaxed);
                     });
                 });
 
@@ -458,20 +673,20 @@ impl eframe::App for App {
 
                     // Check if we clicked on a robot
                     let mut found = None;
-                    for (n, agent) in self.sim.agents.iter().enumerate() {
+                    for (n, agent) in self.sim_state.agents.iter().enumerate() {
                         let robot = &agent.robot;
                         if (robot.pos - pos).length() < robot.diameter * 0.75 {
-                            self.focused = Some(n);
+                            self.global_opts.focused = Some(n);
                             found = Some(n);
                             break;
                         }
                     }
-                    self.focused = found;
+                    self.global_opts.focused = found;
 
                     // If we were following a robot, follow the clicked one
-                    if self.follow.is_some() {
-                        if let Some(f) = self.focused {
-                            self.follow = Some(f);
+                    if self.global_opts.follow.is_some() {
+                        if let Some(f) = self.global_opts.focused {
+                            self.global_opts.follow = Some(f);
                         }
                     }
                 });

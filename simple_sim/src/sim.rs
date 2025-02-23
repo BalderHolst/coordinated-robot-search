@@ -1,10 +1,12 @@
 use std::{
+    collections::HashMap,
     f32::consts::PI,
+    sync::mpsc,
     time::{Duration, Instant},
 };
 
 use eframe::egui::{Pos2, Vec2};
-use robcore::{self, grid::iter_circle, scaled_grid::ScaledGrid, CamPoint};
+use robcore::{self, debug::DebugType, grid::iter_circle, scaled_grid::ScaledGrid, CamPoint};
 
 use crate::{
     cli::BehaviorFn,
@@ -42,42 +44,52 @@ impl Agent {
 }
 
 #[derive(Clone)]
-pub struct Simulator {
+pub struct SimulatorState {
     pub agents: Vec<Agent>,
     pub world: World,
     pub sps: f32,
+    pub time: f32,
+}
+
+pub struct Simulator {
+    pub state: SimulatorState,
+    debug_channels: Vec<mpsc::Receiver<DebugType>>,
     behavior: BehaviorFn,
     messages: Vec<robcore::Message>,
     start_time: Instant,
-    time: f32,
 }
 
 impl Simulator {
     pub fn new(world: World, sps: f32, behavior: BehaviorFn) -> Self {
-        Self {
+        let state = SimulatorState {
             agents: vec![],
-            messages: vec![],
-            behavior,
             world,
             sps,
-            start_time: Instant::now(),
             time: 0.0,
+        };
+        Self {
+            state,
+            debug_channels: vec![],
+            messages: vec![],
+            behavior,
+            start_time: Instant::now(),
         }
     }
 
     fn dt(&self) -> f32 {
-        1.0 / self.sps
+        1.0 / self.state.sps
     }
 
     pub fn add_robot(&mut self, mut agent: Agent) {
-        let id = self.agents.len() as u32;
+        let id = self.state.agents.len() as u32;
         agent.robot.id = robcore::RobotId::new(id);
         agent.robot.search_grid = ScaledGrid::new(
-            self.world.width(),
-            self.world.height(),
-            self.world.scale() / SEARCH_GRID_FACTOR,
+            self.state.world.width(),
+            self.state.world.height(),
+            self.state.world.scale() / SEARCH_GRID_FACTOR,
         );
-        self.agents.push(agent);
+        agent.robot.debug_soup = Some(HashMap::new());
+        self.state.agents.push(agent);
     }
 
     fn cast_ray(
@@ -88,7 +100,7 @@ impl Simulator {
         max_range: f32,
         ignore: &[Cell],
     ) -> (f32, Option<Cell>) {
-        let step_size = self.world.scale() * 0.5;
+        let step_size = self.state.world.scale() * 0.5;
         let direction = Vec2::angled(angle);
 
         let mut distance = robot_radius;
@@ -96,7 +108,7 @@ impl Simulator {
         while distance < max_range {
             let pos = base_pos + direction * distance;
 
-            let cell = self.world.get(pos);
+            let cell = self.state.world.get(pos);
 
             if !cell.is_empty() && !ignore.contains(&cell) {
                 return (distance, Some(cell));
@@ -104,7 +116,7 @@ impl Simulator {
 
             // Check for collisions with other robots
             if distance > robot_radius {
-                for robot in &self.agents {
+                for robot in &self.state.agents {
                     let d = (robot.pos() - pos).length();
                     if d < robot_radius {
                         return (distance, None);
@@ -119,41 +131,41 @@ impl Simulator {
     }
 
     fn resolve_robot_collisions(&mut self) {
-        for i in 0..self.agents.len() {
-            for j in i + 1..self.agents.len() {
-                let agent1 = &self.agents[i];
-                let agent2 = &self.agents[j];
+        for i in 0..self.state.agents.len() {
+            for j in i + 1..self.state.agents.len() {
+                let agent1 = &self.state.agents[i];
+                let agent2 = &self.state.agents[j];
                 let diameter = f32::max(agent1.robot.diameter, agent2.robot.diameter);
                 if (agent1.pos() - agent2.pos()).length() < diameter {
                     let diff = agent1.pos() - agent2.pos();
                     let overlap = diameter - diff.length();
                     let dir = diff.normalized() * overlap / 2.0;
-                    self.agents[i].robot.pos += dir;
-                    self.agents[j].robot.pos -= dir;
+                    self.state.agents[i].robot.pos += dir;
+                    self.state.agents[j].robot.pos -= dir;
                 }
             }
         }
     }
 
     fn resolve_world_collisions(&mut self) {
-        for agent in &mut self.agents {
+        for agent in &mut self.state.agents {
             // Look in a circle around the robot
-            let radius = agent.robot.diameter / 2.0 * 1.4 / self.world.scale();
+            let radius = agent.robot.diameter / 2.0 * 1.4 / self.state.world.scale();
 
-            let center = self.world.world_to_grid(agent.pos());
+            let center = self.state.world.world_to_grid(agent.pos());
             let mut nudge = Vec2::ZERO;
             let mut nudgers = 0;
             for (x, y) in iter_circle(center, radius) {
-                let cell = self.world.grid().get(x, y);
+                let cell = self.state.world.grid().get(x, y);
                 if matches!(cell, Cell::Wall | Cell::OutOfBounds) {
-                    let cell_center = self.world.grid_to_world(Pos2 {
+                    let cell_center = self.state.world.grid_to_world(Pos2 {
                         x: x as f32,
                         y: y as f32,
                     });
                     let diff = agent.pos() - cell_center;
 
                     let overlap =
-                        agent.robot.diameter / 2.0 - diff.length() + 0.5 * self.world.scale();
+                        agent.robot.diameter / 2.0 - diff.length() + 0.5 * self.state.world.scale();
                     if overlap < 0.0 {
                         continue;
                     }
@@ -177,20 +189,20 @@ impl Simulator {
     }
 
     fn resolve_border_collisions(&mut self) {
-        for agent in &mut self.agents {
+        for agent in &mut self.state.agents {
             let pos = &mut agent.robot.pos;
             let radius = agent.robot.diameter / 2.0;
-            if pos.x - radius < -self.world.width() / 2.0 {
-                pos.x = -self.world.width() / 2.0 + radius;
+            if pos.x - radius < -self.state.world.width() / 2.0 {
+                pos.x = -self.state.world.width() / 2.0 + radius;
             }
-            if pos.x + radius > self.world.width() / 2.0 {
-                pos.x = self.world.width() / 2.0 - radius;
+            if pos.x + radius > self.state.world.width() / 2.0 {
+                pos.x = self.state.world.width() / 2.0 - radius;
             }
-            if pos.y - radius < -self.world.height() / 2.0 {
-                pos.y = -self.world.height() / 2.0 + radius;
+            if pos.y - radius < -self.state.world.height() / 2.0 {
+                pos.y = -self.state.world.height() / 2.0 + radius;
             }
-            if pos.y + radius > self.world.height() / 2.0 {
-                pos.y = self.world.height() / 2.0 - radius;
+            if pos.y + radius > self.state.world.height() / 2.0 {
+                pos.y = self.state.world.height() / 2.0 - radius;
             }
         }
     }
@@ -199,8 +211,8 @@ impl Simulator {
         let dt = self.dt();
 
         // Call the behavior function for each robot
-        for agent in &mut self.agents {
-            let time = Duration::from_secs_f32(self.time);
+        for agent in &mut self.state.agents {
+            let time = Duration::from_secs_f32(self.state.time);
             let time = self.start_time + time;
             agent.control = (self.behavior)(&mut agent.robot, time);
             agent.robot.vel = agent.control.speed;
@@ -208,7 +220,7 @@ impl Simulator {
         }
 
         // Update the position of each robot
-        for agent in self.agents.iter_mut() {
+        for agent in self.state.agents.iter_mut() {
             let robot = &mut agent.robot;
             let vel = Vec2::angled(robot.angle) * robot.vel;
 
@@ -218,16 +230,17 @@ impl Simulator {
 
         // Handle messages
         let messages: Vec<_> = self
+            .state
             .agents
             .iter_mut()
             .flat_map(|agent| agent.robot.outgoing_msg.drain(..))
             .collect();
 
-        for message in &messages {
-            println!("[{}] {}", message.from.as_u32(), message.kind);
-        }
+        // for message in &messages {
+        //     println!("[{}] {}", message.from.as_u32(), message.kind);
+        // }
 
-        for robot in &mut self.agents {
+        for robot in &mut self.state.agents {
             robot.robot.incomming_msg.extend(
                 messages
                     .iter()
@@ -241,8 +254,8 @@ impl Simulator {
         self.resolve_world_collisions();
 
         // Update robot lidar data
-        let mut lidar_data = Vec::with_capacity(self.agents.len());
-        for agent in &self.agents {
+        let mut lidar_data = Vec::with_capacity(self.state.agents.len());
+        for agent in &self.state.agents {
             let robot = &agent.robot;
             let points = (0..LIDAR_RAYS)
                 .map(|n| {
@@ -261,9 +274,9 @@ impl Simulator {
         }
 
         // Update robot camera
-        let mut cam_data = Vec::with_capacity(self.agents.len());
+        let mut cam_data = Vec::with_capacity(self.state.agents.len());
 
-        for agent in &self.agents {
+        for agent in &self.state.agents {
             let robot = &agent.robot;
             let angle_step = robot.cam_fov / (CAMERA_RAYS - 1) as f32;
             let max_camera_range = robot.cam_range.end;
@@ -327,12 +340,12 @@ impl Simulator {
 
         // Actually update the robots
         let data = lidar_data.into_iter().zip(cam_data);
-        for (agent, (lidar, cam)) in self.agents.iter_mut().zip(data) {
+        for (agent, (lidar, cam)) in self.state.agents.iter_mut().zip(data) {
             let robot = &mut agent.robot;
             robot.lidar = lidar;
             robot.cam = cam;
         }
 
-        self.time += dt;
+        self.state.time += dt;
     }
 }

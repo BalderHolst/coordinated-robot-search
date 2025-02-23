@@ -1,11 +1,19 @@
 #![allow(dead_code)]
 
-use std::{collections::HashSet, f32::consts::PI, fmt::Display, ops::Range, time::Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    f32::consts::PI,
+    fmt::Display,
+    ops::Range,
+    time::Instant,
+};
 
+use debug::DebugType;
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
 
 pub mod behaviors;
+pub mod debug;
 pub mod grid;
 pub mod scaled_grid;
 
@@ -117,7 +125,7 @@ pub struct Control {
     pub steer: f32,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Robot {
     /// The id of the robot
     pub id: RobotId,
@@ -162,6 +170,8 @@ pub struct Robot {
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
     pub last_search_grid_update: Instant,
+
+    pub debug_soup: Option<HashMap<String, DebugType>>,
 }
 
 impl Default for Robot {
@@ -183,6 +193,7 @@ impl Default for Robot {
             outgoing_msg: Default::default(),
             search_grid: Default::default(),
             last_search_grid_update: Instant::now(),
+            debug_soup: None,
         }
     }
 }
@@ -246,12 +257,18 @@ impl Robot {
         let dir = (line.end - line.start).normalized();
         let step_size = self.search_grid.scale();
         let r = step_size * 2.0;
-        let mut distance = self.cam_range.start + r / 2.0;
+        let start_distance = self.cam_range.start + r / 2.0;
+        let mut distance = start_distance;
         while distance < self.cam_range.end - r / 2.0 {
             let pos = line.start + dir * distance;
 
+            // Nearness is in range [0, 1]
+            let nearness = (distance - start_distance) / (self.cam_range.end - start_distance);
+
             for (point, mut cell) in self.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
-                cell += diff;
+                // We weight points closer to the robot more
+                cell += 2.0 * (diff * nearness);
+
                 self.search_grid.set(point, cell);
             }
 
@@ -261,6 +278,7 @@ impl Robot {
 
     pub(crate) fn update_search_grid(&mut self, time: Instant) {
         const HEAT_WIDTH: f32 = PI / 4.0;
+        const CAM_MULTPLIER: f32 = 10.0;
 
         // How often to update the search grid (multiplied on all changes to the cells)
         const UPDATE_INTERVAL: f32 = 0.1;
@@ -292,7 +310,7 @@ impl Robot {
             let end = self.pos + dir * self.cam_range.end;
             let line = Line { start, end };
 
-            let diff = 2.0 * cam_point.propability * UPDATE_INTERVAL;
+            let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
             self.update_search_line(&line, diff);
             self.post(MessageKind::Line { line, diff });
         }
@@ -314,6 +332,12 @@ impl Robot {
                 }
                 _ => {}
             }
+        }
+    }
+
+    pub(crate) fn show<S: ToString>(&mut self, name: S, debug_type: DebugType) {
+        if let Some(m) = &mut self.debug_soup {
+            m.insert(name.to_string(), debug_type);
         }
     }
 }

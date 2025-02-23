@@ -8,6 +8,9 @@ pub type BehaviorFn = fn(&mut robcore::Robot, Instant) -> robcore::Control;
 pub struct Args {
     #[arg(index = 1)]
     pub behavior: Behavior,
+
+    #[arg(short, long)]
+    pub paused: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
