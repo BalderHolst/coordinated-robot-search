@@ -1,8 +1,9 @@
 mod description;
+mod pgm;
 
 use std::{path::PathBuf, process::exit};
 
-use description::{ObjectDescription, WorldDescription};
+use description::{BitmapDescription, ObjectDescription, WorldDescription};
 use eframe::{egui::Color32, epaint::Hsva};
 
 use robcore::{grid::GridCell, scaled_grid::ScaledGrid};
@@ -56,7 +57,31 @@ pub fn world_from_path(path: &PathBuf) -> World {
                 }
             }
         }
-        Some("yaml") => todo!("YAML"),
+        Some("yaml") => {
+            let Ok(contents) = std::fs::read_to_string(path) else {
+                eprintln!("Failed to read file {}", path.display());
+                exit(1);
+            };
+
+            let mut bitmap_desc = match serde_yml::from_str::<BitmapDescription>(&contents) {
+                Ok(bitmap_desc) => bitmap_desc,
+                Err(e) => {
+                    eprintln!("Failed to parse YAML file {}: {}", path.display(), e);
+                    exit(1);
+                }
+            };
+
+            let image_path = path.with_file_name(&bitmap_desc.image);
+
+            let Ok(image_bytes) = std::fs::read(&image_path) else {
+                eprintln!("Failed to read image file {}", image_path.display());
+                exit(1);
+            };
+
+            bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
+
+            WorldDescription::Bitmap(bitmap_desc)
+        }
         _ => {
             eprintln!("Unknown file type for {:?}", path);
             exit(1);

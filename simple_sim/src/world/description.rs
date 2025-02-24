@@ -1,9 +1,11 @@
-use robcore::shapes::Shape;
+use std::path::PathBuf;
+
+use robcore::{grid::Grid, scaled_grid::ScaledGrid, shapes::Shape};
 use serde::{Deserialize, Serialize};
 
 use crate::world::Cell;
 
-use super::World;
+use super::{pgm::PgmImage, World};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectDescription {
@@ -16,11 +18,23 @@ pub struct ObjectDescription {
     search_items: Vec<Shape>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BitmapDescriptionMode {
+    Trinary,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BitmapDescription {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
+    pub image: PathBuf,
+    pub mode: BitmapDescriptionMode,
+    pub resolution: f32,
+    pub origin: [f32; 3],
+    pub negate: i32,
+    pub occupied_thresh: f32,
+    pub free_thresh: f32,
+    #[serde(skip)]
+    pub bitmap: PgmImage,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +46,26 @@ pub enum WorldDescription {
 impl WorldDescription {
     pub fn create(self) -> World {
         match self {
-            WorldDescription::Bitmap(bitmap_description) => todo!(),
+            WorldDescription::Bitmap(BitmapDescription {
+                resolution,
+                bitmap: image,
+                ..
+            }) => {
+                let mut grid = Grid::new(image.width, image.height);
+                for (x, y, value) in image.iter() {
+                    let cell = match value {
+                        0 | 205 => Cell::Wall,
+                        254 => Cell::Empty,
+                        other => {
+                            eprintln!("Invalid value in PGM image: {}", other);
+                            Cell::Empty
+                        }
+                    };
+                    grid.set(x, y, cell);
+                }
+
+                ScaledGrid::from_grid(grid, resolution)
+            }
             WorldDescription::Objs(ObjectDescription {
                 width,
                 height,

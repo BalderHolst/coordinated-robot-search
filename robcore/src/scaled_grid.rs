@@ -39,6 +39,17 @@ impl<C: GridCell> ScaledGrid<C> {
         }
     }
 
+    pub fn from_grid(grid: Grid<C>, cell_size: f32) -> Self {
+        let width = grid.width() as f32 * cell_size;
+        let height = grid.height() as f32 * cell_size;
+        Self {
+            grid,
+            width,
+            height,
+            cell_size,
+        }
+    }
+
     pub fn width(&self) -> f32 {
         self.width
     }
