@@ -619,7 +619,6 @@ impl eframe::App for App {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-
                 ui.ctx().request_repaint_after_secs(1.0 / self.target_fps);
 
                 let size = ui.available_size_before_wrap();

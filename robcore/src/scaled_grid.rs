@@ -2,7 +2,10 @@ use std::fmt::Debug;
 
 use emath::{Pos2, Vec2};
 
-use crate::grid::{iter_circle, Grid, GridCell};
+use crate::{
+    grid::{iter_circle, Grid, GridCell},
+    shapes::{Circle, Line, Shape, WideLine},
+};
 
 #[derive(Clone)]
 pub struct ScaledGrid<C: GridCell> {
@@ -111,6 +114,17 @@ impl<C: GridCell> ScaledGrid<C> {
         debug_assert!(y <= self.grid.height());
         if x < self.grid.width() && y < self.grid.height() {
             self.grid.set(x, y, cell);
+        }
+    }
+
+    pub fn shape(&mut self, shape: &Shape, cell: C) {
+        match shape {
+            Shape::Circle(Circle { center, radius }) => self.circle(*center, *radius, cell),
+            Shape::Line(Line { start, end }) => self.line(*start, *end, self.cell_size, cell),
+            Shape::WideLine(WideLine { start, end, width }) => {
+                self.line(*start, *end, *width, cell)
+            }
+            Shape::Cone(_cone) => todo!(),
         }
     }
 

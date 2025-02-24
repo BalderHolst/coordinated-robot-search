@@ -1,0 +1,23 @@
+ObjectDescription(
+    width: 25,
+    height: 25,
+    scale: 0.10,
+    obstacles: [
+        Line(
+            start: Pos2(x: -10, y: 0 ),
+            end:   Pos2(x: -2,  y: 0 ),
+            width: 0.1,
+        ),
+        Line(
+            start: Pos2(x:  0, y: 2 ),
+            end:   Pos2(x:  0, y: 10),
+            width: 0.1,
+        ),
+    ],
+    search_items: [
+        Circle(
+            center: Pos2(x: 10, y: 10),
+            radius: 0.2,
+        ),
+    ],
+)

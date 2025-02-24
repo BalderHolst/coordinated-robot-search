@@ -11,11 +11,13 @@ use std::{
 use debug::DebugType;
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
+use shapes::{Cone, Line};
 
 pub mod behaviors;
 pub mod debug;
 pub mod grid;
 pub mod scaled_grid;
+pub mod shapes;
 
 fn normalize_angle(angle: f32) -> f32 {
     let mut angle = angle;
@@ -41,20 +43,6 @@ impl RobotId {
     pub fn as_u32(&self) -> u32 {
         self.0
     }
-}
-
-#[derive(Debug, Clone)]
-pub struct Cone {
-    center: Pos2,
-    radius: Range<f32>,
-    angle: f32,
-    fov: f32,
-}
-
-#[derive(Debug, Clone)]
-pub struct Line {
-    start: Pos2,
-    end: Pos2,
 }
 
 #[derive(Debug, Clone)]

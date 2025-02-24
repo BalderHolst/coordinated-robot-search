@@ -1,12 +1,12 @@
 use std::f32::consts::PI;
 
 use app::App;
-use eframe::egui::{self, pos2};
+use eframe::egui;
 
 use crate::{
     cli::Args,
     sim::{Agent, Simulator},
-    world::{Cell, World},
+    world::world_from_path,
 };
 
 mod app;
@@ -23,11 +23,7 @@ pub fn run(args: Args) {
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
-            // Set up world
-            let mut world = World::new(60.0, 60.0, 0.05);
-            // world.line(pos2(-2.0, 0.0), pos2(1.5, 0.0), 0.2, Cell::Wall);
-            // world.line(pos2(-2.0, 0.0), pos2(-2.0, -2.0), 0.2, Cell::Wall);
-            world.circle(pos2(15.0, 20.0), 0.08, Cell::SearchItem);
+            let world = world_from_path(&args.world);
 
             // Set up simulator
             let mut sim = Simulator::new(world, args.target_sps, args.behavior.get_fn());

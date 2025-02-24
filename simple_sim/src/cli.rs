@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{path::PathBuf, time::Instant};
 
 use clap::{self, Parser};
 
@@ -6,9 +6,11 @@ pub type BehaviorFn = fn(&mut robcore::Robot, Instant) -> robcore::Control;
 
 #[derive(Parser)]
 pub struct Args {
+    #[arg(index = 1)]
+    pub world: PathBuf,
 
     /// What behavior to run on the robots
-    #[arg(index = 1)]
+    #[arg(index = 2)]
     pub behavior: Behavior,
 
     /// Start the simulation paused
@@ -23,7 +25,6 @@ pub struct Args {
     /// Target simulation steps per second
     #[arg(long("sps"), default_value = "60")]
     pub target_sps: f32,
-
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
