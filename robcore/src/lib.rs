@@ -330,7 +330,7 @@ impl Robot {
         }
     }
 
-    pub(crate) fn show<S: ToString>(&mut self, name: S, debug_type: DebugType) {
+    pub(crate) fn debug<S: ToString>(&mut self, name: S, debug_type: DebugType) {
         if let Some(m) = &mut self.debug_soup {
             m.insert(name.to_string(), debug_type);
         }

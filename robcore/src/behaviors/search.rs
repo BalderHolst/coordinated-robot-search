@@ -6,63 +6,111 @@ use crate::{normalize_angle, LidarData};
 
 use super::{Control, DebugType, Robot};
 
-const GRADIENT_RADIUS: f32 = 5.0;
+const GRADIENT_RADIUS: f32 = 8.0;
 
-const GRADIENT_WEIGHT: f32 = 1.0;
+const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
 const FORWARD_BIAS: f32 = 0.1;
 
 const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
+pub fn search(robot: &mut Robot, time: Instant) -> Control {
+    robot.update_search_grid(time);
+
+    let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
+    robot.debug("Forward Bias", DebugType::Vector(forward_bias));
+
+    let mut target = Vec2::ZERO;
+    target += forward_bias;
+    target += gradient(robot);
+    target += lidar(robot);
+
+    robot.debug("Target", DebugType::Vector(target));
+
+    robot.clear_processed();
+
+    control_towards(robot, target)
+}
+
+/// Calculate the gradient of the heat map around the robot
 fn gradient(robot: &mut Robot) -> Vec2 {
     let mut gradient = Vec2::ZERO;
     {
         // Get the heat under the robot
         let mut robot_heat: f32 = 0.0;
-        let mut robot_points = vec![];
-        for (pos, cell) in robot.search_grid.iter_circle(robot.pos, robot.diameter) {
-            robot_heat += cell.unwrap_or(0.0);
-            robot_points.push((pos, cell));
+        {
+            let mut robot_points = vec![];
+            for (pos, cell) in robot
+                .search_grid
+                .iter_circle(robot.pos, robot.diameter * 2.0)
+            {
+                robot_heat += cell.unwrap_or(0.0);
+                robot_points.push((pos, cell));
+            }
+            robot_heat /= robot_points.len() as f32;
+            robot.debug("Robot Heat", DebugType::Number(robot_heat));
         }
-        robot_heat /= robot_points.len() as f32;
-
-        robot.show("Robot Heat", DebugType::Number(robot_heat));
 
         let mut points = vec![];
         let mut total_weight: f32 = 0.0;
-        let mut n = 0;
+        let mut total_cells = 0;
         for (pos, cell) in robot.search_grid.iter_circle(robot.pos, GRADIENT_RADIUS) {
+            // Skip cells which are out of bounds
             let Some(cell) = cell else {
                 continue;
             };
-            let angle = (pos - robot.pos).angle();
+
+            // The relative position of the cell to the robot
+            let vec = pos - robot.pos;
+
+            // Don't include cells which are too close for the camera to see
+            if vec.length() <= robot.cam_range.start {
+                continue;
+            }
+
+            // Weight is the difference between the cell and the robot heat
             let weight = cell - robot_heat;
+
+            // Ignore cells that are colder than the robot as this ends up
+            // repelling the robot leading to situations where the robot
+            // gets stuck at the edge of the map
             if weight <= 0.0 {
                 continue;
             }
+
+            // We want the weight to be stronger the closer we are to the robot
+            let nearness = 1.0 - vec.length() / GRADIENT_RADIUS;
+            let weight = weight * nearness;
+
             points.push((pos, weight));
-            gradient += Vec2::angled(angle) * weight;
-            n += 1;
+
+            gradient += vec.normalized() * weight;
+
+            total_cells += 1;
             total_weight += weight;
         }
 
-        if n == 0 {
-            n = 1;
+        if total_cells == 0 {
+            total_cells = 1;
         }
-        gradient /= n as f32;
+        gradient /= total_cells as f32;
 
         gradient *= GRADIENT_WEIGHT;
 
-        robot.show("Gradient Values", DebugType::NumberPoints(points));
-        robot.show("Gradient Radius", DebugType::Radius(GRADIENT_RADIUS));
-        robot.show("Average Weight", DebugType::Number(total_weight / n as f32));
-        robot.show("Gradient", DebugType::Vector(gradient));
-        robot.show("Gradient Length", DebugType::Number(gradient.length()));
+        robot.debug("Gradient Values", DebugType::NumberPoints(points));
+        robot.debug("Gradient Radius", DebugType::Radius(GRADIENT_RADIUS));
+        robot.debug(
+            "Average Weight",
+            DebugType::Number(total_weight / total_cells as f32),
+        );
+        robot.debug("Gradient", DebugType::Vector(gradient));
+        robot.debug("Gradient Length", DebugType::Number(gradient.length()));
     }
 
     gradient
 }
 
+/// Calculate the lidar contribution to the control
 fn lidar(robot: &mut Robot) -> Vec2 {
     let mut lidar_contribution = Vec2::ZERO;
     {
@@ -79,7 +127,7 @@ fn lidar(robot: &mut Robot) -> Vec2 {
 
         lidar_contribution *= LIDAR_WEIGHT;
 
-        robot.show("Lidar Contribution", DebugType::Vector(lidar_contribution));
+        robot.debug("Lidar Contribution", DebugType::Vector(lidar_contribution));
     }
     lidar_contribution
 }
@@ -91,22 +139,4 @@ pub fn control_towards(robot: &mut Robot, target: Vec2) -> Control {
     let steer = t * normalize_angle(target.angle() - robot.angle);
 
     Control { speed, steer }
-}
-
-pub fn search(robot: &mut Robot, time: Instant) -> Control {
-    robot.update_search_grid(time);
-
-    let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
-    robot.show("Forward Bias", DebugType::Vector(forward_bias));
-
-    let mut target = Vec2::ZERO;
-    target += forward_bias;
-    target += gradient(robot);
-    target += lidar(robot);
-
-    robot.show("Target", DebugType::Vector(target));
-
-    robot.clear_processed();
-
-    control_towards(robot, target)
 }

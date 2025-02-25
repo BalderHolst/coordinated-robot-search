@@ -89,7 +89,6 @@ impl Camera {
     pub fn update(&mut self, ui: &Ui, resp: &Response) -> bool {
         let mut moved = false;
 
-
         // Zoom
         if resp.hovered() {
             ui.input(|i| {

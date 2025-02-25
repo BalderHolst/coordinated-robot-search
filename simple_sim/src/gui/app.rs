@@ -415,28 +415,12 @@ impl App {
                             }
                         }
                         DebugType::NumberPoints(ps) => {
-                            let max_weight =
-                                ps.iter()
-                                    .map(|(_, w)| w)
-                                    .fold(0.0, |acc, w| match *w > acc {
-                                        true => *w,
-                                        false => acc,
-                                    });
-                            let min_weight =
-                                ps.iter()
-                                    .map(|(_, w)| w)
-                                    .fold(0.0, |acc, w| match *w < acc {
-                                        true => *w,
-                                        false => acc,
-                                    });
                             let font_id = FontId {
-                                size: self.cam.scaled(0.05),
+                                size: self.cam.scaled(0.08),
                                 family: FontFamily::Monospace,
                             };
                             for (p, w) in ps {
                                 let p = self.cam.world_to_viewport(*p);
-                                let alpha = (*w - min_weight) / (max_weight - min_weight);
-                                let color = color.gamma_multiply(alpha);
                                 painter.text(
                                     p,
                                     Align2::CENTER_CENTER,
