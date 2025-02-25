@@ -8,6 +8,7 @@ from launch.conditions import IfCondition
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
+from nav2_common.launch import ReplaceString
 
 
 def generate_launch_description():
@@ -47,19 +48,35 @@ def generate_launch_description():
         "robot_name", default_value="turtlebot4", description="name of the robot"
     )
 
+    robot_bridge = os.path.join(sim_dir, "launch", "bridge_robot_tmp.yaml")
+    camera_bridge_image = os.path.join(
+        sim_dir, "launch", "bridge_camera_image_tmp.yaml"
+    )
+    camera_bridge_depth = os.path.join(
+        sim_dir, "launch", "bridge_camera_depth_tmp.yaml"
+    )
+
+    robot_bridge_namespaced = ReplaceString(
+        source_file=robot_bridge,
+        replacements={"<gz_namespace>": ("/", namespace)},
+    )
+    camera_bridge_image_namespaced = ReplaceString(
+        source_file=camera_bridge_image,
+        replacements={"<gz_namespace>": ("/", namespace)},
+    )
+    camera_bridge_depth_namespaced = ReplaceString(
+        source_file=robot_bridge,
+        replacements={"<gz_namespace>": ("/", namespace)},
+    )
+
     bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         name=robot_name,
         namespace=namespace,
-        arguments=[
-            "/model/vehicle_blue/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry",
-            "/model/vehicle_green/cmd_vel@geometry_msgs/msg/Twist@gz.msgs.Twist",
-            "/model/vehicle_green/odometry@nav_msgs/msg/Odometry@gz.msgs.Odometry",
-        ],
         parameters=[
             {
-                # "config_file": os.path.join(sim_dir, "params", "tb4_bridge.yaml"),
+                "config_file": robot_bridge_namespaced,
                 "use_sim_time": use_sim_time,
             }
         ],
@@ -74,10 +91,10 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
+                "config_file": camera_bridge_image_namespaced,
                 "use_sim_time": use_sim_time,
             }
         ],
-        arguments=["rgbd_camera/image"],
     )
 
     camera_bridge_depth = Node(
@@ -88,6 +105,7 @@ def generate_launch_description():
         output="screen",
         parameters=[
             {
+                "config_file": camera_bridge_depth_namespaced,
                 "use_sim_time": use_sim_time,
             }
         ],

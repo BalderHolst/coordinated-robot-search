@@ -163,7 +163,6 @@ def generate_launch_description():
             "use_simulator": use_simulator,
             "use_sim_time": use_sim_time,
             "robot_name": robot_name,
-            # "robot_sdf": robot_sdf,
             "x_pose": pose["x"],
             "y_pose": pose["y"],
             "z_pose": pose["z"],
@@ -171,6 +170,18 @@ def generate_launch_description():
             "pitch": pose["P"],
             "yaw": pose["Y"],
         }.items(),
+    )
+    clock_bridge = Node(
+        package="ros_gz_bridge",
+        executable="parameter_bridge",
+        name="clock",
+        parameters=[
+            {
+                "use_sim_time": use_sim_time,
+            }
+        ],
+        arguments=["/clock@rosgraph_msgs/msg/Clock@gz.msgs.Clock"],
+        output="screen",
     )
 
     # Create the launch description and populate
@@ -193,6 +204,7 @@ def generate_launch_description():
     ld.add_action(gz_robot)
     ld.add_action(gazebo_server)
     ld.add_action(gazebo_client)
+    ld.add_action(clock_bridge)
 
     # Add the actions to launch all of the navigation nodes
     ld.add_action(start_robot_state_publisher_cmd)
