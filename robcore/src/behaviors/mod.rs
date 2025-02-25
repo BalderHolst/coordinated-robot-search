@@ -1,3 +1,5 @@
+//! This module contains the robot behaviors.
+
 pub mod search;
 
 use std::{f32::consts::PI, time::Instant};
@@ -5,7 +7,9 @@ use std::{f32::consts::PI, time::Instant};
 use super::*;
 
 pub use search::search;
+use utils::normalize_angle;
 
+/// Move in a circle.
 pub fn circle(_robot: &mut Robot, _time: Instant) -> Control {
     Control {
         speed: 1.0,
@@ -13,6 +17,7 @@ pub fn circle(_robot: &mut Robot, _time: Instant) -> Control {
     }
 }
 
+/// Do nothing.
 pub fn nothing(_robot: &mut Robot, _time: Instant) -> Control {
     Control {
         speed: 0.0,
@@ -20,6 +25,7 @@ pub fn nothing(_robot: &mut Robot, _time: Instant) -> Control {
     }
 }
 
+/// Avoid obstacles by steering away from the closest point in front of the robot.
 pub fn avoid_obstacles(robot: &mut Robot, time: Instant) -> Control {
     const MIN_DISTANCE: f32 = 3.0;
     const FOV: f32 = PI / 1.8;

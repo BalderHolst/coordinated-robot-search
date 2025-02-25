@@ -246,7 +246,7 @@ impl Simulator {
         // }
 
         for robot in &mut self.state.agents {
-            robot.robot.incomming_msg.extend(
+            robot.robot.incoming_msg.extend(
                 messages
                     .iter()
                     .filter(|m| m.from != robot.robot.id)

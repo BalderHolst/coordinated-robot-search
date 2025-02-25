@@ -1,3 +1,5 @@
+//! Various shapes
+
 use std::ops::Range;
 
 use emath::Pos2;

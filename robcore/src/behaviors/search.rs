@@ -1,10 +1,12 @@
+//! This module contains robot `search` behavior.
+
 use std::{f32::consts::PI, time::Instant};
 
 use emath::Vec2;
 
-use crate::{normalize_angle, LidarData};
+use crate::LidarData;
 
-use super::{Control, DebugType, Robot};
+use super::{shapes::Circle, utils::normalize_angle, Control, DebugType, Robot};
 
 const GRADIENT_RADIUS: f32 = 8.0;
 
@@ -14,6 +16,7 @@ const FORWARD_BIAS: f32 = 0.1;
 
 const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
+/// Search for the object using a gradient on the heat map
 pub fn search(robot: &mut Robot, time: Instant) -> Control {
     robot.update_search_grid(time);
 
@@ -40,10 +43,12 @@ fn gradient(robot: &mut Robot) -> Vec2 {
         let mut robot_heat: f32 = 0.0;
         {
             let mut robot_points = vec![];
-            for (pos, cell) in robot
-                .search_grid
-                .iter_circle(robot.pos, robot.diameter * 2.0)
-            {
+            for (pos, cell) in robot.search_grid.iter_circle(
+                &(Circle {
+                    center: robot.pos,
+                    radius: robot.diameter * 2.0,
+                }),
+            ) {
                 robot_heat += cell.unwrap_or(0.0);
                 robot_points.push((pos, cell));
             }
@@ -54,7 +59,13 @@ fn gradient(robot: &mut Robot) -> Vec2 {
         let mut points = vec![];
         let mut total_weight: f32 = 0.0;
         let mut total_cells = 0;
-        for (pos, cell) in robot.search_grid.iter_circle(robot.pos, GRADIENT_RADIUS) {
+
+        for (pos, cell) in robot.search_grid.iter_circle(
+            &(Circle {
+                center: robot.pos,
+                radius: GRADIENT_RADIUS,
+            }),
+        ) {
             // Skip cells which are out of bounds
             let Some(cell) = cell else {
                 continue;

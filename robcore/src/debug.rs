@@ -1,5 +1,6 @@
 use emath::{Pos2, Vec2};
 
+/// A type of debug information that can be shown in a simulator
 #[derive(Clone, Debug)]
 pub enum DebugType {
     Radius(f32),

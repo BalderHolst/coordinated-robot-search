@@ -4,9 +4,11 @@ use emath::{Pos2, Vec2};
 
 use crate::{
     grid::{iter_circle, Grid, GridCell},
-    shapes::{Circle, Line, Shape, WideLine},
+    shapes::{Circle, Cone, Line, Shape, WideLine},
+    utils,
 };
 
+/// A 2D grid of cells with a scale indexed by floating point values
 #[derive(Clone)]
 pub struct ScaledGrid<C: GridCell> {
     grid: Grid<C>,
@@ -27,6 +29,7 @@ impl<C: GridCell> Default for ScaledGrid<C> {
 }
 
 impl<C: GridCell> ScaledGrid<C> {
+    /// Create a new grid with the given width, height, and the size of each cell
     pub fn new(width: f32, height: f32, cell_size: f32) -> Self {
         let grid_width = (width / cell_size).ceil() as usize;
         let grid_height = (height / cell_size).ceil() as usize;
@@ -39,6 +42,7 @@ impl<C: GridCell> ScaledGrid<C> {
         }
     }
 
+    /// Create a new grid from a grid and the size of each cell
     pub fn from_grid(grid: Grid<C>, cell_size: f32) -> Self {
         let width = grid.width() as f32 * cell_size;
         let height = grid.height() as f32 * cell_size;
@@ -50,26 +54,27 @@ impl<C: GridCell> ScaledGrid<C> {
         }
     }
 
+    /// Width of the grid
     pub fn width(&self) -> f32 {
         self.width
     }
 
+    /// Height of the grid
     pub fn height(&self) -> f32 {
         self.height
     }
 
+    /// Size of each cell
     pub fn scale(&self) -> f32 {
         self.cell_size
     }
 
-    pub fn grid(&self) -> &Grid<C> {
-        &self.grid
-    }
-
+    /// Size of the grid
     pub fn size(&self) -> Vec2 {
         Vec2::new(self.width, self.height)
     }
 
+    /// Bounds of the grid
     pub fn bounds(&self) -> (Pos2, Pos2) {
         let min = Pos2 {
             x: -self.width / 2.0,
@@ -82,14 +87,22 @@ impl<C: GridCell> ScaledGrid<C> {
         (min, max)
     }
 
+    /// The underlying grid
+    pub fn grid(&self) -> &Grid<C> {
+        &self.grid
+    }
+
+    /// Convert a world position to the underlying grid position
     pub fn world_to_grid(&self, pos: Pos2) -> Pos2 {
         ((pos + self.size() / 2.0) / self.cell_size).floor()
     }
 
+    /// Convert an underlying grid position to a world position
     pub fn grid_to_world(&self, pos: Pos2) -> Pos2 {
         (pos + Vec2::splat(0.5)) * self.cell_size - self.size() / 2.0
     }
 
+    /// Get the cell at the given position. Returns `None` if the position is out of bounds.
     pub fn get(&self, pos: Pos2) -> Option<C> {
         if pos.x < self.width / -2.0
             || pos.x > self.width / 2.0
@@ -108,6 +121,7 @@ impl<C: GridCell> ScaledGrid<C> {
         self.grid.get(x, y)
     }
 
+    /// Set the cell at the given position
     pub fn set(&mut self, pos: Pos2, cell: C) {
         if pos.x < self.width / -2.0
             || pos.x > self.width / 2.0
@@ -128,6 +142,7 @@ impl<C: GridCell> ScaledGrid<C> {
         }
     }
 
+    /// Set the cells in a [Shape] to a value
     pub fn shape(&mut self, shape: &Shape, cell: C) {
         match shape {
             Shape::Circle(Circle { center, radius }) => self.circle(*center, *radius, cell),
@@ -139,6 +154,7 @@ impl<C: GridCell> ScaledGrid<C> {
         }
     }
 
+    /// Set the cells in a line to a value
     pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let width = width / self.cell_size;
         let start = self.world_to_grid(start);
@@ -146,23 +162,45 @@ impl<C: GridCell> ScaledGrid<C> {
         self.grid.line(start, end, width, cell);
     }
 
+    /// Set the cells in a circle to a value
     pub fn circle(&mut self, center: Pos2, radius: f32, cell: C) {
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
         self.grid.circle(center, radius, cell);
     }
 
-    pub fn iter_circle(
-        &self,
-        center: Pos2,
-        radius: f32,
-    ) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
+    /// Iterate over cells within a [Circle]
+    pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
+        let Circle { center, radius } = circle;
         let radius = radius / self.cell_size;
-        let center = self.world_to_grid(center);
+        let center = self.world_to_grid(*center);
         iter_circle(center, radius).map(move |(x, y)| {
             let pos = self.grid_to_world(Pos2::new(x as f32, y as f32));
             let cell = self.grid.get(x, y);
             (pos, cell)
+        })
+    }
+
+    /// Iterate over cells within a [Cone]
+    pub fn iter_cone(&self, cone: &Cone) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
+        let Cone {
+            center,
+            radius,
+            angle,
+            fov,
+        } = cone.clone();
+        self.iter_circle(&Circle {
+            center,
+            radius: radius.end,
+        })
+        .filter(move |(point, _cell)| {
+            let offset = *point - center;
+            if offset.length() < radius.start {
+                return false;
+            }
+            let angle = offset.angle() - angle;
+            let angle = utils::normalize_angle(angle);
+            angle.abs() < fov / 2.0
         })
     }
 }

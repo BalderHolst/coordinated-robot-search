@@ -2,14 +2,15 @@ use std::fmt::Debug;
 
 use emath::Pos2;
 
+/// A 2D grid of cells
 #[derive(Clone)]
-pub struct Grid<C> {
+pub struct Grid<C: GridCell> {
     cells: Vec<C>,
     width: usize,
     height: usize,
 }
 
-impl<C> Default for Grid<C> {
+impl<C: GridCell> Default for Grid<C> {
     fn default() -> Self {
         Self {
             cells: vec![],
@@ -20,6 +21,7 @@ impl<C> Default for Grid<C> {
 }
 
 impl<C: GridCell> Grid<C> {
+    /// Create a new grid with the given width and height
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             cells: vec![C::default(); width * height],
@@ -28,14 +30,17 @@ impl<C: GridCell> Grid<C> {
         }
     }
 
+    /// Width of the grid
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Height of the grid
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// Get the cell at the given position. Returns `None` if the position is out of bounds.
     pub fn get(&self, x: usize, y: usize) -> Option<C> {
         if x >= self.width || y >= self.height {
             return None;
@@ -43,12 +48,14 @@ impl<C: GridCell> Grid<C> {
         self.cells.get(y * self.width + x).cloned()
     }
 
+    /// Set the cell at the given position
     pub fn set(&mut self, x: usize, y: usize, cell: C) {
         if let Some(inner) = self.cells.get_mut(y * self.width + x) {
             *inner = cell;
         }
     }
 
+    /// Iterate over all cells in the grid
     pub fn iter(&self) -> impl Iterator<Item = (usize, usize, C)> + '_ {
         self.cells.iter().enumerate().map(|(i, &cell)| {
             let x = i % self.width;
@@ -57,6 +64,7 @@ impl<C: GridCell> Grid<C> {
         })
     }
 
+    /// Iterate over all cells in the grid mutably
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (usize, usize, &mut C)> + '_ {
         self.cells.iter_mut().enumerate().map(|(i, cell)| {
             let x = i % self.width;
@@ -65,6 +73,7 @@ impl<C: GridCell> Grid<C> {
         })
     }
 
+    /// Draw a line of cells on the grid
     pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let delta = end - start;
         let length = delta.length();
@@ -75,6 +84,7 @@ impl<C: GridCell> Grid<C> {
         }
     }
 
+    /// Draw a circle of cells on the grid
     pub fn circle(&mut self, center: Pos2, radius: f32, cell: C) {
         iter_circle(center, radius).for_each(|(x, y)| {
             self.set(x, y, cell);
@@ -82,6 +92,7 @@ impl<C: GridCell> Grid<C> {
     }
 }
 
+/// Iterate over coordinates within a circle
 pub fn iter_circle(center: Pos2, radius: f32) -> impl Iterator<Item = (usize, usize)> {
     let radius2 = radius * radius;
     ((center.y - radius).ceil() as usize..=(center.y + radius).floor() as usize).flat_map(
@@ -99,7 +110,7 @@ pub fn iter_circle(center: Pos2, radius: f32) -> impl Iterator<Item = (usize, us
     )
 }
 
-impl<C> Debug for Grid<C> {
+impl<C: GridCell> Debug for Grid<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Grid({}x{})", self.width, self.height)
     }

@@ -3,7 +3,6 @@
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
-    fmt::Display,
     ops::Range,
     time::Instant,
 };
@@ -11,25 +10,16 @@ use std::{
 use debug::DebugType;
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
-use shapes::{Cone, Line};
+use shapes::{Circle, Cone, Line, Shape};
 
 pub mod behaviors;
 pub mod debug;
 pub mod grid;
 pub mod scaled_grid;
 pub mod shapes;
+mod utils;
 
-fn normalize_angle(angle: f32) -> f32 {
-    let mut angle = angle;
-    while angle < -std::f32::consts::PI {
-        angle += 2.0 * std::f32::consts::PI;
-    }
-    while angle > std::f32::consts::PI {
-        angle -= 2.0 * std::f32::consts::PI;
-    }
-    angle
-}
-
+/// A unique identifier for a robot
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
 pub struct RobotId(u32);
 
@@ -45,68 +35,52 @@ impl RobotId {
     }
 }
 
+/// Kinds of messages that can be sent between robots
 #[derive(Debug, Clone)]
 pub enum MessageKind {
-    Cone { cone: Cone, diff: f32 },
-    Line { line: Line, diff: f32 },
-    String(String),
+    ShapeDiff { shape: Shape, diff: f32 },
     Debug(String),
 }
 
-impl Display for MessageKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            MessageKind::Line { line, .. } => write!(f, "Line: {} -> {}", line.start, line.end),
-            MessageKind::String(s) => write!(f, "{}", s),
-            MessageKind::Debug(s) => write!(f, "DEBUG: {}", s),
-            MessageKind::Cone {
-                cone:
-                    Cone {
-                        center,
-                        radius,
-                        angle,
-                        fov,
-                    },
-                ..
-            } => write!(
-                f,
-                "Cone: center: {}, radius: {:?}, angle: {}, fov: {}",
-                center, radius, angle, fov
-            ),
-        }
-    }
-}
-
+/// A message sent between robots
 #[derive(Debug, Clone)]
 pub struct Message {
+    /// The id of the robot that sent the message
     pub from: RobotId,
+
+    /// The kind of message
     pub kind: MessageKind,
 }
 
-#[derive(Debug, Clone)]
-pub struct RecvMessage {
-    msg: Message,
-    processed: bool,
-}
-
+/// A point detected by the camera
 #[derive(Debug, Clone)]
 pub struct CamPoint {
+    /// The angle of the point relative to the robot
     pub angle: f32,
+
+    /// The probability of the search object being at this point
     pub propability: f32,
 }
 
+/// Data from the camera
 #[derive(Debug, Clone, Default)]
 pub struct CamData(pub Vec<CamPoint>);
 
+/// A point detected by the lidar
 #[derive(Debug, Clone, Default)]
 pub struct LidarPoint {
+    /// The angle of the point relative to the robot
     pub angle: f32,
+
+    /// The distance to the object
     pub distance: f32,
 }
 
+/// Data from the lidar
 #[derive(Debug, Clone, Default)]
 pub struct LidarData(pub Vec<LidarPoint>);
 
+/// Control signal to be sent to the robot
 #[derive(Debug, Clone, Default)]
 pub struct Control {
     pub speed: f32,
@@ -149,7 +123,9 @@ pub struct Robot {
     pub lidar_range: f32,
 
     /// The messages from the other robots since the last call.
-    pub incomming_msg: Vec<Message>,
+    pub incoming_msg: Vec<Message>,
+
+    /// The indices of the messages that have been processed.
     pub processed_msgs: HashSet<usize>,
 
     /// The messages to be sent to the other robots.
@@ -157,8 +133,12 @@ pub struct Robot {
 
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
+
+    /// The time of the last search grid update
     pub last_search_grid_update: Instant,
 
+    /// Debug object and their names. Used for visualization.
+    /// Set to `None` to disable debug visualization.
     pub debug_soup: Option<HashMap<String, DebugType>>,
 }
 
@@ -176,7 +156,7 @@ impl Default for Robot {
             cam_fov: PI / 2.0,
             lidar: Default::default(),
             lidar_range: 5.0,
-            incomming_msg: Default::default(),
+            incoming_msg: Default::default(),
             processed_msgs: Default::default(),
             outgoing_msg: Default::default(),
             search_grid: Default::default(),
@@ -187,22 +167,23 @@ impl Default for Robot {
 }
 
 impl Robot {
-    /// Get the messages from the other robots since the last call.
+    /// Get the messages from the other robots since the last call
     pub(crate) fn recv(&mut self) -> impl Iterator<Item = (usize, &Message)> {
-        self.incomming_msg
+        self.incoming_msg
             .iter()
             .enumerate()
             .filter(|(i, msg)| !self.processed_msgs.contains(i) && msg.from != self.id)
     }
 
-    /// Mark a message as processed.
+    /// Mark a message as processed
     pub(crate) fn set_processed(&mut self, idx: usize) {
         self.processed_msgs.insert(idx);
     }
 
+    /// Clear the processed messages from the incoming messages list
     pub(crate) fn clear_processed(&mut self) {
-        self.incomming_msg = self
-            .incomming_msg
+        self.incoming_msg = self
+            .incoming_msg
             .iter()
             .cloned()
             .enumerate()
@@ -213,29 +194,15 @@ impl Robot {
     }
 
     /// Send a message to the other robots.
-    pub(crate) fn post(&mut self, msg: MessageKind) {
+    pub(crate) fn post(&mut self, kind: MessageKind) {
         self.outgoing_msg.push(Message {
             from: self.id,
-            kind: msg,
+            kind,
         });
     }
 
     pub(crate) fn update_search_cone(&mut self, cone: &Cone, diff: f32) {
-        let cone_iter = self
-            .search_grid
-            .iter_circle(cone.center, cone.radius.end)
-            .filter(|(point, _cell)| {
-                let offset = *point - cone.center;
-                if offset.length() < cone.radius.start {
-                    return false;
-                }
-                let angle = offset.angle() - cone.angle;
-                let angle = normalize_angle(angle);
-                angle.abs() < cone.fov / 2.0
-            })
-            .collect::<Vec<_>>();
-
-        for (point, cell) in cone_iter {
+        for (point, cell) in self.search_grid.iter_cone(cone).collect::<Vec<_>>() {
             if let Some(mut cell) = cell {
                 cell -= diff;
                 self.search_grid.set(point, cell);
@@ -246,10 +213,10 @@ impl Robot {
     pub(crate) fn update_search_line(&mut self, line: &Line, diff: f32) {
         let dir = (line.end - line.start).normalized();
         let step_size = self.search_grid.scale();
-        let r = step_size * 2.0;
-        let start_distance = self.cam_range.start + r / 2.0;
+        let radius = step_size * 2.0;
+        let start_distance = self.cam_range.start + radius / 2.0;
         let mut distance = start_distance;
-        while distance < self.cam_range.end - r / 2.0 {
+        while distance < self.cam_range.end - radius / 2.0 {
             let pos = line.start + dir * distance;
 
             // Nearness is in range [0, 1]
@@ -257,7 +224,10 @@ impl Robot {
 
             for (point, mut cell) in self
                 .search_grid
-                .iter_circle(pos, r)
+                .iter_circle(&Circle {
+                    center: pos,
+                    radius,
+                })
                 .filter_map(|(p, c)| Some((p, c?)))
                 .collect::<Vec<_>>()
             {
@@ -278,54 +248,62 @@ impl Robot {
         // How often to update the search grid (multiplied on all changes to the cells)
         const UPDATE_INTERVAL: f32 = 0.1;
 
+        // Only update the search grid every UPDATE_INTERVAL seconds
         if (time - self.last_search_grid_update).as_secs_f32() < UPDATE_INTERVAL {
             return;
         }
         self.last_search_grid_update = time;
 
-        let CamData(cam) = self.cam.clone();
-
-        let cone = Cone {
-            center: self.pos,
-            radius: self.cam_range.clone(),
-            angle: self.angle,
-            fov: self.cam_fov,
-        };
-
+        // Cool down the search grid within the view of the camera
         {
+            let cone = Cone {
+                center: self.pos,
+                radius: self.cam_range.clone(),
+                angle: self.angle,
+                fov: self.cam_fov,
+            };
             let diff = 1.0 * UPDATE_INTERVAL;
             self.update_search_cone(&cone, diff);
-            self.post(MessageKind::Cone { cone, diff });
+            self.post(MessageKind::ShapeDiff {
+                shape: Shape::Cone(cone),
+                diff,
+            });
         }
 
-        for cam_point in cam {
-            let angle = self.angle + cam_point.angle;
-            let dir = Vec2::angled(angle);
-            let start = self.pos + dir * self.cam_range.start;
-            let end = self.pos + dir * self.cam_range.end;
-            let line = Line { start, end };
+        // Heat up the search grid in the direction of the search items
+        // detected by the camera
+        {
+            let CamData(cam) = self.cam.clone();
+            for cam_point in cam {
+                let angle = self.angle + cam_point.angle;
+                let dir = Vec2::angled(angle);
+                let start = self.pos + dir * self.cam_range.start;
+                let end = self.pos + dir * self.cam_range.end;
+                let line = Line { start, end };
 
-            let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
-            self.update_search_line(&line, diff);
-            self.post(MessageKind::Line { line, diff });
+                let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
+
+                self.update_search_line(&line, diff);
+                self.post(MessageKind::ShapeDiff {
+                    shape: Shape::Line(line),
+                    diff,
+                });
+            }
         }
 
-        // Read incoming messages
+        // Read incoming messages and update the search grid accordingly
         for (msg_id, msg) in self
             .recv()
             .map(|(id, msg)| (id, msg.kind.clone()))
             .collect::<Vec<_>>()
         {
-            match msg {
-                MessageKind::Cone { cone, diff } => {
-                    self.update_search_cone(&cone, diff);
-                    self.set_processed(msg_id);
+            if let MessageKind::ShapeDiff { shape, diff } = msg {
+                match shape {
+                    Shape::Cone(cone) => self.update_search_cone(&cone, diff),
+                    Shape::Line(line) => self.update_search_line(&line, diff),
+                    _ => {}
                 }
-                MessageKind::Line { line, diff } => {
-                    self.update_search_line(&line, diff);
-                    self.set_processed(msg_id);
-                }
-                _ => {}
+                self.set_processed(msg_id);
             }
         }
     }
