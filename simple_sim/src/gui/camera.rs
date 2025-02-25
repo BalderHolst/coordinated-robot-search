@@ -2,36 +2,58 @@ use eframe::egui::{Key, Pos2, Rect, Response, Ui, Vec2};
 
 use crate::{bind_down, bind_pressed};
 
+#[derive(Clone, Debug)]
+struct CameraView {
+    pub pos: Pos2,
+    pub scale: f32,
+}
+
+impl Default for CameraView {
+    fn default() -> Self {
+        Self {
+            pos: Pos2::ZERO,
+            scale: 100.0,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Camera {
-    pub pos: Pos2,
-    home: Pos2,
-    scale: f32,
+    view: CameraView,
+    home: CameraView,
     viewport: Rect,
 }
 
 impl Default for Camera {
     fn default() -> Self {
         Self {
-            home: Pos2::ZERO,
-            pos: Pos2::ZERO,
+            view: CameraView::default(),
+            home: CameraView::default(),
             viewport: Rect::ZERO,
-            scale: 100.0,
         }
     }
 }
 
 impl Camera {
-    pub fn new(pos: Pos2) -> Self {
+    pub fn new(pos: Pos2, scale: f32) -> Self {
+        let view = CameraView { pos, scale };
         Self {
-            home: pos,
-            pos,
+            view: view.clone(),
+            home: view,
             ..Default::default()
         }
     }
 
+    pub fn pos(&self) -> Pos2 {
+        self.view.pos
+    }
+
+    pub fn set_pos(&mut self, pos: Pos2) {
+        self.view.pos = pos;
+    }
+
     pub fn home(&mut self) {
-        self.pos = self.home;
+        self.view = self.home.clone();
     }
 
     pub fn origin(&self) -> Pos2 {
@@ -42,22 +64,22 @@ impl Camera {
     where
         X: std::ops::Mul<f32, Output = X>,
     {
-        x * self.scale
+        x * self.view.scale
     }
 
     pub fn world_to_viewport(&self, world_pos: Pos2) -> Pos2 {
-        let rel_pos = world_pos - self.pos;
-        self.viewport.center() + rel_pos * self.scale
+        let rel_pos = world_pos - self.view.pos;
+        self.viewport.center() + rel_pos * self.view.scale
     }
 
     pub fn canvas_to_world(&self, canvas_pos: Pos2) -> Pos2 {
-        let rel_pos = (canvas_pos - self.viewport.center()) / self.scale;
+        let rel_pos = (canvas_pos - self.viewport.center()) / self.view.scale;
 
-        self.pos + rel_pos
+        self.view.pos + rel_pos
     }
 
     pub fn canvas_to_rel(&self, canvas_pos: Vec2) -> Vec2 {
-        canvas_pos / self.scale
+        canvas_pos / self.view.scale
     }
 
     pub fn set_viewport(&mut self, viewport: Rect) {
@@ -67,13 +89,13 @@ impl Camera {
     pub fn update(&mut self, ui: &Ui, resp: &Response) -> bool {
         let mut moved = false;
 
+
         // Zoom
         if resp.hovered() {
             ui.input(|i| {
                 let delta_scale = i.smooth_scroll_delta.y;
-                let delta_scale = 0.01 * delta_scale * self.scale;
-                self.scale += delta_scale;
-                self.scale = self.scale.clamp(10.0, 500.0);
+                let delta_scale = 0.01 * delta_scale * self.view.scale;
+                self.view.scale += delta_scale;
             });
         }
 
@@ -81,7 +103,7 @@ impl Camera {
         if resp.dragged() {
             moved = true;
             let delta = self.canvas_to_rel(resp.drag_delta());
-            self.pos -= delta;
+            self.view.pos -= delta;
         }
 
         // Keys
@@ -99,7 +121,7 @@ impl Camera {
 
             if velocity != Vec2::ZERO {
                 moved = true;
-                self.pos += velocity * 0.001 * self.scale;
+                self.view.pos += velocity * 0.001 * self.view.scale;
             }
         });
 

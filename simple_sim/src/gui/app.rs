@@ -176,7 +176,7 @@ impl App {
         let robot_opts = vec![RobotOptions::default(); sim_state.agents.len()];
 
         Self {
-            cam: Camera::new(Pos2::ZERO),
+            cam: Camera::new(Pos2::ZERO, 100.0),
             sim_state,
             sim_bg,
             target_sps: args.target_sps as usize,
@@ -642,7 +642,8 @@ impl eframe::App for App {
                 }
 
                 if let Some(f) = self.global_opts.follow {
-                    self.cam.pos = self.sim_state.agents[f].pos();
+                    let agent_pos = self.sim_state.agents[f].pos();
+                    self.cam.set_pos(agent_pos);
                 }
 
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
