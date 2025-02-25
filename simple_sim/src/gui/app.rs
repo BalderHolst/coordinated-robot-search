@@ -26,7 +26,7 @@ use eframe::{
     epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
 };
-use robcore::{debug::DebugType, grid::GridCell};
+use robcore::debug::DebugType;
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
@@ -98,14 +98,14 @@ pub struct App {
     textures: AppTextures,
 }
 
-fn grid_to_image<C: GridCell>(
+fn grid_to_image<C: Clone + Default>(
     grid: &robcore::grid::Grid<C>,
     color: impl Fn(C) -> Color32,
 ) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());
-        let cell = grid.get(x, y).unwrap_or_default();
+        let cell = grid.get(x, y).cloned().unwrap_or_default();
         *pixel = color(cell);
     });
     image
@@ -294,8 +294,8 @@ impl App {
                 let mut min: f32 = 0.0;
                 let mut max: f32 = 0.0;
                 for (_, _, cell) in robot.search_grid.grid().iter() {
-                    min = min.min(cell);
-                    max = max.max(cell);
+                    min = min.min(*cell);
+                    max = max.max(*cell);
                 }
 
                 const COOL_COLOR: Color32 = Color32::BLUE;

@@ -3,21 +3,21 @@ use std::fmt::Debug;
 use emath::{Pos2, Vec2};
 
 use crate::{
-    grid::{iter_circle, Grid, GridCell},
+    grid::{iter_circle, Grid},
     shapes::{Circle, Cone, Line, Shape, WideLine},
     utils,
 };
 
 /// A 2D grid of cells with a scale indexed by floating point values
 #[derive(Clone)]
-pub struct ScaledGrid<C: GridCell> {
+pub struct ScaledGrid<C: Clone + Default> {
     grid: Grid<C>,
     width: f32,
     height: f32,
     cell_size: f32,
 }
 
-impl<C: GridCell> Default for ScaledGrid<C> {
+impl<C: Clone + Default> Default for ScaledGrid<C> {
     fn default() -> Self {
         Self {
             grid: Grid::default(),
@@ -28,7 +28,7 @@ impl<C: GridCell> Default for ScaledGrid<C> {
     }
 }
 
-impl<C: GridCell> ScaledGrid<C> {
+impl<C: Clone + Default> ScaledGrid<C> {
     /// Create a new grid with the given width, height, and the size of each cell
     pub fn new(width: f32, height: f32, cell_size: f32) -> Self {
         let grid_width = (width / cell_size).ceil() as usize;
@@ -103,7 +103,7 @@ impl<C: GridCell> ScaledGrid<C> {
     }
 
     /// Get the cell at the given position. Returns `None` if the position is out of bounds.
-    pub fn get(&self, pos: Pos2) -> Option<C> {
+    pub fn get(&self, pos: Pos2) -> Option<&C> {
         if pos.x < self.width / -2.0
             || pos.x > self.width / 2.0
             || pos.y < self.height / -2.0
@@ -170,7 +170,7 @@ impl<C: GridCell> ScaledGrid<C> {
     }
 
     /// Iterate over cells within a [Circle]
-    pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
+    pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = (Pos2, Option<&C>)> + '_ {
         let Circle { center, radius } = circle;
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(*center);
@@ -182,7 +182,7 @@ impl<C: GridCell> ScaledGrid<C> {
     }
 
     /// Iterate over cells within a [Cone]
-    pub fn iter_cone(&self, cone: &Cone) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
+    pub fn iter_cone(&self, cone: &Cone) -> impl Iterator<Item = (Pos2, Option<&C>)> + '_ {
         let Cone {
             center,
             radius,
@@ -205,7 +205,7 @@ impl<C: GridCell> ScaledGrid<C> {
     }
 }
 
-impl<C: GridCell> Debug for ScaledGrid<C> {
+impl<C: Clone + Default> Debug for ScaledGrid<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,

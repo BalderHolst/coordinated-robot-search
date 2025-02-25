@@ -6,7 +6,7 @@ use std::{path::PathBuf, process::exit};
 use description::{BitmapDescription, ObjectDescription, WorldDescription};
 use eframe::{egui::Color32, epaint::Hsva};
 
-use robcore::{grid::GridCell, scaled_grid::ScaledGrid};
+use robcore::scaled_grid::ScaledGrid;
 
 pub type World = ScaledGrid<Cell>;
 
@@ -31,8 +31,6 @@ impl Cell {
         }
     }
 }
-
-impl GridCell for Cell {}
 
 pub fn world_from_path(path: &PathBuf) -> World {
     println!("Loading world from {:?}", path);

@@ -202,7 +202,12 @@ impl Robot {
     }
 
     pub(crate) fn update_search_cone(&mut self, cone: &Cone, diff: f32) {
-        for (point, cell) in self.search_grid.iter_cone(cone).collect::<Vec<_>>() {
+        for (point, cell) in self
+            .search_grid
+            .iter_cone(cone)
+            .map(|(p, c)| (p, c.cloned()))
+            .collect::<Vec<_>>()
+        {
             if let Some(mut cell) = cell {
                 cell -= diff;
                 self.search_grid.set(point, cell);
@@ -228,7 +233,7 @@ impl Robot {
                     center: pos,
                     radius,
                 })
-                .filter_map(|(p, c)| Some((p, c?)))
+                .filter_map(|(p, c)| Some((p, *c?)))
                 .collect::<Vec<_>>()
             {
                 // We weight points closer to the robot more

@@ -112,8 +112,8 @@ impl Simulator {
 
             // Check for collisions with the world
             if let Some(cell) = cell {
-                if !cell.is_empty() && !ignore.contains(&cell) {
-                    return (distance, Some(cell));
+                if !cell.is_empty() && !ignore.contains(cell) {
+                    return (distance, Some(*cell));
                 }
             } else {
                 return (distance, Some(Cell::Wall));

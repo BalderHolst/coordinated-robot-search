@@ -49,7 +49,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
                     radius: robot.diameter * 2.0,
                 }),
             ) {
-                robot_heat += cell.unwrap_or(0.0);
+                robot_heat += cell.unwrap_or(&0.0);
                 robot_points.push((pos, cell));
             }
             robot_heat /= robot_points.len() as f32;
