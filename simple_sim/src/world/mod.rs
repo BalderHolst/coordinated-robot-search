@@ -16,7 +16,6 @@ pub enum Cell {
     Empty,
     Wall,
     SearchItem,
-    OutOfBounds,
 }
 
 impl Cell {
@@ -29,16 +28,11 @@ impl Cell {
             Self::Empty => Color32::TRANSPARENT,
             Self::Wall => Hsva::new(0.6, 0.7, 0.5, 1.0).into(),
             Self::SearchItem => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
-            Self::OutOfBounds => Color32::TRANSPARENT,
         }
     }
 }
 
-impl GridCell for Cell {
-    fn out_of_bounds() -> Self {
-        Self::OutOfBounds
-    }
-}
+impl GridCell for Cell {}
 
 pub fn world_from_path(path: &PathBuf) -> World {
     println!("Loading world from {:?}", path);

@@ -105,7 +105,8 @@ fn grid_to_image<C: GridCell>(
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
     image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
         let (x, y) = (i % grid.width(), i / grid.width());
-        *pixel = color(grid.get(x, y));
+        let cell = grid.get(x, y).unwrap_or_default();
+        *pixel = color(cell);
     });
     image
 }

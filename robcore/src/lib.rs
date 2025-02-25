@@ -235,9 +235,11 @@ impl Robot {
             })
             .collect::<Vec<_>>();
 
-        for (point, mut cell) in cone_iter {
-            cell -= diff;
-            self.search_grid.set(point, cell);
+        for (point, cell) in cone_iter {
+            if let Some(mut cell) = cell {
+                cell -= diff;
+                self.search_grid.set(point, cell);
+            }
         }
     }
 
@@ -253,7 +255,12 @@ impl Robot {
             // Nearness is in range [0, 1]
             let nearness = (distance - start_distance) / (self.cam_range.end - start_distance);
 
-            for (point, mut cell) in self.search_grid.iter_circle(pos, r).collect::<Vec<_>>() {
+            for (point, mut cell) in self
+                .search_grid
+                .iter_circle(pos, r)
+                .filter_map(|(p, c)| Some((p, c?)))
+                .collect::<Vec<_>>()
+            {
                 // We weight points closer to the robot more
                 cell += 2.0 * (diff * nearness);
 
@@ -266,7 +273,7 @@ impl Robot {
 
     pub(crate) fn update_search_grid(&mut self, time: Instant) {
         const HEAT_WIDTH: f32 = PI / 4.0;
-        const CAM_MULTPLIER: f32 = 10.0;
+        const CAM_MULTPLIER: f32 = 20.0;
 
         // How often to update the search grid (multiplied on all changes to the cells)
         const UPDATE_INTERVAL: f32 = 0.1;

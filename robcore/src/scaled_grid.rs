@@ -90,13 +90,13 @@ impl<C: GridCell> ScaledGrid<C> {
         (pos + Vec2::splat(0.5)) * self.cell_size - self.size() / 2.0
     }
 
-    pub fn get(&self, pos: Pos2) -> C {
+    pub fn get(&self, pos: Pos2) -> Option<C> {
         if pos.x < self.width / -2.0
             || pos.x > self.width / 2.0
             || pos.y < self.height / -2.0
             || pos.y > self.height / 2.0
         {
-            return C::out_of_bounds();
+            return None;
         }
         let pos = self.world_to_grid(pos);
         debug_assert!(pos.x >= 0.0);
@@ -152,12 +152,17 @@ impl<C: GridCell> ScaledGrid<C> {
         self.grid.circle(center, radius, cell);
     }
 
-    pub fn iter_circle(&self, center: Pos2, radius: f32) -> impl Iterator<Item = (Pos2, C)> + '_ {
+    pub fn iter_circle(
+        &self,
+        center: Pos2,
+        radius: f32,
+    ) -> impl Iterator<Item = (Pos2, Option<C>)> + '_ {
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
         iter_circle(center, radius).map(move |(x, y)| {
             let pos = self.grid_to_world(Pos2::new(x as f32, y as f32));
-            (pos, self.grid.get(x, y))
+            let cell = self.grid.get(x, y);
+            (pos, cell)
         })
     }
 }

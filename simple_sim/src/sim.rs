@@ -110,8 +110,13 @@ impl Simulator {
 
             let cell = self.state.world.get(pos);
 
-            if !cell.is_empty() && !ignore.contains(&cell) {
-                return (distance, Some(cell));
+            // Check for collisions with the world
+            if let Some(cell) = cell {
+                if !cell.is_empty() && !ignore.contains(&cell) {
+                    return (distance, Some(cell));
+                }
+            } else {
+                return (distance, Some(Cell::Wall));
             }
 
             // Check for collisions with other robots
@@ -157,7 +162,7 @@ impl Simulator {
             let mut nudgers = 0;
             for (x, y) in iter_circle(center, radius) {
                 let cell = self.state.world.grid().get(x, y);
-                if matches!(cell, Cell::Wall | Cell::OutOfBounds) {
+                if matches!(cell, Some(Cell::Wall) | None) {
                     let cell_center = self.state.world.grid_to_world(Pos2 {
                         x: x as f32,
                         y: y as f32,

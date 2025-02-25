@@ -36,11 +36,11 @@ impl<C: GridCell> Grid<C> {
         self.height
     }
 
-    pub fn get(&self, x: usize, y: usize) -> C {
-        self.cells
-            .get(y * self.width + x)
-            .cloned()
-            .unwrap_or_else(C::out_of_bounds)
+    pub fn get(&self, x: usize, y: usize) -> Option<C> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        self.cells.get(y * self.width + x).cloned()
     }
 
     pub fn set(&mut self, x: usize, y: usize, cell: C) {
@@ -106,19 +106,11 @@ impl<C> Debug for Grid<C> {
 }
 
 pub trait GridCell: Clone + Copy + Default {
-    fn out_of_bounds() -> Self;
+    // Empty
 }
 
 macro_rules! impl_grid_cell {
-    ($($t:ty),*) => {
-        $(
-            impl GridCell for $t {
-                fn out_of_bounds() -> Self {
-                    Self::default()
-                }
-            }
-        )*
-    };
+    ($($t:ty),*) => { $(impl GridCell for $t {})* };
 }
 
 impl_grid_cell![
