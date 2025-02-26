@@ -1,11 +1,9 @@
-use std::f32::consts::PI;
-
 use app::App;
 use eframe::egui;
 
 use crate::{
     cli::Args,
-    sim::{Agent, Simulator},
+    sim::Simulator,
     world::world_from_path,
 };
 
@@ -23,16 +21,15 @@ pub fn run(args: Args) {
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
+            // Create world
             let world = world_from_path(&args.world);
 
-            // Set up simulator
-            let mut sim = Simulator::new(world, args.target_sps, args.behavior.get_fn());
-            sim.add_robot(Agent::new_at(-2.0, -2.0, 1.0));
-            sim.add_robot(Agent::new_at(2.2, 1.1, PI));
-            sim.add_robot(Agent::new_at(-1.0, 1.0, 0.0));
+            // Create simulator
+            let sim = Simulator::new(world, args.target_sps, args.behavior.get_fn());
 
             // Create app
             let app = App::new(sim, args, cc);
+
             Ok(Box::new(app))
         }),
     ) {

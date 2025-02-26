@@ -1,5 +1,6 @@
 use std::{
     collections::HashSet,
+    f32::consts::PI,
     hash::{self, Hash, Hasher},
     sync::{
         atomic::{AtomicBool, Ordering},
@@ -11,7 +12,7 @@ use std::{
 use crate::{
     bind_down, bind_pressed,
     cli::Args,
-    sim::{Simulator, SimulatorState},
+    sim::{Agent, Simulator, SimulatorState},
     world::Cell,
 };
 
@@ -53,7 +54,6 @@ pub struct GlobalOptions {
     paused: Arc<AtomicBool>,
     focused: Option<usize>,
     follow: Option<usize>,
-    show_velocity: bool,
 }
 
 impl Default for GlobalOptions {
@@ -62,7 +62,6 @@ impl Default for GlobalOptions {
             paused: Arc::new(AtomicBool::new(false)),
             focused: None,
             follow: None,
-            show_velocity: true,
         }
     }
 }
@@ -72,6 +71,7 @@ pub struct RobotOptions {
     show_lidar: bool,
     show_search_grid: bool,
     debug_items: HashSet<String>,
+    show_velocity: bool,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -81,8 +81,16 @@ impl Default for RobotOptions {
             show_lidar: false,
             show_search_grid: false,
             debug_items: Default::default(),
+            show_velocity: true,
         }
     }
+}
+
+#[derive(Clone, Copy, Default)]
+enum CursorState {
+    #[default]
+    Picking,
+    SpawnRobot,
 }
 
 pub struct App {
@@ -96,6 +104,7 @@ pub struct App {
     global_opts: GlobalOptions,
     robot_opts: Vec<RobotOptions>,
     textures: AppTextures,
+    cursor_state: CursorState,
 }
 
 fn grid_to_image<C: Clone + Default>(
@@ -189,6 +198,7 @@ impl App {
                 world: world_texture,
                 search_grid: None,
             },
+            cursor_state: CursorState::default(),
         }
     }
 
@@ -250,19 +260,21 @@ impl App {
             }
 
             // Draw robot (as a circle)
-            let stroke = match self.global_opts.focused {
-                Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
-                _ => Stroke::NONE,
-            };
-            painter.circle(
-                pos,
-                self.cam.scaled(robot.diameter / 2.0),
-                ROBOT_COLOR,
-                stroke,
-            );
+            {
+                let stroke = match self.global_opts.focused {
+                    Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
+                    _ => Stroke::NONE,
+                };
+                painter.circle(
+                    pos,
+                    self.cam.scaled(robot.diameter / 2.0),
+                    ROBOT_COLOR,
+                    stroke,
+                );
+            }
 
             // Draw velocity vector (arrow)
-            if self.global_opts.show_velocity {
+            if robot_opts.show_velocity {
                 let vel = Vec2::angled(robot.angle) * (robot.vel + robot.diameter * 0.5);
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
@@ -502,10 +514,7 @@ impl eframe::App for App {
             })
             .show(ctx, |ui| {
                 ui.horizontal(|ui| {
-                    ui.label("Global Visualization Options:");
-                    ui.toggle_value(&mut self.global_opts.show_velocity, "Show Velocities");
-
-                    // TODO: Show all lidar button
+                    ui.label("Simulation Options");
 
                     // SPS Slider
                     let prev_target_sps = self.target_sps;
@@ -518,12 +527,24 @@ impl eframe::App for App {
                         *self.target_sps_bg.lock().unwrap() = self.target_sps as f32;
                     }
 
+                    // Pause/Resume Button
                     let paused = self.global_opts.paused.load(Ordering::Relaxed);
                     ui.button(if paused { "Resume" } else { "Pause" })
                         .clicked()
                         .then(|| {
                             self.global_opts.paused.store(!paused, Ordering::Relaxed);
                         });
+
+                    //Spawn Robot Button
+                    ui.selectable_label(
+                        matches!(self.cursor_state, CursorState::SpawnRobot),
+                        "Spawn Robots",
+                    )
+                    .clicked()
+                    .then(|| match self.cursor_state {
+                        CursorState::SpawnRobot => self.cursor_state = CursorState::default(),
+                        _ => self.cursor_state = CursorState::SpawnRobot,
+                    });
                 });
             });
 
@@ -556,6 +577,7 @@ impl eframe::App for App {
                 ui.separator();
 
                 ui.label("Visualization Options");
+                ui.toggle_value(&mut robot_opts.show_velocity, "Show Velocity");
                 ui.toggle_value(&mut robot_opts.show_lidar, "Show Lidar");
 
                 ui.separator();
@@ -659,22 +681,33 @@ impl eframe::App for App {
                     };
                     let pos = self.cam.canvas_to_world(pos);
 
-                    // Check if we clicked on a robot
-                    let mut found = None;
-                    for (n, agent) in self.sim_state.agents.iter().enumerate() {
-                        let robot = &agent.robot;
-                        if (robot.pos - pos).length() < robot.diameter * 0.75 {
-                            self.global_opts.focused = Some(n);
-                            found = Some(n);
-                            break;
+                    match self.cursor_state {
+                        CursorState::SpawnRobot => {
+                            let mut sim = self.sim_bg.lock().unwrap();
+                            let agent =
+                                Agent::new_at(pos, PI / 2.0 * self.sim_state.agents.len() as f32);
+                            sim.add_robot(agent);
+                            self.robot_opts.push(RobotOptions::default());
                         }
-                    }
-                    self.global_opts.focused = found;
+                        CursorState::Picking => {
+                            // Check if we clicked on a robot
+                            let mut found = None;
+                            for (n, agent) in self.sim_state.agents.iter().enumerate() {
+                                let robot = &agent.robot;
+                                if (robot.pos - pos).length() < robot.diameter * 0.75 {
+                                    self.global_opts.focused = Some(n);
+                                    found = Some(n);
+                                    break;
+                                }
+                            }
+                            self.global_opts.focused = found;
 
-                    // If we were following a robot, follow the clicked one
-                    if self.global_opts.follow.is_some() {
-                        if let Some(f) = self.global_opts.focused {
-                            self.global_opts.follow = Some(f);
+                            // If we were following a robot, follow the clicked one
+                            if self.global_opts.follow.is_some() {
+                                if let Some(f) = self.global_opts.focused {
+                                    self.global_opts.follow = Some(f);
+                                }
+                            }
                         }
                     }
                 });

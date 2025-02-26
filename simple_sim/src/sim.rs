@@ -28,9 +28,9 @@ pub struct Agent {
 }
 
 impl Agent {
-    pub fn new_at(x: f32, y: f32, angle: f32) -> Self {
+    pub fn new_at(pos: Pos2, angle: f32) -> Self {
         let robot = robcore::Robot {
-            pos: Pos2 { x, y },
+            pos,
             angle,
             ..Default::default()
         };

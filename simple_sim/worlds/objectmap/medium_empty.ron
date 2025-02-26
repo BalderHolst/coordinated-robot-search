@@ -1,5 +1,5 @@
 ObjectDescription(
-    width: 25,
-    height: 25,
+    width: 80,
+    height: 80,
     scale: 0.05,
 )
