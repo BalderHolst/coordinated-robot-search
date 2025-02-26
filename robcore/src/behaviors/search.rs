@@ -10,9 +10,12 @@ use super::{shapes::Circle, utils::normalize_angle, Control, DebugType, Robot};
 
 const GRADIENT_RADIUS: f32 = 8.0;
 
+/// The range of the lidar sensor at which the robot moves away from an object
+const LIDAR_OBSTACLE_RANGE: f32 = 3.0;
+
 const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
-const FORWARD_BIAS: f32 = 0.1;
+const FORWARD_BIAS: f32 = 0.05;
 
 const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
@@ -123,12 +126,14 @@ fn gradient(robot: &mut Robot) -> Vec2 {
 
 /// Calculate the lidar contribution to the control
 fn lidar(robot: &mut Robot) -> Vec2 {
+    assert!(robot.lidar_range >= LIDAR_OBSTACLE_RANGE);
     let mut lidar_contribution = Vec2::ZERO;
     {
         let mut total_weight: f32 = 0.0;
         let LidarData(points) = robot.lidar.clone();
         for point in points {
-            let weight = -(1.0 - point.distance / robot.lidar_range).powi(2);
+            let distance = point.distance.clamp(0.0, LIDAR_OBSTACLE_RANGE);
+            let weight = -(1.0 - distance / LIDAR_OBSTACLE_RANGE).powi(2);
             lidar_contribution += Vec2::angled(point.angle + robot.angle) * weight;
         }
         if total_weight == 0.0 {
