@@ -44,7 +44,6 @@ def generate_launch_description():
         "P": LaunchConfiguration("pitch", default="0.00"),
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
-    robot_name = LaunchConfiguration("robot_name")
     robot_sdf = LaunchConfiguration("robot_sdf")
 
     # Map fully qualified names to relative ones so the node's namespace can be prepended.
@@ -88,10 +87,6 @@ def generate_launch_description():
         description="Full path to world model file to load",
     )
 
-    declare_robot_name_cmd = DeclareLaunchArgument(
-        "robot_name", default_value="nav2_turtlebot4", description="name of the robot"
-    )
-
     declare_robot_sdf_cmd = DeclareLaunchArgument(
         "robot_sdf",
         default_value=os.path.join(
@@ -118,10 +113,7 @@ def generate_launch_description():
         remappings=remappings,
     )
 
-    # The SDF file for the world is a xacro file because we wanted to
-    # conditionally load the SceneBroadcaster plugin based on wheter we're
-    # running in headless mode. But currently, the Gazebo command line doesn't
-    # take SDF strings for worlds, so the output of xacro needs to be saved into
+    # The Gazebo command line doesn't take SDF strings for worlds, so the output of xacro needs to be saved into
     # a temporary file and passed to Gazebo.
     world_sdf = tempfile.mktemp(prefix="tb4_", suffix=".sdf")
     world_sdf_xacro = ExecuteProcess(
@@ -162,7 +154,7 @@ def generate_launch_description():
             "namespace": namespace,
             "use_simulator": use_simulator,
             "use_sim_time": use_sim_time,
-            "robot_name": robot_name,
+            "robot_name": namespace,
             "x_pose": pose["x"],
             "y_pose": pose["y"],
             "z_pose": pose["z"],
@@ -195,7 +187,6 @@ def generate_launch_description():
     ld.add_action(declare_use_robot_state_pub_cmd)
     ld.add_action(declare_simulator_cmd)
     ld.add_action(declare_world_cmd)
-    ld.add_action(declare_robot_name_cmd)
     ld.add_action(declare_robot_sdf_cmd)
 
     ld.add_action(set_env_vars_resources)

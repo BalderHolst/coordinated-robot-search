@@ -1,5 +1,11 @@
 # Good commands for ROS2
 
+Kill all
+
+```bash
+ps aux | grep -E 'rviz|gz|ros' | grep -v -E 'home|grep' | awk '{print $2}' | xargs kill
+```
+
 ## General
 
 Make package under `ros2_ws/src`
