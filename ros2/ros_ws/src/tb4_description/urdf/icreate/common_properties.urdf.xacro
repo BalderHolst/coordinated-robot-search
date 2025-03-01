@@ -54,7 +54,7 @@
       <update_rate>${update_rate}</update_rate>
       <visualize>${visualize}</visualize>
       <always_on>true</always_on>
-      <gz_frame_id>${sensor_name}_link</gz_frame_id>
+      <gz_frame_id>${namespace}/${sensor_name}_link</gz_frame_id>
       <topic>${namespace}/scan</topic>
       <lidar>
         <scan>

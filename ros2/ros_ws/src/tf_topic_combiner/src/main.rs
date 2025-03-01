@@ -84,14 +84,6 @@ async fn relay_tf_topic(
                 transform.header.frame_id = format!("{robot_name}/{}", transform.header.frame_id);
                 transform.child_frame_id = format!("{robot_name}/{}", transform.child_frame_id);
             });
-            assert!(msg.transforms.iter().all(|transform| transform
-                .header
-                .frame_id
-                .starts_with(&format!("{robot_name}/"))
-                && transform
-                    .header
-                    .frame_id
-                    .starts_with(&format!("{robot_name}/"))));
             arc_publisher.lock().unwrap().publish(&msg).unwrap();
             future::ready(())
         })
