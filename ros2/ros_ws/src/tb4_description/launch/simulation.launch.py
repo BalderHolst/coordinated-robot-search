@@ -105,6 +105,7 @@ def generate_launch_description():
         parameters=[
             {
                 "use_sim_time": use_sim_time,
+                # "tf_prefix": namespace,
                 "robot_description": Command(
                     ["xacro", " ", robot_sdf, " namespace:=", namespace]
                 ),

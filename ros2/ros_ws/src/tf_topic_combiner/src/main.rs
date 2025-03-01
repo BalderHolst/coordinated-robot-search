@@ -23,19 +23,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for i in 0..n_robots {
         let robot_name = format!("robot_{}", i);
         let robot_name_cp = robot_name.clone();
+
         let topic_name = "tf".to_string();
         let node = arc_node.clone();
+        let qos = QosProfile::default();
         println!("Relaying from /{robot_name}/{topic_name} to /{topic_name}",);
         task::spawn(async move {
-            relay_tf_topic(node, robot_name_cp, topic_name)
+            relay_tf_topic(node, robot_name_cp, topic_name, qos)
                 .await
                 .unwrap()
         });
 
+        let qos = QosProfile::default().transient_local();
         let topic_name = "tf_static".to_string();
         println!("Relaying from /{robot_name}/{topic_name} to /{topic_name}",);
         let node = arc_node.clone();
-        task::spawn(async move { relay_tf_topic(node, robot_name, topic_name).await.unwrap() });
+        task::spawn(async move {
+            relay_tf_topic(node, robot_name, topic_name, qos)
+                .await
+                .unwrap()
+        });
     }
 
     let handle = tokio::task::spawn_blocking(move || loop {
@@ -55,22 +62,20 @@ async fn relay_tf_topic(
     arc_node: Arc<Mutex<r2r::Node>>,
     robot_name: String,
     topic_name: String,
+    qos: QosProfile,
 ) -> Result<(), r2r::Error> {
     let sub = arc_node
         .lock()
         .unwrap()
         .subscribe::<tf2_msgs::msg::TFMessage>(
             &format!("/{robot_name}/{topic_name}"),
-            QosProfile::default(),
+            qos.clone(),
         )?;
 
     let publisher = arc_node
         .lock()
         .unwrap()
-        .create_publisher::<tf2_msgs::msg::TFMessage>(
-            &format!("/{topic_name}"),
-            QosProfile::default(),
-        )?;
+        .create_publisher::<tf2_msgs::msg::TFMessage>(&format!("/{topic_name}"), qos)?;
     let arc_publisher = Arc::new(Mutex::new(publisher));
 
     task::spawn(async move {
@@ -79,6 +84,14 @@ async fn relay_tf_topic(
                 transform.header.frame_id = format!("{robot_name}/{}", transform.header.frame_id);
                 transform.child_frame_id = format!("{robot_name}/{}", transform.child_frame_id);
             });
+            assert!(msg.transforms.iter().all(|transform| transform
+                .header
+                .frame_id
+                .starts_with(&format!("{robot_name}/"))
+                && transform
+                    .header
+                    .frame_id
+                    .starts_with(&format!("{robot_name}/"))));
             arc_publisher.lock().unwrap().publish(&msg).unwrap();
             future::ready(())
         })
