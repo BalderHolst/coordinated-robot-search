@@ -3,8 +3,7 @@ import os
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
@@ -12,12 +11,15 @@ from nav2_common.launch import ReplaceString
 
 
 def generate_launch_description():
-    sim_dir = get_package_share_directory("tb4_description")
-
+    # Launch arguments
     use_sim_time = LaunchConfiguration("use_sim_time")
     namespace = LaunchConfiguration("namespace")
-    use_simulator = LaunchConfiguration("use_simulator")
     robot_name = LaunchConfiguration("robot_name")
+
+    # Paths
+    desc_dir = get_package_share_directory("tb4_description")
+    robot_bridge = os.path.join(desc_dir, "params", "bridge_robot_tmp.yaml")
+
     pose = {
         "x": LaunchConfiguration("x_pose", default="-8.00"),
         "y": LaunchConfiguration("y_pose", default="-0.50"),
@@ -26,29 +28,6 @@ def generate_launch_description():
         "P": LaunchConfiguration("pitch", default="0.00"),
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
-
-    # Declare the launch arguments
-    declare_namespace_cmd = DeclareLaunchArgument(
-        "namespace", default_value="", description="Top-level namespace"
-    )
-
-    declare_use_simulator_cmd = DeclareLaunchArgument(
-        "use_simulator",
-        default_value="True",
-        description="Whether to start the simulator",
-    )
-
-    declare_use_sim_time_cmd = DeclareLaunchArgument(
-        "use_sim_time",
-        default_value="true",
-        description="Use simulation (Gazebo) clock if true",
-    )
-
-    declare_robot_name_cmd = DeclareLaunchArgument(
-        "robot_name", default_value="turtlebot4", description="name of the robot"
-    )
-
-    robot_bridge = os.path.join(sim_dir, "params", "bridge_robot_tmp.yaml")
 
     robot_bridge_namespaced = ReplaceString(
         source_file=robot_bridge,
@@ -70,7 +49,6 @@ def generate_launch_description():
     )
 
     spawn_model = Node(
-        condition=IfCondition(use_simulator),
         package="ros_gz_sim",
         executable="create",
         namespace=namespace,
@@ -90,11 +68,19 @@ def generate_launch_description():
 
     # Create the launch description and populate
     ld = LaunchDescription()
-    ld.add_action(declare_namespace_cmd)
-    ld.add_action(declare_robot_name_cmd)
-    ld.add_action(declare_use_simulator_cmd)
-    ld.add_action(declare_use_sim_time_cmd)
+    DeclareLaunchArgument(
+        "namespace", default_value="", description="Top-level namespace"
+    )
+    DeclareLaunchArgument(
+        "robot_name", default_value="turtlebot4", description="name of the robot"
+    )
+    DeclareLaunchArgument(
+        "use_sim_time",
+        default_value="true",
+        description="Use simulation (Gazebo) clock if true",
+    )
 
+    AppendEnvironmentVariable("GZ_SIM_RESOURCE_PATH", os.path.join(desc_dir))
     ld.add_action(bridge)
     ld.add_action(spawn_model)
     return ld

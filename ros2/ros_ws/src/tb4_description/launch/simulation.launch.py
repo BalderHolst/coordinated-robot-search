@@ -136,9 +136,6 @@ def generate_launch_description():
         )
     )
 
-    set_env_vars_resources = AppendEnvironmentVariable(
-        "GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds")
-    )
     gazebo_client = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -153,9 +150,8 @@ def generate_launch_description():
         PythonLaunchDescriptionSource(os.path.join(launch_dir, "spawn_tb4.launch.py")),
         launch_arguments={
             "namespace": namespace,
-            "use_simulator": use_simulator,
-            "use_sim_time": use_sim_time,
             "robot_name": namespace,
+            "use_sim_time": use_sim_time,
             "x_pose": pose["x"],
             "y_pose": pose["y"],
             "z_pose": pose["z"],
@@ -190,7 +186,7 @@ def generate_launch_description():
     ld.add_action(declare_world_cmd)
     ld.add_action(declare_robot_sdf_cmd)
 
-    ld.add_action(set_env_vars_resources)
+    AppendEnvironmentVariable("GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds"))
     ld.add_action(world_sdf_xacro)
     ld.add_action(remove_temp_sdf_file)
     ld.add_action(gz_robot)
