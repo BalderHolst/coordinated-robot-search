@@ -26,7 +26,7 @@ def generate_launch_description():
     ########### General imports ###########
     sim_dir = get_package_share_directory("nav2_minimal_tb4_sim")
     desc_dir = get_package_share_directory("nav2_minimal_tb4_description")
-    multi_robot = get_package_share_directory("multi_robot_control")
+    multi_robot = get_package_share_directory("multi_robot_control_old")
 
     ########### Variables ###########
     world = LaunchConfiguration("world")

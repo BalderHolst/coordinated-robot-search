@@ -1,10 +1,11 @@
 import os
+from pathlib import Path
 
 from ament_index_python.packages import get_package_share_directory
 
 from launch import LaunchDescription
-from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument
-from launch.substitutions import LaunchConfiguration
+from launch.actions import AppendEnvironmentVariable, DeclareLaunchArgument, LogInfo
+from launch.substitutions import Command, LaunchConfiguration
 
 from launch_ros.actions import Node
 from nav2_common.launch import ReplaceString
@@ -18,7 +19,6 @@ def generate_launch_description():
 
     # Paths
     desc_dir = get_package_share_directory("tb4_description")
-    robot_bridge = os.path.join(desc_dir, "params", "bridge_robot_tmp.yaml")
 
     pose = {
         "x": LaunchConfiguration("x_pose", default="-8.00"),
@@ -29,12 +29,30 @@ def generate_launch_description():
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
 
-    robot_bridge_namespaced = ReplaceString(
-        source_file=robot_bridge,
-        replacements={"<gz_namespace>": ("/", namespace)},
+    robot_sdf = os.path.join(desc_dir, "urdf", "standard", "turtlebot4.urdf.xacro")
+    start_robot_state_publisher_cmd = Node(
+        package="robot_state_publisher",
+        executable="robot_state_publisher",
+        name="robot_state_publisher",
+        namespace=namespace,
+        output="screen",
+        parameters=[
+            {
+                "use_sim_time": use_sim_time,
+                # "tf_prefix": namespace, # Not needed with current setup
+                "robot_description": Command(
+                    ["xacro", " ", robot_sdf, " namespace:=", namespace]
+                ),
+            }
+        ],
+        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
 
-    bridge = Node(
+    robot_bridge_namespaced = ReplaceString(
+        source_file=os.path.join(desc_dir, "params", "bridge_robot_tmp.yaml"),
+        replacements={"<gz_namespace>": ("/", namespace)},
+    )
+    bridge_cmd = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
         name=robot_name,
@@ -48,7 +66,7 @@ def generate_launch_description():
         output="screen",
     )
 
-    spawn_model = Node(
+    spawn_model_cmd = Node(
         package="ros_gz_sim",
         executable="create",
         namespace=namespace,
@@ -67,20 +85,29 @@ def generate_launch_description():
     )
 
     # Create the launch description and populate
-    ld = LaunchDescription()
-    DeclareLaunchArgument(
-        "namespace", default_value="", description="Top-level namespace"
-    )
-    DeclareLaunchArgument(
-        "robot_name", default_value="turtlebot4", description="name of the robot"
-    )
-    DeclareLaunchArgument(
-        "use_sim_time",
-        default_value="true",
-        description="Use simulation (Gazebo) clock if true",
+    ld = LaunchDescription(
+        [
+            DeclareLaunchArgument(
+                "namespace", default_value="", description="Top-level namespace"
+            ),
+            DeclareLaunchArgument(
+                "robot_name",
+                default_value="turtlebot4",
+                description="name of the robot",
+            ),
+            DeclareLaunchArgument(
+                "use_sim_time",
+                default_value="true",
+                description="Use simulation (Gazebo) clock if true",
+            ),
+            AppendEnvironmentVariable(
+                "GZ_SIM_RESOURCE_PATH",
+                str(Path(os.path.join(desc_dir)).parent.resolve()),
+            ),
+            start_robot_state_publisher_cmd,
+            bridge_cmd,
+            spawn_model_cmd,
+        ]
     )
 
-    AppendEnvironmentVariable("GZ_SIM_RESOURCE_PATH", os.path.join(desc_dir))
-    ld.add_action(bridge)
-    ld.add_action(spawn_model)
     return ld

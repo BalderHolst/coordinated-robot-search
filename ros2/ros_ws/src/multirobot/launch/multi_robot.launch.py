@@ -12,28 +12,25 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
 )
-from launch.conditions import IfCondition
+from launch.conditions import UnlessCondition
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
-from launch.substitutions import LaunchConfiguration, PythonExpression
+from launch.substitutions import LaunchConfiguration
 
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
     # Get the launch directory
-    sim_dir = get_package_share_directory("nav2_minimal_tb4_sim")
+    sim_dir = get_package_share_directory("multi_robot_control")
     desc_dir = get_package_share_directory("tb4_description")
-    launch_dir = os.path.join(desc_dir, "launch")
 
     # Create the launch configuration variables
     namespace = LaunchConfiguration("namespace")
     use_sim_time = LaunchConfiguration("use_sim_time")
 
     # Launch configuration variables specific to simulation
-    use_simulator = LaunchConfiguration("use_simulator")
-    use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
     pose = {
@@ -44,74 +41,18 @@ def generate_launch_description():
         "P": LaunchConfiguration("pitch", default="0.00"),
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
-    robot_sdf = LaunchConfiguration("robot_sdf")
-
-    # Map fully qualified names to relative ones so the node's namespace can be prepended.
-    # In case of the transforms (tf), currently, there doesn't seem to be a better alternative
-    # https://github.com/ros/geometry2/issues/32
-    # https://github.com/ros/robot_state_publisher/pull/30
-    # TODO(orduno) Substitute with `PushNodeRemapping`
-    #              https://github.com/ros2/launch_ros/issues/56
-    remappings = [("/tf", "tf"), ("/tf_static", "tf_static")]
 
     # Declare the launch arguments
-    declare_namespace_cmd = DeclareLaunchArgument(
-        "namespace", default_value="", description="Top-level namespace"
-    )
-
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         "use_sim_time",
         default_value="True",
         description="Use simulation (Gazebo) clock if true",
     )
 
-    declare_use_simulator_cmd = DeclareLaunchArgument(
-        "use_simulator",
-        default_value="True",
-        description="Whether to start the simulator",
-    )
-
-    declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-        "use_robot_state_pub",
-        default_value="True",
-        description="Whether to start the robot state publisher",
-    )
-
-    declare_simulator_cmd = DeclareLaunchArgument(
-        "headless", default_value="False", description="Whether to execute gzclient)"
-    )
-
     declare_world_cmd = DeclareLaunchArgument(
         "world",
         default_value=os.path.join(sim_dir, "worlds", "depot.sdf"),
         description="Full path to world model file to load",
-    )
-
-    declare_robot_sdf_cmd = DeclareLaunchArgument(
-        "robot_sdf",
-        default_value=os.path.join(
-            desc_dir, "urdf", "standard", "turtlebot4.urdf.xacro"
-        ),
-        description="Full path to robot sdf file to spawn the robot in gazebo",
-    )
-
-    start_robot_state_publisher_cmd = Node(
-        condition=IfCondition(use_robot_state_pub),
-        package="robot_state_publisher",
-        executable="robot_state_publisher",
-        name="robot_state_publisher",
-        namespace=namespace,
-        output="screen",
-        parameters=[
-            {
-                "use_sim_time": use_sim_time,
-                # "tf_prefix": namespace, # Not needed with current setup
-                "robot_description": Command(
-                    ["xacro", " ", robot_sdf, " namespace:=", namespace]
-                ),
-            }
-        ],
-        remappings=remappings,
     )
 
     # The Gazebo command line doesn't take SDF strings for worlds, so the output of xacro needs to be saved into
@@ -127,7 +68,6 @@ def generate_launch_description():
             )
         ),
         launch_arguments={"gz_args": ["-r -s ", world_sdf]}.items(),
-        condition=IfCondition(use_simulator),
     )
 
     remove_temp_sdf_file = RegisterEventHandler(
@@ -142,12 +82,14 @@ def generate_launch_description():
                 get_package_share_directory("ros_gz_sim"), "launch", "gz_sim.launch.py"
             )
         ),
-        condition=IfCondition(PythonExpression([use_simulator, " and not ", headless])),
+        condition=UnlessCondition(headless),
         launch_arguments={"gz_args": ["-v4 -g "]}.items(),
     )
 
     gz_robot = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(launch_dir, "spawn_tb4.launch.py")),
+        PythonLaunchDescriptionSource(
+            os.path.join(desc_dir, "launch", "spawn_tb4.launch.py")
+        ),
         launch_arguments={
             "namespace": namespace,
             "robot_name": namespace,
@@ -176,17 +118,14 @@ def generate_launch_description():
     # Create the launch description and populate
     ld = LaunchDescription()
 
+    AppendEnvironmentVariable(
+        "GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "config", "worlds")
+    )
     # Declare the launch options
-    ld.add_action(declare_namespace_cmd)
     ld.add_action(declare_use_sim_time_cmd)
-
-    ld.add_action(declare_use_simulator_cmd)
-    ld.add_action(declare_use_robot_state_pub_cmd)
-    ld.add_action(declare_simulator_cmd)
     ld.add_action(declare_world_cmd)
     ld.add_action(declare_robot_sdf_cmd)
 
-    AppendEnvironmentVariable("GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds"))
     ld.add_action(world_sdf_xacro)
     ld.add_action(remove_temp_sdf_file)
     ld.add_action(gz_robot)
