@@ -8,10 +8,8 @@ use crate::LidarData;
 
 use super::{shapes::Circle, utils::normalize_angle, Control, DebugType, Robot};
 
-const GRADIENT_RADIUS: f32 = 8.0;
-
 /// The range of the lidar sensor at which the robot moves away from an object
-const LIDAR_OBSTACLE_RANGE: f32 = 3.0;
+const LIDAR_OBSTACLE_RANGE: f32 = 1.0;
 
 const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
@@ -66,9 +64,15 @@ fn gradient(robot: &mut Robot) -> Vec2 {
         for (pos, cell) in robot.search_grid.iter_circle(
             &(Circle {
                 center: robot.pos,
-                radius: GRADIENT_RADIUS,
+                radius: robot.lidar_range,
             }),
         ) {
+            let angle = (pos - robot.pos).angle() - robot.angle;
+            let dist = (pos - robot.pos).length();
+            if dist > robot.lidar.interpolate(angle) {
+                continue;
+            }
+
             // Skip cells which are out of bounds
             let Some(cell) = cell else {
                 continue;
@@ -93,7 +97,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
             }
 
             // We want the weight to be stronger the closer we are to the robot
-            let nearness = 1.0 - vec.length() / GRADIENT_RADIUS;
+            let nearness = 1.0 - vec.length() / robot.lidar_range;
             let weight = weight * nearness;
 
             points.push((pos, weight));
@@ -112,7 +116,6 @@ fn gradient(robot: &mut Robot) -> Vec2 {
         gradient *= GRADIENT_WEIGHT;
 
         robot.debug("Gradient Values", DebugType::NumberPoints(points));
-        robot.debug("Gradient Radius", DebugType::Radius(GRADIENT_RADIUS));
         robot.debug(
             "Average Weight",
             DebugType::Number(total_weight / total_cells as f32),
