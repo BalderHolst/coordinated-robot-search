@@ -17,6 +17,10 @@ pub struct Args {
     #[arg(short, long)]
     pub paused: bool,
 
+    /// Number of threads to use for simulation
+    #[arg(short('j'), long, default_value = "4")]
+    pub threads: usize,
+
     // TODO: This does not work for some reason
     /// Target frames per second
     #[arg(long("fps"), default_value = "60")]
