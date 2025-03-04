@@ -25,8 +25,7 @@ const STEER_MULTIPLIER: f32 = 1.0;
 const LIDAR_RAYS: usize = 40;
 const CAMERA_RAYS: usize = 20;
 
-/// The factor of the world size to use as the search grid size
-const SEARCH_GRID_FACTOR: f32 = 0.25;
+const SEARCH_GRID_SCALE: f32 = 0.20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
 
@@ -100,7 +99,7 @@ impl Simulator {
         agent.robot.search_grid = ScaledGrid::new(
             self.state.world.width(),
             self.state.world.height(),
-            self.state.world.scale() / SEARCH_GRID_FACTOR,
+            SEARCH_GRID_SCALE,
         );
         agent.robot.debug_soup = Some(HashMap::new());
         self.state.agents.push(agent);
