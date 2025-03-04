@@ -87,6 +87,7 @@ pub struct Control {
     pub steer: f32,
 }
 
+// TODO: Factor out parameters
 #[derive(Clone)]
 pub struct Robot {
     /// The id of the robot

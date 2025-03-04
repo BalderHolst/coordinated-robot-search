@@ -1,11 +1,15 @@
 # TODO list
+- [ ] Realsense? 
+- [ ] Update URDF (remove imu?)
+- [ ] Localization in multi-robot enviornment
 
-1. ROS2 simulation setup
+- [ ] ROS2 Messaging between robots
+- [ ] ROS2 Image Recognition
+- [ ] Robot Node: Take optional namespace parameter
 
-- Model of Turtle Bot
-- Setup environment
-- Setup sensors - Lidar & Camera? (Maybe realsense)
-- Build a map
-- Use
+- [ ] Proximity Grid
+- [ ] Multi-threaded simple simulation
 
-Look at other multi-robot setups in ROS2
+# Think about
+- When should we create a task?
+
