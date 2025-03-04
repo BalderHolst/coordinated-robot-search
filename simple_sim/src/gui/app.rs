@@ -69,6 +69,7 @@ impl Default for GlobalOptions {
 #[derive(Clone)]
 pub struct RobotOptions {
     show_lidar: bool,
+    show_cam_range: bool,
     show_search_grid: bool,
     debug_items: HashSet<String>,
     show_velocity: bool,
@@ -79,6 +80,7 @@ impl Default for RobotOptions {
     fn default() -> Self {
         Self {
             show_lidar: false,
+            show_cam_range: false,
             show_search_grid: false,
             debug_items: Default::default(),
             show_velocity: true,
@@ -211,7 +213,7 @@ impl App {
 
             // Draw lidar rays
             if robot_opts.show_lidar {
-                for point in &robot.lidar.0 {
+                for point in robot.lidar.points() {
                     let end = pos
                         + Vec2::angled(robot.angle + point.angle) * self.cam.scaled(point.distance);
                     painter.line(
@@ -226,6 +228,24 @@ impl App {
                             ),
                         ),
                     );
+                }
+            }
+
+            // Draw Cam Range
+            {
+                const CAM_RANGE_STEPS: usize = 20;
+                let stroke = PathStroke::new(self.cam.scaled(0.04), Hsva::new(0.0, 0.8, 0.8, 0.8));
+                if robot_opts.show_cam_range {
+                    let step_size = robot.cam_fov / CAM_RANGE_STEPS as f32;
+                    let points = (0..CAM_RANGE_STEPS)
+                        .map(|i| {
+                            let angle = i as f32 * step_size - robot.cam_fov / 2.0;
+                            let dist = robot.lidar.interpolate(angle).min(robot.cam_range.end);
+                            let pos = robot.pos + Vec2::angled(angle + robot.angle) * dist;
+                            self.cam.world_to_viewport(pos)
+                        })
+                        .collect();
+                    painter.line(points, stroke);
                 }
             }
 
@@ -579,6 +599,7 @@ impl eframe::App for App {
                 ui.label("Visualization Options");
                 ui.toggle_value(&mut robot_opts.show_velocity, "Show Velocity");
                 ui.toggle_value(&mut robot_opts.show_lidar, "Show Lidar");
+                ui.toggle_value(&mut robot_opts.show_cam_range, "Show Cam Range");
 
                 ui.separator();
                 ui.heading("Grids");

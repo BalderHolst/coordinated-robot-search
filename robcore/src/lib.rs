@@ -11,6 +11,7 @@ use debug::DebugType;
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
 use shapes::{Circle, Cone, Line, Shape};
+use utils::normalize_angle;
 
 pub mod behaviors;
 pub mod debug;
@@ -38,7 +39,15 @@ impl RobotId {
 /// Kinds of messages that can be sent between robots
 #[derive(Debug, Clone)]
 pub enum MessageKind {
-    ShapeDiff { shape: Shape, diff: f32 },
+    ShapeDiff {
+        shape: Shape,
+        diff: f32,
+    },
+    CamDiff {
+        cone: Cone,
+        lidar: LidarData,
+        diff: f32,
+    },
     Debug(String),
 }
 
@@ -78,7 +87,94 @@ pub struct LidarPoint {
 
 /// Data from the lidar
 #[derive(Debug, Clone, Default)]
-pub struct LidarData(pub Vec<LidarPoint>);
+pub struct LidarData(Vec<LidarPoint>);
+
+impl LidarData {
+    pub fn new(mut points: Vec<LidarPoint>) -> Self {
+        points
+            .iter_mut()
+            .for_each(|p| p.angle = normalize_angle(p.angle));
+        points.sort_by(|a, b| a.angle.total_cmp(&b.angle));
+        Self(points)
+    }
+
+    pub fn points(&self) -> impl Iterator<Item = &LidarPoint> {
+        self.0.iter()
+    }
+
+    pub fn into_points(self) -> Vec<LidarPoint> {
+        self.0
+    }
+
+    pub fn within_fov(&self, fov: f32) -> Self {
+        let range = -fov / 2.0..fov / 2.0;
+        let points: Vec<_> = self
+            .points()
+            .filter(|&p| range.contains(&p.angle))
+            .cloned()
+            .collect();
+        Self(points)
+    }
+
+    /// Interpolates the distance to an object at a given continuous angle
+    pub fn interpolate(&self, angle: f32) -> f32 {
+        let Self(points) = &self;
+
+        if points.is_empty() {
+            return 0.0;
+        }
+
+        if points.len() == 1 {
+            return points[0].distance;
+        }
+
+        let angle = normalize_angle(angle);
+
+        let mut i: usize = 0;
+        for point in points {
+            if point.angle > angle {
+                break;
+            }
+            i += 1;
+        }
+
+        let a = points.get(i.saturating_sub(1));
+        let b = points.get(i);
+
+        match (a, b) {
+            (None, None) => 0.0,
+            (None, Some(p)) | (Some(p), None) => p.distance,
+            (Some(a), Some(b)) if a.distance == b.distance => a.distance,
+            (Some(a), Some(b)) => {
+                let t = (angle - a.angle) / (b.angle - a.angle);
+                a.distance + t * (b.distance - a.distance)
+            }
+        }
+    }
+}
+
+#[test]
+fn test_lidar_interpolate() {
+    let points = vec![
+        LidarPoint {
+            angle: -PI / 2.0,
+            distance: 1.0,
+        },
+        LidarPoint {
+            angle: 0.0,
+            distance: 2.0,
+        },
+        LidarPoint {
+            angle: PI / 2.0,
+            distance: 3.0,
+        },
+    ];
+    let lidar = LidarData::new(points);
+
+    assert_eq!(lidar.interpolate(-PI), 1.0);
+    assert_eq!(lidar.interpolate(0.0), 2.0);
+    assert_eq!(lidar.interpolate(PI / 4.0), 2.5);
+}
 
 /// Control signal to be sent to the robot
 #[derive(Debug, Clone, Default)]
@@ -202,11 +298,18 @@ impl Robot {
         });
     }
 
-    pub(crate) fn update_search_cone(&mut self, cone: &Cone, diff: f32) {
+    pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {
         for (point, cell) in self
             .search_grid
             .iter_cone(cone)
-            .map(|(p, c)| (p, c.cloned()))
+            .filter_map(|(p, c)| {
+                let angle = (p - cone.center).angle();
+                let distance = (p - cone.center).length();
+                match distance <= lidar.interpolate(angle - self.angle) {
+                    true => Some((p, c.cloned())),
+                    false => None,
+                }
+            })
             .collect::<Vec<_>>()
         {
             if let Some(mut cell) = cell {
@@ -268,12 +371,10 @@ impl Robot {
                 angle: self.angle,
                 fov: self.cam_fov,
             };
+            let lidar = self.lidar.within_fov(self.cam_fov);
             let diff = 1.0 * UPDATE_INTERVAL;
-            self.update_search_cone(&cone, diff);
-            self.post(MessageKind::ShapeDiff {
-                shape: Shape::Cone(cone),
-                diff,
-            });
+            self.update_search_cone(&cone, &lidar, diff);
+            self.post(MessageKind::CamDiff { cone, lidar, diff });
         }
 
         // Heat up the search grid in the direction of the search items
@@ -303,13 +404,20 @@ impl Robot {
             .map(|(id, msg)| (id, msg.kind.clone()))
             .collect::<Vec<_>>()
         {
-            if let MessageKind::ShapeDiff { shape, diff } = msg {
-                match shape {
-                    Shape::Cone(cone) => self.update_search_cone(&cone, diff),
-                    Shape::Line(line) => self.update_search_line(&line, diff),
-                    _ => {}
+            match msg {
+                MessageKind::ShapeDiff { shape, diff } => {
+                    match shape {
+                        Shape::Cone(_cone) => todo!(),
+                        Shape::Line(line) => self.update_search_line(&line, diff),
+                        _ => {}
+                    }
+                    self.set_processed(msg_id);
                 }
-                self.set_processed(msg_id);
+                MessageKind::CamDiff { cone, lidar, diff } => {
+                    self.update_search_cone(&cone, &lidar, diff);
+                    self.set_processed(msg_id);
+                }
+                MessageKind::Debug(_) => {}
             }
         }
     }

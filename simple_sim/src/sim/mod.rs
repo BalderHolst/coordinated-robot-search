@@ -196,7 +196,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 robcore::LidarPoint { angle, distance }
             })
             .collect();
-        robot.lidar = robcore::LidarData(points);
+        robot.lidar = robcore::LidarData::new(points);
     }
 
     // Update robot camera
