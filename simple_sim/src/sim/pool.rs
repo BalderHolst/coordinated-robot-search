@@ -6,7 +6,7 @@ use std::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct DataId(usize);
 
-struct ThreadPool<A, B>
+pub struct ThreadPool<A, B>
 where
     A: Send + 'static,
     B: Send + 'static,
@@ -60,7 +60,7 @@ where
         for _ in 0..len {
             results.push(self.output_channel.recv().unwrap());
         }
-        results.sort_by(|(ida, _), (idb, _)| ida.cmp(&idb));
+        results.sort_by(|(ida, _), (idb, _)| ida.cmp(idb));
         results.into_iter().map(|(_, item)| item).collect()
     }
 }

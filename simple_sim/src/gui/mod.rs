@@ -21,7 +21,7 @@ pub fn run(args: Args) {
             let world = world_from_path(&args.world);
 
             // Create simulator
-            let sim = Simulator::new(world, args.target_sps, args.behavior.get_fn());
+            let sim = Simulator::new(world, args.target_sps, args.behavior.get_fn(), args.threads);
 
             // Create app
             let app = App::new(sim, args, cc);
