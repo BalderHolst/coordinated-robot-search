@@ -189,19 +189,13 @@ impl<C: Clone + Default> ScaledGrid<C> {
             angle,
             fov,
         } = cone.clone();
-        self.iter_circle(&Circle {
-            center,
-            radius: radius.end,
-        })
-        .filter(move |(point, _cell)| {
-            let offset = *point - center;
-            if offset.length() < radius.start {
-                return false;
-            }
-            let angle = offset.angle() - angle;
-            let angle = utils::normalize_angle(angle);
-            angle.abs() < fov / 2.0
-        })
+        self.iter_circle(&Circle { center, radius })
+            .filter(move |(point, _cell)| {
+                let offset = *point - center;
+                let angle = offset.angle() - angle;
+                let angle = utils::normalize_angle(angle);
+                angle.abs() < fov / 2.0
+            })
     }
 }
 

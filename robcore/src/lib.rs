@@ -3,7 +3,6 @@
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
-    ops::Range,
     time::Instant,
 };
 
@@ -208,7 +207,7 @@ pub struct Robot {
     pub cam: CamData,
 
     /// Range (min and max distance) of camera object detection (in meters)
-    pub cam_range: Range<f32>,
+    pub cam_range: f32,
 
     /// Field of view of the camera
     pub cam_fov: f32,
@@ -249,7 +248,7 @@ impl Default for Robot {
             avel: Default::default(),
             diameter: 0.5,
             cam: Default::default(),
-            cam_range: 0.8..3.0,
+            cam_range: 3.0,
             cam_fov: PI / 2.0,
             lidar: Default::default(),
             lidar_range: 5.0,
@@ -323,13 +322,12 @@ impl Robot {
         let dir = (line.end - line.start).normalized();
         let step_size = self.search_grid.scale();
         let radius = step_size * 2.0;
-        let start_distance = self.cam_range.start + radius / 2.0;
-        let mut distance = start_distance;
-        while distance < self.cam_range.end - radius / 2.0 {
+        let mut distance = 0.0;
+        while distance < self.cam_range - radius / 2.0 {
             let pos = line.start + dir * distance;
 
             // Nearness is in range [0, 1]
-            let nearness = (distance - start_distance) / (self.cam_range.end - start_distance);
+            let nearness = distance / self.cam_range;
 
             for (point, mut cell) in self
                 .search_grid
@@ -367,7 +365,7 @@ impl Robot {
         {
             let cone = Cone {
                 center: self.pos,
-                radius: self.cam_range.clone(),
+                radius: self.cam_range,
                 angle: self.angle,
                 fov: self.cam_fov,
             };
@@ -384,8 +382,8 @@ impl Robot {
             for cam_point in cam {
                 let angle = self.angle + cam_point.angle;
                 let dir = Vec2::angled(angle);
-                let start = self.pos + dir * self.cam_range.start;
-                let end = self.pos + dir * self.cam_range.end;
+                let start = self.pos;
+                let end = start + dir * self.cam_range;
                 let line = Line { start, end };
 
                 let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;

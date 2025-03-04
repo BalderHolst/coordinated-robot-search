@@ -81,11 +81,6 @@ fn gradient(robot: &mut Robot) -> Vec2 {
             // The relative position of the cell to the robot
             let vec = pos - robot.pos;
 
-            // Don't include cells which are too close for the camera to see
-            if vec.length() <= robot.cam_range.start {
-                continue;
-            }
-
             // Weight is the difference between the cell and the robot heat
             let weight = cell - robot_heat;
 

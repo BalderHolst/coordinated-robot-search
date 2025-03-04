@@ -1,7 +1,5 @@
 //! Various shapes
 
-use std::ops::Range;
-
 use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
@@ -23,7 +21,7 @@ pub struct Circle {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Cone {
     pub center: Pos2,
-    pub radius: Range<f32>,
+    pub radius: f32,
     pub angle: f32,
     pub fov: f32,
 }

@@ -203,7 +203,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
     {
         let robot = &mut agent.robot;
         let angle_step = robot.cam_fov / (CAMERA_RAYS - 1) as f32;
-        let max_camera_range = robot.cam_range.end;
+        let max_camera_range = robot.cam_range;
         let points = (0..CAMERA_RAYS)
             .filter_map(|n| {
                 let angle = n as f32 * angle_step - robot.cam_fov / 2.0;

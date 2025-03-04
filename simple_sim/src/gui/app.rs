@@ -240,7 +240,7 @@ impl App {
                     let points = (0..CAM_RANGE_STEPS)
                         .map(|i| {
                             let angle = i as f32 * step_size - robot.cam_fov / 2.0;
-                            let dist = robot.lidar.interpolate(angle).min(robot.cam_range.end);
+                            let dist = robot.lidar.interpolate(angle).min(robot.cam_range);
                             let pos = robot.pos + Vec2::angled(angle + robot.angle) * dist;
                             self.cam.world_to_viewport(pos)
                         })
