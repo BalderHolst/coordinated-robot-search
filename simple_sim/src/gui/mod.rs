@@ -1,11 +1,7 @@
 use app::App;
 use eframe::egui;
 
-use crate::{
-    cli::Args,
-    sim::Simulator,
-    world::world_from_path,
-};
+use crate::{cli::Args, sim::Simulator, world::world_from_path};
 
 mod app;
 mod bind_key;
