@@ -1,5 +1,5 @@
-cmake_minimum_required(VERSION 3.20)
-project(multi_robot_control_testing)
+cmake_minimum_required(VERSION 3.5)
+project(search_agent)
 
 find_package(ament_cmake REQUIRED)
 
@@ -7,17 +7,12 @@ if(NOT DEFINED CMAKE_SUPPRESS_DEVELOPER_WARNINGS)
   set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
 endif()
 
-install(
-  DIRECTORY launch config
-  DESTINATION share/${PROJECT_NAME}
-)
-
 include(r2r_cargo.cmake)
 
 # put ros package dependencies here.
 r2r_cargo(rcl                    # we need the c ros2 api
           rcl_action             # as of r2r 0.1.0, we also need the action api
-          geometry_msgs)
+          tf2_msgs)
 
 # install binaries
 if(WIN32)
@@ -25,7 +20,6 @@ if(WIN32)
 else()
   set(SUFFIX "")
 endif()
-
 
 install(PROGRAMS
   ${CMAKE_SOURCE_DIR}/target/colcon/${PROJECT_NAME}${SUFFIX}
