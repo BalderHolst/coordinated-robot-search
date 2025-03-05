@@ -48,7 +48,7 @@ def generate_launch_description():
         "P": LaunchConfiguration("pitch", default="0.00"),
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
-    map_yaml_file = LaunchConfiguration("map")
+    map_server_yaml = LaunchConfiguration("map_server_yaml")
 
     # The Gazebo command line doesn't take SDF strings for worlds, so the output of xacro needs to be saved into
     # a temporary file and passed to Gazebo.
@@ -128,29 +128,36 @@ def generate_launch_description():
         output="screen",
         respawn=True,
         respawn_delay=2.0,
-        parameters=[configured_params, {"yaml_filename": map_yaml_file}],
+        parameters=[configured_params, {"yaml_filename": map_server_yaml}],
+        # parameters=[{"yaml_filename": map_server_yaml}],
         arguments=["--ros-args", "--log-level", "info"],
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
-    nav2_amcl = Node(
-        package="nav2_amcl",
-        executable="amcl",
-        name="amcl",
-        output="screen",
-        respawn=True,
-        respawn_delay=2.0,
-        parameters=[configured_params],
-        arguments=["--ros-args", "--log-level", "info"],
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
-    )
-    # Node(
-    #     package="nav2_lifecycle_manager",
-    #     executable="lifecycle_manager",
-    #     name="lifecycle_manager_localization",
+    # nav2_amcl = Node(
+    #     package="nav2_amcl",
+    #     executable="amcl",
+    #     name="amcl",
     #     output="screen",
-    #     arguments=["--ros-args", "--log-level", log_level],
-    #     parameters=[{"autostart": autostart}, {"node_names": lifecycle_nodes}],
+    #     respawn=True,
+    #     respawn_delay=2.0,
+    #     parameters=[configured_params],
+    #     arguments=["--ros-args", "--log-level", "info"],
+    #     remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     # )
+    # lifecycle_nodes = ["map_server", "amcl"]
+    lifecycle_nodes = ["map_server"]
+    lifecycle_node = Node(
+        package="nav2_lifecycle_manager",
+        executable="lifecycle_manager",
+        name="lifecycle_manager_localization",
+        output="screen",
+        arguments=["--ros-args", "--log-level", "info"],
+        parameters=[
+            {"use_sim_time": use_sim_time},
+            {"autostart": True},
+            {"node_names": lifecycle_nodes},
+        ],
+    )
 
     # Create the launch description and populate
     ld = LaunchDescription(
@@ -185,21 +192,22 @@ def generate_launch_description():
                 description="Full path to world model file to load",
             ),
             DeclareLaunchArgument(
-                "map",
+                "map_server_yaml",
                 default_value=os.path.join(localization_dir, "maps", "depot.yaml"),
                 description="Full path to map yaml file to load",
             ),
             AppendEnvironmentVariable(
                 "GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds")
             ),
-            world_sdf_xacro,
-            remove_temp_sdf_file,
-            gz_robot,
-            gazebo_server,
-            gazebo_client,
-            clock_bridge,
+            # world_sdf_xacro,
+            # remove_temp_sdf_file,
+            # gz_robot,
+            # gazebo_server,
+            # gazebo_client,
+            # clock_bridge,
             map_server,
-            nav2_amcl,
+            lifecycle_node,
+            # nav2_amcl,
         ]
     )
     return ld
