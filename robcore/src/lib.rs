@@ -304,7 +304,7 @@ impl Robot {
             .filter_map(|(p, c)| {
                 let angle = (p - cone.center).angle();
                 let distance = (p - cone.center).length();
-                match distance <= lidar.interpolate(angle - self.angle) {
+                match distance <= lidar.interpolate(angle - cone.angle) {
                     true => Some((p, c.cloned())),
                     false => None,
                 }
