@@ -62,7 +62,7 @@ impl Ros2 {
                     println!("Pose listener started");
                     loop {
                         if let Some(msg) = sub_pose.next().await {
-                            println!("Pose received");
+                            // println!("Pose received");
                             pose.lock().unwrap().replace(msg);
                         } else {
                             println!("Broken");
@@ -90,7 +90,7 @@ pub fn scan_to_lidar_data(scan: &sensor_msgs::msg::LaserScan) -> robcore::LidarD
             distance: *rng,
         });
     }
-    LidarData(lidar_data)
+    LidarData::new(lidar_data)
 }
 
 pub fn cov_pose_to_pose2d(

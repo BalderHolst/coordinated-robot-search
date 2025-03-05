@@ -29,7 +29,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         if let Some(pose) = agent.pose.lock().unwrap().take() {
             let (pos, angle) = cov_pose_to_pose2d(&pose);
-            println!("Pose: {:?}", (pos, angle));
+            // println!("Pose: {:?}", (pos, angle));
             robot.pos = pos;
             robot.angle = angle;
         }
