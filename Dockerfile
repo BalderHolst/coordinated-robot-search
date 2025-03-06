@@ -6,7 +6,6 @@ RUN apt update
 RUN apt install -y git
 
 
-# Install Gazebo
 RUN apt update
 RUN apt -y install curl lsb-release gnupg
 RUN curl https://packages.osrfoundation.org/gazebo.gpg --output /usr/share/keyrings/pkgs-osrf-archive-keyring.gpg
@@ -17,10 +16,8 @@ RUN apt install -y gz-harmonic
 RUN apt install -y ros-jazzy-nav2*
 RUN apt install -y ros-jazzy-turtlesim
 
-RUN rosdep install --from-paths ./ros2/ros_ws/src -r -y
-
-
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 RUN echo "export ROS_LOCALHOST_ONLY=1" >> ~/.bashrc
 
-VOLUME ["/tmp/.X11-unix:/tmp/.X11-unix"]
+# terminal multiplexer for convenience
+RUN apt install -y tmux
