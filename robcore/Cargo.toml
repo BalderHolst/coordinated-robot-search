@@ -6,8 +6,10 @@ edition = "2021"
 [features]
 default = []
 cli = ["clap"]
+serde-bin = ["serde-binary"]
 
 [dependencies]
 emath = { version = "0.30.0", features = ["serde"] }
 serde = { version = "1.0.218", features = ["derive"]}
 clap = { version = "4.5.31", features = ["derive"], optional = true }
+serde-binary = { version = "0.5.0", optional = true }

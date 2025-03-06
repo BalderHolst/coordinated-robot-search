@@ -4,9 +4,11 @@ use std::{
 };
 mod ros2;
 
-use r2r::{self, geometry_msgs, QosProfile};
-use ros2::{cov_pose_to_pose2d, scan_to_lidar_data, Ros2};
 use clap::{self, Parser};
+use r2r::{self, geometry_msgs, QosProfile};
+use ros2::{
+    agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data, Ros2,
+};
 
 #[derive(Parser)]
 struct Cli {
@@ -18,10 +20,11 @@ struct Cli {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let args = Cli::parse();
 
     let mut agent = Ros2::new(args.namespace);
+
+    let logger = agent.node.logger().to_string().leak();
 
     let publisher = agent
         .node
@@ -33,24 +36,54 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent.node.spin_once(Duration::from_secs(1));
         agent.pool.run_until_stalled();
 
-        if let Some(scan) = agent.scan.lock().unwrap().take() {
-            let lidar = scan_to_lidar_data(&scan);
-           robot.lidar = lidar;
+        // Set inputs for robot
+        {
+            // Set the robot lidar input
+            if let Some(scan) = agent.scan.lock().unwrap().take() {
+                let lidar = scan_to_lidar_data(&scan);
+                robot.lidar = lidar;
+            }
+
+            // Set the robot pose
+            if let Some(pose) = agent.pose.lock().unwrap().take() {
+                let (pos, angle) = cov_pose_to_pose2d(&pose);
+                robot.pos = pos;
+                robot.angle = angle;
+            }
+
+            // Set incomming messages
+            {
+                let mut guard = agent.incomming_msgs.lock().unwrap();
+                let msgs = guard.drain(..).filter_map(|ros_msg| {
+                    let sender_id = ros_msg.sender_id;
+                    match ros2_msg_to_agent_msg(ros_msg) {
+                        Some(msg) => Some(msg),
+                        None => {
+                            r2r::log_warn!(logger, "Error converting message from: {}", sender_id);
+                            None
+                        }
+                    }
+                });
+                robot.incoming_msg.extend(msgs);
+            }
+
+            // Publish outgoing msgs
+            {
+                robot.outgoing_msg.drain(..).for_each(|msg| {
+                    if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
+                        agent.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                    } else {
+                        r2r::log_warn!(logger, "Error converting message to ROS2");
+                    }
+                });
+            }
         }
-        if let Some(pose) = agent.pose.lock().unwrap().take() {
-            let (pos, angle) = cov_pose_to_pose2d(&pose);
-            robot.pos = pos;
-            robot.angle = angle;
-        }
+
         let control = behavior(&mut robot, Instant::now());
 
-        let closest_point = robot.lidar.points().min_by(|a, b| {
-            a.distance
-                .partial_cmp(&b.distance)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
-
         let mut twist = geometry_msgs::msg::Twist::default();
+
+        let m = r2r::search_agent_msgs::msg::AgentMessage::default();
 
         // We can control
         twist.linear.x = control.speed as f64;

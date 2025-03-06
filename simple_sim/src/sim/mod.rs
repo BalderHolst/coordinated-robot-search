@@ -172,7 +172,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
     agent.robot.incoming_msg.extend(
         pending_messages
             .iter()
-            .filter(|m| m.from != agent.robot.id)
+            .filter(|m| m.sender_id != agent.robot.id)
             .cloned(),
     );
 
