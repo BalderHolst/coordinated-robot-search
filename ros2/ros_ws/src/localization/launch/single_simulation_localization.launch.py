@@ -37,7 +37,6 @@ def generate_launch_description():
 
     # Launch configuration variables specific to simulation
     use_simulator = LaunchConfiguration("use_simulator")
-    use_robot_state_pub = LaunchConfiguration("use_robot_state_pub")
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
     pose = {
@@ -48,7 +47,7 @@ def generate_launch_description():
         "P": LaunchConfiguration("pitch", default="0.00"),
         "Y": LaunchConfiguration("yaw", default="0.00"),
     }
-    map_server_yaml = LaunchConfiguration("map_server_yaml")
+    map_yaml = LaunchConfiguration("map_yaml")
 
     # The Gazebo command line doesn't take SDF strings for worlds, so the output of xacro needs to be saved into
     # a temporary file and passed to Gazebo.
@@ -128,24 +127,22 @@ def generate_launch_description():
         output="screen",
         respawn=True,
         respawn_delay=2.0,
-        parameters=[configured_params, {"yaml_filename": map_server_yaml}],
-        # parameters=[{"yaml_filename": map_server_yaml}],
+        parameters=[configured_params, {"yaml_filename": map_yaml}],
         arguments=["--ros-args", "--log-level", "info"],
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
-    # nav2_amcl = Node(
-    #     package="nav2_amcl",
-    #     executable="amcl",
-    #     name="amcl",
-    #     output="screen",
-    #     respawn=True,
-    #     respawn_delay=2.0,
-    #     parameters=[configured_params],
-    #     arguments=["--ros-args", "--log-level", "info"],
-    #     remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
-    # )
-    # lifecycle_nodes = ["map_server", "amcl"]
-    lifecycle_nodes = ["map_server"]
+    nav2_amcl = Node(
+        package="nav2_amcl",
+        executable="amcl",
+        name="amcl",
+        output="screen",
+        respawn=True,
+        respawn_delay=2.0,
+        parameters=[configured_params],
+        arguments=["--ros-args", "--log-level", "info"],
+        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
+    )
+    lifecycle_nodes = ["map_server", "amcl"]
     lifecycle_node = Node(
         package="nav2_lifecycle_manager",
         executable="lifecycle_manager",
@@ -177,11 +174,6 @@ def generate_launch_description():
                 description="Whether to start the simulator",
             ),
             DeclareLaunchArgument(
-                "use_robot_state_pub",
-                default_value="True",
-                description="Whether to start the robot state publisher",
-            ),
-            DeclareLaunchArgument(
                 "headless",
                 default_value="False",
                 description="Whether to execute gzclient)",
@@ -192,22 +184,22 @@ def generate_launch_description():
                 description="Full path to world model file to load",
             ),
             DeclareLaunchArgument(
-                "map_server_yaml",
+                "map_yaml",
                 default_value=os.path.join(localization_dir, "maps", "depot.yaml"),
                 description="Full path to map yaml file to load",
             ),
             AppendEnvironmentVariable(
                 "GZ_SIM_RESOURCE_PATH", os.path.join(sim_dir, "worlds")
             ),
-            # world_sdf_xacro,
-            # remove_temp_sdf_file,
-            # gz_robot,
-            # gazebo_server,
-            # gazebo_client,
-            # clock_bridge,
+            world_sdf_xacro,
+            remove_temp_sdf_file,
+            gz_robot,
+            gazebo_server,
+            gazebo_client,
+            clock_bridge,
             map_server,
+            nav2_amcl,
             lifecycle_node,
-            # nav2_amcl,
         ]
     )
     return ld
