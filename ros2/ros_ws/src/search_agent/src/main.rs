@@ -52,6 +52,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let mut twist = geometry_msgs::msg::Twist::default();
 
+        let m = r2r::search_agent_msgs::msg::AgentMessage::default();
+
         // We can control
         twist.linear.x = control.speed as f64;
         twist.angular.z = control.steer as f64;
