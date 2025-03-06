@@ -309,7 +309,7 @@ fn cast_ray(
         }
         distance += step_size;
     }
-    (distance, None)
+    (distance - step_size / 2.0, None)
 }
 
 fn resolve_robot_collisions(me: &mut Agent, agents: &[Agent]) {
