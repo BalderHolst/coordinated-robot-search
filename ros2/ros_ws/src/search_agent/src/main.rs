@@ -4,9 +4,9 @@ use std::{
 };
 mod ros2;
 
-use r2r::{self, geometry_msgs, QosProfile};
-use ros2::{cov_pose_to_pose2d, scan_to_lidar_data, Ros2};
 use clap::{self, Parser};
+use r2r::{self, geometry_msgs, QosProfile};
+use ros2::{agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data, Ros2};
 
 #[derive(Parser)]
 struct Cli {
@@ -18,7 +18,6 @@ struct Cli {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-
     let args = Cli::parse();
 
     let mut agent = Ros2::new(args.namespace);
@@ -33,22 +32,38 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         agent.node.spin_once(Duration::from_secs(1));
         agent.pool.run_until_stalled();
 
-        if let Some(scan) = agent.scan.lock().unwrap().take() {
-            let lidar = scan_to_lidar_data(&scan);
-           robot.lidar = lidar;
-        }
-        if let Some(pose) = agent.pose.lock().unwrap().take() {
-            let (pos, angle) = cov_pose_to_pose2d(&pose);
-            robot.pos = pos;
-            robot.angle = angle;
-        }
-        let control = behavior(&mut robot, Instant::now());
+        // Set inputs for robot
+        {
+            // Set the robot lidar input
+            if let Some(scan) = agent.scan.lock().unwrap().take() {
+                let lidar = scan_to_lidar_data(&scan);
+                robot.lidar = lidar;
+            }
 
-        let closest_point = robot.lidar.points().min_by(|a, b| {
-            a.distance
-                .partial_cmp(&b.distance)
-                .unwrap_or(std::cmp::Ordering::Equal)
-        });
+            // Set the robot pose
+            if let Some(pose) = agent.pose.lock().unwrap().take() {
+                let (pos, angle) = cov_pose_to_pose2d(&pose);
+                robot.pos = pos;
+                robot.angle = angle;
+            }
+
+            // Set incomming messages
+            {
+                let mut guard = agent.incomming_msgs.lock().unwrap();
+                let msgs = guard.drain(..).map(|msg| ros2_msg_to_agent_msg(&msg));
+                robot.incoming_msg.extend(msgs);
+            }
+
+            // Publish outgoing msgs
+            {
+                robot.outgoing_msg.drain(..).for_each(|msg| {
+                    let ros_msg = agent_msg_to_ros2_msg(&msg);
+                    agent.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                });
+            }
+        }
+
+        let control = behavior(&mut robot, Instant::now());
 
         let mut twist = geometry_msgs::msg::Twist::default();
 

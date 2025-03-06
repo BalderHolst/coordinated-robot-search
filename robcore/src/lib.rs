@@ -9,6 +9,7 @@ use std::{
 use debug::DebugType;
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
+use serde::{Deserialize, Serialize};
 use shapes::{Circle, Cone, Line, Shape};
 use utils::normalize_angle;
 
@@ -36,7 +37,7 @@ impl RobotId {
 }
 
 /// Kinds of messages that can be sent between robots
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageKind {
     ShapeDiff {
         shape: Shape,
@@ -54,7 +55,7 @@ pub enum MessageKind {
 #[derive(Debug, Clone)]
 pub struct Message {
     /// The id of the robot that sent the message
-    pub from: RobotId,
+    pub sender_id: RobotId,
 
     /// The kind of message
     pub kind: MessageKind,
@@ -75,7 +76,7 @@ pub struct CamPoint {
 pub struct CamData(pub Vec<CamPoint>);
 
 /// A point detected by the lidar
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LidarPoint {
     /// The angle of the point relative to the robot
     pub angle: f32,
@@ -85,7 +86,7 @@ pub struct LidarPoint {
 }
 
 /// Data from the lidar. Points have angles within the range [-PI, PI].
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LidarData(Vec<LidarPoint>);
 
 impl LidarData {
@@ -268,7 +269,7 @@ impl Robot {
         self.incoming_msg
             .iter()
             .enumerate()
-            .filter(|(i, msg)| !self.processed_msgs.contains(i) && msg.from != self.id)
+            .filter(|(i, msg)| !self.processed_msgs.contains(i) && msg.sender_id != self.id)
     }
 
     /// Mark a message as processed
@@ -292,7 +293,7 @@ impl Robot {
     /// Send a message to the other robots.
     pub(crate) fn post(&mut self, kind: MessageKind) {
         self.outgoing_msg.push(Message {
-            from: self.id,
+            sender_id: self.id,
             kind,
         });
     }

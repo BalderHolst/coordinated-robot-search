@@ -34,6 +34,12 @@ pub fn avoid_obstacles(robot: &mut Robot, time: Instant) -> Control {
         let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
         let how_close = how_close.powi(2);
         steer = how_close * (-min_point.angle.signum());
+
+        robot.post(crate::MessageKind::Debug(format!(
+            "Close obstacle at {:.2}",
+            min_point.angle
+        )));
+
         speed *= 1.0 - how_close;
     }
 

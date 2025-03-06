@@ -14,3 +14,4 @@ r2r = "0.9"
 futures = "0.3.15"
 robcore = { path = "../../../../robcore", features = ["cli"] }
 clap = { version = "4.5.31", features = ["derive"] }
+serde-binary = "0.5.0"
