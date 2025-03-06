@@ -11,13 +11,11 @@ use std::{
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
 use robcore::{
-    self, debug::DebugType, grid::iter_circle, scaled_grid::ScaledGrid, CamData, CamPoint,
+    self, behaviors::BehaviorFn, debug::DebugType, grid::iter_circle, scaled_grid::ScaledGrid,
+    CamData, CamPoint,
 };
 
-use crate::{
-    cli::BehaviorFn,
-    world::{Cell, World},
-};
+use crate::world::{Cell, World};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;

@@ -84,7 +84,7 @@ pub struct LidarPoint {
     pub distance: f32,
 }
 
-/// Data from the lidar
+/// Data from the lidar. Points have angles within the range [-PI, PI].
 #[derive(Debug, Clone, Default)]
 pub struct LidarData(Vec<LidarPoint>);
 

@@ -19,10 +19,10 @@ pub struct Ros2 {
 }
 
 impl Ros2 {
-    pub fn new() -> Self {
+    pub fn new(namespace: Option<String>) -> Self {
         let ctx = r2r::Context::create().unwrap();
-        let mut node = r2r::Node::create(ctx, "agent", "").unwrap(); // Namespace set from launch
-                                                                     // file
+
+        let mut node = r2r::Node::create(ctx, "agent", &namespace.unwrap_or_default()).unwrap();
 
         let qos = QosProfile::default().volatile();
         let mut sub_scan = node
@@ -90,7 +90,7 @@ pub fn scan_to_lidar_data(scan: &sensor_msgs::msg::LaserScan) -> robcore::LidarD
             distance: *rng,
         });
     }
-    LidarData(lidar_data)
+    LidarData::new(lidar_data)
 }
 
 pub fn cov_pose_to_pose2d(

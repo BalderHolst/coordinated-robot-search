@@ -1,8 +1,8 @@
-use std::{path::PathBuf, time::Instant};
+use std::path::PathBuf;
+
+use robcore::behaviors::Behavior;
 
 use clap::{self, Parser};
-
-pub type BehaviorFn = fn(&mut robcore::Robot, Instant) -> robcore::Control;
 
 #[derive(Parser)]
 pub struct Args {
@@ -29,21 +29,4 @@ pub struct Args {
     /// Target simulation steps per second
     #[arg(long("sps"), default_value = "60")]
     pub target_sps: f32,
-}
-
-#[derive(clap::ValueEnum, Clone, Debug)]
-pub enum Behavior {
-    Circle,
-    AvoidObstacles,
-    Search,
-}
-
-impl Behavior {
-    pub fn get_fn(&self) -> BehaviorFn {
-        match self {
-            Self::Circle => robcore::behaviors::circle,
-            Self::AvoidObstacles => robcore::behaviors::avoid_obstacles,
-            Self::Search => robcore::behaviors::search,
-        }
-    }
 }
