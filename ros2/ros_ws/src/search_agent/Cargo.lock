@@ -786,6 +786,7 @@ dependencies = [
  "clap",
  "emath",
  "serde",
+ "serde-binary",
 ]
 
 [[package]]
@@ -821,7 +822,6 @@ dependencies = [
  "futures",
  "r2r",
  "robcore",
- "serde-binary",
 ]
 
 [[package]]

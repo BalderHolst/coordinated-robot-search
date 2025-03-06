@@ -5,7 +5,6 @@ use std::{
 
 use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
 use r2r::{geometry_msgs, search_agent_msgs, sensor_msgs, Publisher, QosProfile};
-use serde_binary;
 use robcore::{self, LidarData, LidarPoint, RobotId};
 
 // use crate::world::{self, Cell, World};
@@ -88,10 +87,9 @@ impl Ros2 {
             let incomming_msgs = incomming_msgs.clone();
             pool.spawner()
                 .spawn_local(async move {
-                    println!("Messages listener started");
+                    println!("Message listener started");
                     loop {
                         if let Some(msg) = sub_messages.next().await {
-                            println!("Message received");
                             incomming_msgs.lock().unwrap().push(msg);
                         } else {
                             println!("Broken");
@@ -135,20 +133,17 @@ pub fn cov_pose_to_pose2d(
     (pos, angle as f32)
 }
 
-const ENDIANNESS: serde_binary::binary_stream::Endian = serde_binary::binary_stream::Endian::Little;
 
-pub fn ros2_msg_to_agent_msg(msg: &search_agent_msgs::msg::AgentMessage) -> robcore::Message {
-    let kind = serde_binary::from_slice(&msg.data, ENDIANNESS).unwrap();
-    robcore::Message {
+pub fn ros2_msg_to_agent_msg(msg: search_agent_msgs::msg::AgentMessage) -> Option<robcore::Message> {
+    Some(robcore::Message {
         sender_id: RobotId::new(msg.sender_id),
-        kind,
-    }
+        kind: msg.data.try_into().ok()?,
+    })
 }
 
-pub fn agent_msg_to_ros2_msg(msg: &robcore::Message) -> search_agent_msgs::msg::AgentMessage {
-    let data = serde_binary::to_vec(&msg.kind, ENDIANNESS).unwrap();
-    search_agent_msgs::msg::AgentMessage {
+pub fn agent_msg_to_ros2_msg(msg: robcore::Message) -> Option<search_agent_msgs::msg::AgentMessage> {
+    Some(search_agent_msgs::msg::AgentMessage {
         sender_id: msg.sender_id.as_u32(),
-        data,
-    }
+        data: msg.kind.try_into().ok()?,
+    })
 }

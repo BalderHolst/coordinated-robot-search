@@ -6,7 +6,9 @@ mod ros2;
 
 use clap::{self, Parser};
 use r2r::{self, geometry_msgs, QosProfile};
-use ros2::{agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data, Ros2};
+use ros2::{
+    agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data, Ros2,
+};
 
 #[derive(Parser)]
 struct Cli {
@@ -21,6 +23,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Cli::parse();
 
     let mut agent = Ros2::new(args.namespace);
+
+    let logger = agent.node.logger().to_string().leak();
 
     let publisher = agent
         .node
@@ -50,15 +54,27 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Set incomming messages
             {
                 let mut guard = agent.incomming_msgs.lock().unwrap();
-                let msgs = guard.drain(..).map(|msg| ros2_msg_to_agent_msg(&msg));
+                let msgs = guard.drain(..).filter_map(|ros_msg| {
+                    let sender_id = ros_msg.sender_id;
+                    match ros2_msg_to_agent_msg(ros_msg) {
+                        Some(msg) => Some(msg),
+                        None => {
+                            r2r::log_warn!(logger, "Error converting message from: {}", sender_id);
+                            None
+                        }
+                    }
+                });
                 robot.incoming_msg.extend(msgs);
             }
 
             // Publish outgoing msgs
             {
                 robot.outgoing_msg.drain(..).for_each(|msg| {
-                    let ros_msg = agent_msg_to_ros2_msg(&msg);
-                    agent.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                    if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
+                        agent.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                    } else {
+                        r2r::log_warn!(logger, "Error converting message to ROS2");
+                    }
                 });
             }
         }
