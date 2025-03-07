@@ -7,7 +7,7 @@ use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
 use r2r::{geometry_msgs, search_agent_msgs, sensor_msgs, Publisher, QosProfile};
 use robcore::{self, LidarData, LidarPoint, RobotId};
 
-// use crate::world::{self, Cell, World};
+const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct Ros2 {
     pub node: r2r::Node,
@@ -21,10 +21,14 @@ pub struct Ros2 {
 }
 
 impl Ros2 {
-    pub fn new(namespace: Option<String>) -> Self {
+    pub fn new() -> Self {
         let ctx = r2r::Context::create().unwrap();
 
-        let mut node = r2r::Node::create(ctx, "agent", &namespace.unwrap_or_default()).unwrap();
+        let mut node = r2r::Node::create(ctx, "agent", "").unwrap();
+
+        let channel_topic: String = node
+            .get_parameter("channel_topic")
+            .unwrap_or(DEFAULT_CHANNEL_TOPIC.into());
 
         let qos = QosProfile::default().volatile();
         let mut sub_scan = node
@@ -36,13 +40,12 @@ impl Ros2 {
             .subscribe::<r2r::geometry_msgs::msg::PoseWithCovarianceStamped>("amcl_pose", qos)
             .unwrap();
 
-
         let qos = QosProfile::default().volatile();
-        let outgoing_msgs_pub = node
-            .create_publisher::<search_agent_msgs::msg::AgentMessage>("msgs_send", qos.clone())
+        let msgs_pub = node
+            .create_publisher::<search_agent_msgs::msg::AgentMessage>(&channel_topic, qos.clone())
             .unwrap();
-        let mut sub_messages = node
-            .subscribe::<search_agent_msgs::msg::AgentMessage>("msgs_recv", qos)
+        let mut msgs_sub = node
+            .subscribe::<search_agent_msgs::msg::AgentMessage>(&channel_topic, qos)
             .unwrap();
 
         let scan = Arc::new(Mutex::new(None));
@@ -57,14 +60,10 @@ impl Ros2 {
             pool.spawner()
                 .spawn_local(async move {
                     println!("Scan listener started");
-                    loop {
-                        if let Some(msg) = sub_scan.next().await {
-                            scan.lock().unwrap().replace(msg);
-                        } else {
-                            println!("Broken");
-                            break;
-                        }
+                    while let Some(msg) = sub_scan.next().await {
+                        scan.lock().unwrap().replace(msg);
                     }
+                    println!("Scan listener broken");
                 })
                 .unwrap();
 
@@ -72,14 +71,8 @@ impl Ros2 {
             pool.spawner()
                 .spawn_local(async move {
                     println!("Pose listener started");
-                    loop {
-                        if let Some(msg) = sub_pose.next().await {
-                            println!("Pose received");
-                            pose.lock().unwrap().replace(msg);
-                        } else {
-                            println!("Broken");
-                            break;
-                        }
+                    while let Some(msg) = sub_pose.next().await {
+                        pose.lock().unwrap().replace(msg);
                     }
                 })
                 .unwrap();
@@ -88,17 +81,12 @@ impl Ros2 {
             pool.spawner()
                 .spawn_local(async move {
                     println!("Message listener started");
-                    loop {
-                        if let Some(msg) = sub_messages.next().await {
-                            incomming_msgs.lock().unwrap().push(msg);
-                        } else {
-                            println!("Broken");
-                            break;
-                        }
+                    while let Some(msg) = msgs_sub.next().await {
+                        incomming_msgs.lock().unwrap().push(msg);
                     }
+                    println!("Message listener broken");
                 })
                 .unwrap();
-
         }
         Self {
             node,
@@ -106,7 +94,7 @@ impl Ros2 {
             scan,
             pose,
             incomming_msgs,
-            outgoing_msgs_pub,
+            outgoing_msgs_pub: msgs_pub,
         }
     }
 }
@@ -133,15 +121,18 @@ pub fn cov_pose_to_pose2d(
     (pos, angle as f32)
 }
 
-
-pub fn ros2_msg_to_agent_msg(msg: search_agent_msgs::msg::AgentMessage) -> Option<robcore::Message> {
+pub fn ros2_msg_to_agent_msg(
+    msg: search_agent_msgs::msg::AgentMessage,
+) -> Option<robcore::Message> {
     Some(robcore::Message {
         sender_id: RobotId::new(msg.sender_id),
         kind: msg.data.try_into().ok()?,
     })
 }
 
-pub fn agent_msg_to_ros2_msg(msg: robcore::Message) -> Option<search_agent_msgs::msg::AgentMessage> {
+pub fn agent_msg_to_ros2_msg(
+    msg: robcore::Message,
+) -> Option<search_agent_msgs::msg::AgentMessage> {
     Some(search_agent_msgs::msg::AgentMessage {
         sender_id: msg.sender_id.as_u32(),
         data: msg.kind.try_into().ok()?,
