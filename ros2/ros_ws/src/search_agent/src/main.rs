@@ -8,6 +8,12 @@ use r2r::{self, geometry_msgs, QosProfile};
 use ros2::{cov_pose_to_pose2d, scan_to_lidar_data, Ros2};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // let w = 0.707;
+    // let x = 0.0;
+    // let y = 0.0;
+    // let z = 0.707;
+    // let angle = f64::atan2(2. * w * z + x * y, 1. - 2. * (x.powi(2) * y.powi(2)));
+    // println!("Angle: {}", angle);
     let mut agent = Ros2::new();
     let publisher = agent
         .node

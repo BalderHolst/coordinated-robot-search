@@ -129,12 +129,12 @@ def generate_launch_description():
         respawn_delay=2.0,
         parameters=[configured_params, {"yaml_filename": map_yaml}],
         arguments=["--ros-args", "--log-level", "info"],
-        remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
     nav2_amcl = Node(
         package="nav2_amcl",
         executable="amcl",
         name="amcl",
+        namespace=namespace,
         output="screen",
         respawn=True,
         respawn_delay=2.0,
@@ -142,7 +142,7 @@ def generate_launch_description():
         arguments=["--ros-args", "--log-level", "info"],
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
-    lifecycle_nodes = ["map_server", "amcl"]
+    lifecycle_nodes = ["map_server", "robot_0/amcl"]
     lifecycle_node = Node(
         package="nav2_lifecycle_manager",
         executable="lifecycle_manager",
@@ -161,7 +161,7 @@ def generate_launch_description():
         [
             # Declare the launch options
             DeclareLaunchArgument(
-                "namespace", default_value="", description="Top-level namespace"
+                "namespace", default_value="robot_0", description="Top-level namespace"
             ),
             DeclareLaunchArgument(
                 "use_sim_time",

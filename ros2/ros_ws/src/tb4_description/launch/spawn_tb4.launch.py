@@ -55,7 +55,7 @@ def generate_launch_description():
     bridge_cmd = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        name=robot_name,
+        name="ros_gz_bridge",
         namespace=namespace,
         parameters=[
             {
