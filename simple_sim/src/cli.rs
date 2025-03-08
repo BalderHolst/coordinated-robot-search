@@ -4,6 +4,16 @@ use robcore::behaviors::Behavior;
 
 use clap::{self, Parser};
 
+fn default_threads() -> usize {
+    match std::thread::available_parallelism() {
+        Ok(n) => n.into(),
+        Err(e) => {
+            eprintln!("Error getting number of threads: {e}. Defaulting to 1.");
+            1
+        },
+    }
+}
+
 #[derive(Parser)]
 pub struct Args {
     #[arg(index = 1)]
@@ -18,7 +28,7 @@ pub struct Args {
     pub paused: bool,
 
     /// Number of threads to use for simulation
-    #[arg(short('j'), long, default_value = "4")]
+    #[arg(short('j'), long, default_value_t = default_threads())]
     pub threads: usize,
 
     // TODO: This does not work for some reason
