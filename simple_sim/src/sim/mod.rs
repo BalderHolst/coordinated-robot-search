@@ -187,8 +187,8 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                     agents,
                     robot.pos,
                     robot.angle + angle,
-                    robot.diameter / 2.0,
-                    robot.lidar_range,
+                    robot.params.diameter / 2.0,
+                    robot.params.lidar_range,
                     &[Cell::SearchItem],
                 );
                 robcore::LidarPoint { angle, distance }
@@ -200,17 +200,17 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
     // Update robot camera
     {
         let robot = &mut agent.robot;
-        let angle_step = robot.cam_fov / (CAMERA_RAYS - 1) as f32;
-        let max_camera_range = robot.cam_range;
+        let angle_step = robot.params.cam_fov / (CAMERA_RAYS - 1) as f32;
+        let max_camera_range = robot.params.cam_range;
         let points = (0..CAMERA_RAYS)
             .filter_map(|n| {
-                let angle = n as f32 * angle_step - robot.cam_fov / 2.0;
+                let angle = n as f32 * angle_step - robot.params.cam_fov / 2.0;
                 let (distance, cell) = cast_ray(
                     world,
                     agents,
                     robot.pos,
                     robot.angle + angle,
-                    robot.diameter / 2.0,
+                    robot.params.diameter / 2.0,
                     max_camera_range,
                     &[],
                 );
@@ -315,7 +315,7 @@ fn resolve_robot_collisions(me: &mut Agent, agents: &[Agent]) {
         if other.robot.id == me.robot.id {
             continue;
         }
-        let diameter = f32::max(me.robot.diameter, other.robot.diameter);
+        let diameter = f32::max(me.robot.params.diameter, other.robot.params.diameter);
         if (me.pos() - other.pos()).length() < diameter {
             let diff = me.pos() - other.pos();
             let overlap = diameter - diff.length();
@@ -327,7 +327,7 @@ fn resolve_robot_collisions(me: &mut Agent, agents: &[Agent]) {
 
 fn resolve_world_collisions(me: &mut Agent, world: &World) {
     // Look in a circle around the robot
-    let radius = me.robot.diameter / 2.0 * 1.4 / world.scale();
+    let radius = me.robot.params.diameter / 2.0 * 1.4 / world.scale();
 
     let center = world.world_to_grid(me.pos());
     let mut nudge = Vec2::ZERO;
@@ -341,7 +341,7 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
             });
             let diff = me.pos() - cell_center;
 
-            let overlap = me.robot.diameter / 2.0 - diff.length() + 0.5 * world.scale();
+            let overlap = me.robot.params.diameter / 2.0 - diff.length() + 0.5 * world.scale();
             if overlap < 0.0 {
                 continue;
             }
@@ -365,7 +365,7 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
 
 fn resolve_border_collisions(me: &mut Agent, world: &World) {
     let pos = &mut me.robot.pos;
-    let radius = me.robot.diameter / 2.0;
+    let radius = me.robot.params.diameter / 2.0;
     if pos.x - radius < -world.width() / 2.0 {
         pos.x = -world.width() / 2.0 + radius;
     }

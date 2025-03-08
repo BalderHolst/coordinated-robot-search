@@ -47,7 +47,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
             for (pos, cell) in robot.search_grid.iter_circle(
                 &(Circle {
                     center: robot.pos,
-                    radius: robot.diameter * 2.0,
+                    radius: robot.params.diameter * 2.0,
                 }),
             ) {
                 robot_heat += cell.unwrap_or(&0.0);
@@ -64,7 +64,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
         for (pos, cell) in robot.search_grid.iter_circle(
             &(Circle {
                 center: robot.pos,
-                radius: robot.lidar_range,
+                radius: robot.params.lidar_range,
             }),
         ) {
             let angle = (pos - robot.pos).angle() - robot.angle;
@@ -92,7 +92,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
             }
 
             // We want the weight to be stronger the closer we are to the robot
-            let nearness = 1.0 - vec.length() / robot.lidar_range;
+            let nearness = 1.0 - vec.length() / robot.params.lidar_range;
             let weight = weight * nearness;
 
             points.push((pos, weight));
@@ -124,7 +124,7 @@ fn gradient(robot: &mut Robot) -> Vec2 {
 
 /// Calculate the lidar contribution to the control
 fn lidar(robot: &mut Robot) -> Vec2 {
-    assert!(robot.lidar_range >= LIDAR_OBSTACLE_RANGE);
+    assert!(robot.params.lidar_range >= LIDAR_OBSTACLE_RANGE);
     let mut lidar_contribution = Vec2::ZERO;
     {
         let mut total_weight: f32 = 0.0;

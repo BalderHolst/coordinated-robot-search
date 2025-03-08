@@ -236,11 +236,11 @@ impl App {
                 const CAM_RANGE_STEPS: usize = 20;
                 let stroke = PathStroke::new(self.cam.scaled(0.04), Hsva::new(0.0, 0.8, 0.8, 0.8));
                 if robot_opts.show_cam_range {
-                    let step_size = robot.cam_fov / CAM_RANGE_STEPS as f32;
+                    let step_size = robot.params.cam_fov / CAM_RANGE_STEPS as f32;
                     let points = (0..CAM_RANGE_STEPS)
                         .map(|i| {
-                            let angle = i as f32 * step_size - robot.cam_fov / 2.0;
-                            let dist = robot.lidar.interpolate(angle).min(robot.cam_range);
+                            let angle = i as f32 * step_size - robot.params.cam_fov / 2.0;
+                            let dist = robot.lidar.interpolate(angle).min(robot.params.cam_range);
                             let pos = robot.pos + Vec2::angled(angle + robot.angle) * dist;
                             self.cam.world_to_viewport(pos)
                         })
@@ -261,19 +261,19 @@ impl App {
             const FOV_INIDICATOR_LEN: f32 = 0.1;
             const FOV_INIDICATOR_WIDTH: f32 = 0.02;
             {
-                let left = Vec2::angled(robot.angle - robot.cam_fov / 2.0);
+                let left = Vec2::angled(robot.angle - robot.params.cam_fov / 2.0);
                 painter.line_segment(
                     [
                         pos,
-                        pos + left * self.cam.scaled(robot.diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        pos + left * self.cam.scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
-                let right = Vec2::angled(robot.angle + robot.cam_fov / 2.0);
+                let right = Vec2::angled(robot.angle + robot.params.cam_fov / 2.0);
                 painter.line_segment(
                     [
                         pos,
-                        pos + right * self.cam.scaled(robot.diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        pos + right * self.cam.scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
@@ -287,7 +287,7 @@ impl App {
                 };
                 painter.circle(
                     pos,
-                    self.cam.scaled(robot.diameter / 2.0),
+                    self.cam.scaled(robot.params.diameter / 2.0),
                     ROBOT_COLOR,
                     stroke,
                 );
@@ -295,7 +295,7 @@ impl App {
 
             // Draw velocity vector (arrow)
             if robot_opts.show_velocity {
-                let vel = Vec2::angled(robot.angle) * (robot.vel + robot.diameter * 0.5);
+                let vel = Vec2::angled(robot.angle) * (robot.vel + robot.params.diameter * 0.5);
                 let end = pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
                 let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
@@ -715,7 +715,7 @@ impl eframe::App for App {
                             let mut found = None;
                             for (n, agent) in self.sim_state.agents.iter().enumerate() {
                                 let robot = &agent.robot;
-                                if (robot.pos - pos).length() < robot.diameter * 0.75 {
+                                if (robot.pos - pos).length() < robot.params.diameter * 0.75 {
                                     self.global_opts.focused = Some(n);
                                     found = Some(n);
                                     break;

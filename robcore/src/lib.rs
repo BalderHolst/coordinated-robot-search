@@ -202,11 +202,42 @@ pub struct Control {
     pub steer: f32,
 }
 
-// TODO: Factor out parameters
+/// Parameters which are constant for a type of robot
+#[derive(Clone)]
+pub struct RobotParameters {
+    /// Size of the robot
+    pub diameter: f32,
+
+    /// Range (min and max distance) of camera object detection (in meters)
+    pub cam_range: f32,
+
+    /// Field of view of the camera
+    pub cam_fov: f32,
+
+    /// Range of the lidar sensor (in meters)
+    pub lidar_range: f32,
+}
+
+impl RobotParameters {
+
+    fn turtlebot4() -> Self {
+        Self {
+            diameter: 0.5,
+            cam_range: 3.0,
+            cam_fov: PI / 2.0,
+            lidar_range: 5.0,
+        }
+    }
+
+}
+
 #[derive(Clone)]
 pub struct Robot {
     /// The id of the robot
     pub id: RobotId,
+
+    /// Parameters of the robot
+    pub params: RobotParameters,
 
     /// The position of the robot
     pub pos: Pos2,
@@ -220,23 +251,11 @@ pub struct Robot {
     /// The angular velocity of the robot
     pub avel: f32,
 
-    /// Size of the robot
-    pub diameter: f32,
-
     /// The data from the camera. Angles and probability of objects.
     pub cam: CamData,
 
-    /// Range (min and max distance) of camera object detection (in meters)
-    pub cam_range: f32,
-
-    /// Field of view of the camera
-    pub cam_fov: f32,
-
     /// The data from the lidar. Distance to objects.
     pub lidar: LidarData,
-
-    /// Range of the lidar sensor (in meters)
-    pub lidar_range: f32,
 
     /// The messages from the other robots since the last call.
     pub incoming_msg: Vec<Message>,
@@ -262,16 +281,13 @@ impl Default for Robot {
     fn default() -> Self {
         Self {
             id: Default::default(),
+            params: RobotParameters::turtlebot4(),
             pos: Default::default(),
             vel: Default::default(),
             angle: Default::default(),
             avel: Default::default(),
-            diameter: 0.5,
             cam: Default::default(),
-            cam_range: 3.0,
-            cam_fov: PI / 2.0,
             lidar: Default::default(),
-            lidar_range: 5.0,
             incoming_msg: Default::default(),
             processed_msgs: Default::default(),
             outgoing_msg: Default::default(),
@@ -343,11 +359,11 @@ impl Robot {
         let step_size = self.search_grid.scale();
         let radius = step_size * 2.0;
         let mut distance = 0.0;
-        while distance < self.cam_range - radius / 2.0 {
+        while distance < self.params.cam_range - radius / 2.0 {
             let pos = line.start + dir * distance;
 
             // Nearness is in range [0, 1]
-            let nearness = distance / self.cam_range;
+            let nearness = distance / self.params.cam_range;
 
             for (point, mut cell) in self
                 .search_grid
@@ -385,11 +401,11 @@ impl Robot {
         {
             let cone = Cone {
                 center: self.pos,
-                radius: self.cam_range,
+                radius: self.params.cam_range,
                 angle: self.angle,
-                fov: self.cam_fov,
+                fov: self.params.cam_fov,
             };
-            let lidar = self.lidar.within_fov(self.cam_fov);
+            let lidar = self.lidar.within_fov(self.params.cam_fov);
             let diff = 1.0 * UPDATE_INTERVAL;
             self.update_search_cone(&cone, &lidar, diff);
             self.post(MessageKind::CamDiff { cone, lidar, diff });
@@ -403,7 +419,7 @@ impl Robot {
                 let angle = self.angle + cam_point.angle;
                 let dir = Vec2::angled(angle);
                 let start = self.pos;
-                let end = start + dir * self.cam_range;
+                let end = start + dir * self.params.cam_range;
                 let line = Line { start, end };
 
                 let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
