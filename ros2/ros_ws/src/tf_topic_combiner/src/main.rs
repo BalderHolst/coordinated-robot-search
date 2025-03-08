@@ -50,9 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             arc_node
                 .lock()
                 .unwrap()
-                .spin_once(std::time::Duration::from_millis(10));
+                .spin_once(std::time::Duration::from_millis(100));
         }
-        std::thread::sleep(std::time::Duration::from_millis(100))
     });
     handle.await?;
     Ok(())
@@ -79,11 +78,7 @@ async fn relay_tf_topic(
     let arc_publisher = Arc::new(Mutex::new(publisher));
 
     task::spawn(async move {
-        sub.for_each(|mut msg| {
-            msg.transforms.iter_mut().for_each(|transform| {
-                transform.header.frame_id = format!("{robot_name}/{}", transform.header.frame_id);
-                transform.child_frame_id = format!("{robot_name}/{}", transform.child_frame_id);
-            });
+        sub.for_each(|msg| {
             arc_publisher.lock().unwrap().publish(&msg).unwrap();
             future::ready(())
         })

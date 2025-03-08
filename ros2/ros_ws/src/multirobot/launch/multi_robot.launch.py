@@ -163,6 +163,10 @@ def spawn_robots(context, *args, **kwargs):
             }.items(),
         )
         robot_launch.append(gz_robot)
+        print("Starting AMCL for " + namespace)
+        # TODO: Add AMCL here
 
-    # Also possible to append LaunchDescription to the launch list
+    # TODO: Add map server here
+    # TODO: Add Lifecycle manager here
+
     return robot_launch

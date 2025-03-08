@@ -111,15 +111,6 @@ def generate_launch_description():
         output="screen",
     )
     params_file = os.path.join(localization_dir, "params", "amcl.yaml")
-    configured_params = ParameterFile(
-        RewrittenYaml(
-            source_file=params_file,
-            root_key=namespace,
-            param_rewrites={},
-            convert_types=True,
-        ),
-        allow_substs=True,
-    )
     map_server = Node(
         package="nav2_map_server",
         executable="map_server",
@@ -127,8 +118,21 @@ def generate_launch_description():
         output="screen",
         respawn=True,
         respawn_delay=2.0,
-        parameters=[configured_params, {"yaml_filename": map_yaml}],
+        parameters=[{"yaml_filename": map_yaml}],
         arguments=["--ros-args", "--log-level", "info"],
+    )
+    # Only used to add namespace to topics
+    configured_params = ParameterFile(
+        RewrittenYaml(
+            source_file=params_file,
+            root_key=namespace,
+            param_rewrites={
+                "base_frame_id": "robot_0/base_link",  # FIX: Use namespace
+                "odom_frame_id": "robot_0/odom",  # FIX: Use namespace
+            },
+            convert_types=True,
+        ),
+        allow_substs=True,
     )
     nav2_amcl = Node(
         package="nav2_amcl",
@@ -161,7 +165,7 @@ def generate_launch_description():
         [
             # Declare the launch options
             DeclareLaunchArgument(
-                "namespace", default_value="robot_0", description="Top-level namespace"
+                "namespace", default_value="robot_0/", description="Top-level namespace"
             ),
             DeclareLaunchArgument(
                 "use_sim_time",

@@ -1,5 +1,13 @@
 <?xml version="1.0" ?>
 <robot name="turtlebot4" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- Gazebo version -->
+  <xacro:arg name="gazebo"                       default="harmonic" />
+
+  <!-- Namespace -->
+  <xacro:arg name="namespace"                    default=""/>
+  <xacro:property name="namespace" value="$(arg namespace)" />
+  <xacro:property name="clean_namespace" value="${namespace.replace('/', '')}" />
+
   <!-- Base create3 model -->
   <xacro:include filename="$(find tb4_description)/urdf/icreate/create3.urdf.xacro" />
   <xacro:include filename="$(find tb4_description)/urdf/sensors/rplidar.urdf.xacro" />
@@ -8,6 +16,7 @@
   <xacro:include filename="$(find tb4_description)/urdf/standard/tower_standoff.urdf.xacro" />
   <xacro:include filename="$(find tb4_description)/urdf/standard/tower_sensor_plate.urdf.xacro" />
   <xacro:include filename="$(find tb4_description)/urdf/standard/weight_block.urdf.xacro" />
+
 
   <!-- Mechanical properties -->
   <xacro:property name="shell_z_offset"                value="${3*cm2m}" />
@@ -130,7 +139,7 @@
   </xacro:tower_sensor_plate>
 
   <!-- Turtlebot4 sensor definitions -->
-  <xacro:rplidar name="rplidar" namespace="$(arg namespace)" parent_link="shell_link" gazebo="$(arg gazebo)">
+  <xacro:rplidar name="rplidar" namespace="${clean_namespace}" parent_link="shell_link" gazebo="$(arg gazebo)">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset}"
             rpy="0 0 0"/>
   </xacro:rplidar>
