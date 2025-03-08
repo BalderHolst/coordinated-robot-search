@@ -12,5 +12,5 @@ inherits = "release"
 [dependencies]
 r2r = "0.9"
 futures = "0.3.15"
-robcore = { path = "../../../../robcore", features = ["cli", "serde-bin"] }
+botbrain = { path = "../../../../botbrain", features = ["cli", "serde-bin"] }
 clap = { version = "4.5.31", features = ["derive"] }

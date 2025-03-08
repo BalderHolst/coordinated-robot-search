@@ -17,6 +17,7 @@ use crate::{
 };
 
 use super::camera::Camera;
+use botbrain::debug::DebugType;
 use eframe::{
     self,
     egui::{
@@ -27,7 +28,6 @@ use eframe::{
     epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
 };
-use robcore::debug::DebugType;
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
@@ -110,7 +110,7 @@ pub struct App {
 }
 
 fn grid_to_image<C: Clone + Default>(
-    grid: &robcore::grid::Grid<C>,
+    grid: &botbrain::grid::Grid<C>,
     color: impl Fn(C) -> Color32,
 ) -> ColorImage {
     let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
@@ -265,7 +265,10 @@ impl App {
                 painter.line_segment(
                     [
                         pos,
-                        pos + left * self.cam.scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        pos + left
+                            * self
+                                .cam
+                                .scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );
@@ -273,7 +276,10 @@ impl App {
                 painter.line_segment(
                     [
                         pos,
-                        pos + right * self.cam.scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        pos + right
+                            * self
+                                .cam
+                                .scaled(robot.params.diameter / 2.0 + FOV_INIDICATOR_LEN),
                     ],
                     PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                 );

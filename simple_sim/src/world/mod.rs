@@ -6,7 +6,7 @@ use std::{path::PathBuf, process::exit};
 use description::{BitmapDescription, ObjectDescription, WorldDescription};
 use eframe::{egui::Color32, epaint::Hsva};
 
-use robcore::scaled_grid::ScaledGrid;
+use botbrain::scaled_grid::ScaledGrid;
 
 pub type World = ScaledGrid<Cell>;
 

@@ -8,7 +8,7 @@ const DEFAULT_TOPIC: &str = "/search_channel";
 
 use futures::task::SpawnExt;
 use r2r::{self, search_agent_msgs, QosProfile};
-use robcore::MessageKind;
+use botbrain::MessageKind;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = r2r::Context::create().unwrap();

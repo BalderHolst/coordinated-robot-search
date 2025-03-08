@@ -1,4 +1,4 @@
-//! Utility functions for the robcore library
+//! Utility functions for the botbrain library
 
 use std::f32::consts::PI;
 

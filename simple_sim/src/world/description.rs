@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use robcore::{grid::Grid, scaled_grid::ScaledGrid, shapes::Shape};
+use botbrain::{grid::Grid, scaled_grid::ScaledGrid, shapes::Shape};
 use serde::{Deserialize, Serialize};
 
 use crate::world::Cell;

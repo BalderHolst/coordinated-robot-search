@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use robcore::behaviors::Behavior;
+use botbrain::behaviors::Behavior;
 
 use clap::{self, Parser};
 
@@ -10,7 +10,7 @@ fn default_threads() -> usize {
         Err(e) => {
             eprintln!("Error getting number of threads: {e}. Defaulting to 1.");
             1
-        },
+        }
     }
 }
 

@@ -8,12 +8,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-use eframe::egui::{Pos2, Vec2};
-use pool::ThreadPool;
-use robcore::{
+use botbrain::{
     self, behaviors::BehaviorFn, debug::DebugType, grid::iter_circle, scaled_grid::ScaledGrid,
     CamData, CamPoint,
 };
+use eframe::egui::{Pos2, Vec2};
+use pool::ThreadPool;
 
 use crate::world::{Cell, World};
 
@@ -29,20 +29,20 @@ const SIMULATION_DT: f32 = 1.0 / 60.0;
 
 #[derive(Clone)]
 pub struct Agent {
-    pub robot: robcore::Robot,
-    pub control: robcore::Control,
+    pub robot: botbrain::Robot,
+    pub control: botbrain::Control,
 }
 
 impl Agent {
     pub fn new_at(pos: Pos2, angle: f32) -> Self {
-        let robot = robcore::Robot {
+        let robot = botbrain::Robot {
             pos,
             angle,
             ..Default::default()
         };
         Self {
             robot,
-            control: robcore::Control::default(),
+            control: botbrain::Control::default(),
         }
     }
 
@@ -62,7 +62,7 @@ pub struct SimulatorState {
 pub struct Simulator {
     pub state: SimulatorState,
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
-    pending_messages: Vec<robcore::Message>,
+    pending_messages: Vec<botbrain::Message>,
     debug_channels: Vec<mpsc::Receiver<DebugType>>,
     behavior: BehaviorFn,
     start_time: Instant,
@@ -93,7 +93,7 @@ impl Simulator {
 
     pub fn add_robot(&mut self, mut agent: Agent) {
         let id = self.state.agents.len() as u32;
-        agent.robot.id = robcore::RobotId::new(id);
+        agent.robot.id = botbrain::RobotId::new(id);
         agent.robot.search_grid = ScaledGrid::new(
             self.state.world.width(),
             self.state.world.height(),
@@ -123,7 +123,7 @@ impl Simulator {
         self.state.agents = self.pool.process(input);
 
         // Collect all pending messages
-        self.pending_messages = msg_send_rx.try_iter().collect::<Vec<robcore::Message>>();
+        self.pending_messages = msg_send_rx.try_iter().collect::<Vec<botbrain::Message>>();
 
         self.state.time += dt;
     }
@@ -136,8 +136,8 @@ struct StepArgs {
     time: Instant,
     behavior: BehaviorFn,
     dt: f32,
-    msg_send_tx: mpsc::Sender<robcore::Message>,
-    pending_messages: Vec<robcore::Message>,
+    msg_send_tx: mpsc::Sender<botbrain::Message>,
+    pending_messages: Vec<botbrain::Message>,
 }
 
 fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
@@ -191,10 +191,10 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                     robot.params.lidar_range,
                     &[Cell::SearchItem],
                 );
-                robcore::LidarPoint { angle, distance }
+                botbrain::LidarPoint { angle, distance }
             })
             .collect();
-        robot.lidar = robcore::LidarData::new(points);
+        robot.lidar = botbrain::LidarData::new(points);
     }
 
     // Update robot camera
@@ -217,7 +217,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 match cell {
                     Some(Cell::SearchItem) => {
                         let propability = (max_camera_range - distance) / max_camera_range;
-                        Some((n, robcore::CamPoint { angle, propability }))
+                        Some((n, botbrain::CamPoint { angle, propability }))
                     }
                     _ => None,
                 }

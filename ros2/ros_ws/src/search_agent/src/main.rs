@@ -13,13 +13,13 @@ use r2r::{
     self, geometry_msgs, log_error, log_info, log_warn, search_agent_msgs, sensor_msgs, Publisher,
     QosProfile,
 };
-use robcore::{behaviors::BehaviorFn, RobotId};
+use botbrain::{behaviors::BehaviorFn, RobotId};
 
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct SearchAgent {
     node: r2r::Node,
-    robot: robcore::Robot,
+    robot: botbrain::Robot,
     nl: String,
     behavior: BehaviorFn,
     pool: LocalPool,
@@ -34,7 +34,7 @@ pub struct SearchAgent {
 
 impl SearchAgent {
     fn behaviors() -> Vec<String> {
-        robcore::behaviors::Behavior::value_variants()
+        botbrain::behaviors::Behavior::value_variants()
             .iter()
             .filter_map(|v| Some(v.to_possible_value()?.get_name().to_string()))
             .collect()
@@ -57,7 +57,7 @@ impl SearchAgent {
         };
 
         let Ok(behavior) =
-            robcore::behaviors::Behavior::from_str(&behavior_param, true).map(|b| b.get_fn())
+            botbrain::behaviors::Behavior::from_str(&behavior_param, true).map(|b| b.get_fn())
         else {
             log_error!(
                 &nl,
@@ -67,7 +67,7 @@ impl SearchAgent {
             std::process::exit(1);
         };
 
-        let mut robot = robcore::Robot::default();
+        let mut robot = botbrain::Robot::default();
         let id = match node.get_parameter::<i64>("id") {
             Ok(id) => id.try_into().ok(),
             Err(_) => (|| {
