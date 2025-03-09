@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use eframe::egui::{Key, Pos2, Rect, Response, Ui, Vec2};
 
 use crate::{bind_down, bind_pressed};

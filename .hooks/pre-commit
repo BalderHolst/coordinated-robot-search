@@ -9,5 +9,5 @@ function check_format()
     fi
 }
 
-check_format robcore
+check_format botbrain
 check_format simple_sim

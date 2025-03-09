@@ -8,8 +8,8 @@ use std::{
 };
 
 use botbrain::{
-    self, behaviors::Behavior, debug::DebugType, grid::iter_circle, CamData, CamPoint, Control,
-    RobotId, RobotParameters,
+    self, behaviors::Behavior, grid::iter_circle, CamData, CamPoint, Control, RobotId,
+    RobotParameters,
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
@@ -30,7 +30,6 @@ pub struct AgentState {
     pub angle: f32,
     pub vel: f32,
     pub avel: f32,
-    pub control: botbrain::Control,
 }
 
 pub struct Agent {
@@ -53,7 +52,6 @@ impl Clone for Agent {
 pub struct SimulatorState {
     pub agents: Vec<Agent>,
     pub world: World,
-    pub sps: f32,
     pub time: f32,
 }
 
@@ -61,17 +59,15 @@ pub struct Simulator {
     pub state: SimulatorState,
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
     pending_messages: Vec<botbrain::Message>,
-    debug_channels: Vec<mpsc::Receiver<DebugType>>,
     behavior: Behavior,
     start_time: Instant,
     dt: f32,
 }
 
 impl Simulator {
-    pub fn new(world: World, sps: f32, behavior: Behavior, threads: usize) -> Self {
+    pub fn new(world: World, behavior: Behavior, threads: usize) -> Self {
         let state = SimulatorState {
             world,
-            sps,
             agents: vec![],
             time: 0.0,
         };
@@ -82,7 +78,6 @@ impl Simulator {
                 agent
             }),
             pending_messages: vec![],
-            debug_channels: vec![],
             behavior,
             start_time: Instant::now(),
             dt: SIMULATION_DT,

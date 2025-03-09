@@ -2,7 +2,6 @@
 pub struct PgmImage {
     pub width: usize,
     pub height: usize,
-    pub max_value: u16,
     pub data: Vec<u8>,
 }
 
@@ -22,12 +21,6 @@ pub struct Parser {
 }
 
 impl Parser {
-    fn consume(&mut self) -> u8 {
-        let byte = self.bytes[self.cursor];
-        self.cursor += 1;
-        byte
-    }
-
     fn consume_str(&mut self, len: usize) -> String {
         let start = self.cursor;
         self.cursor += len;
@@ -81,7 +74,6 @@ impl Parser {
         PgmImage {
             width: width as usize,
             height: height as usize,
-            max_value,
             data,
         }
     }
