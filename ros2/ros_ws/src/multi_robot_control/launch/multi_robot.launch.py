@@ -209,7 +209,7 @@ def spawn_robots(context, *args, **kwargs):
         respawn=True,
         respawn_delay=2.0,
         parameters=[{"yaml_filename": map_yaml}],
-        arguments=["--ros-args", "--log-level", "info"],
+        arguments=["--ros-args", "--log-level", "warn"],
     )
     robot_launch.append(map_server)
     lifecycle_node = Node(
@@ -220,11 +220,11 @@ def spawn_robots(context, *args, **kwargs):
         arguments=["--ros-args", "--log-level", "info"],
         parameters=[
             {"use_sim_time": use_sim_time},
-            {"autostart": True},  # FIX: Not starting all amcl...
+            {"autostart": True},
+            {"bond_timeout": 10.0},  # FIX: Not starting all amcl...
             {"node_names": lifecycle_manager_nodes},
         ],
     )
     robot_launch.append(lifecycle_node)
-    print(lifecycle_manager_nodes)
 
     return robot_launch
