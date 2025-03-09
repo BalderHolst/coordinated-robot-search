@@ -131,7 +131,7 @@ def spawn_robots(context, *args, **kwargs):
 
     robot_launch = []
     tf_combiner = Node(
-        package="tf_topic_combiner",
+        package="multi_robot_control",
         executable="tf_topic_combiner",
         name="tf_topic_combiner",
         output="screen",

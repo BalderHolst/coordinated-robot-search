@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format2.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="2">
-  <name>search_agent</name>
+  <name>multi_robot_control</name>
   <version>0.0.1</version>
-  <description>Examples of a minimal r2r node</description>
+  <description>Control variable number of robots</description>
   <maintainer email="math260r@gmail.com">Mathias Balling</maintainer>
   <license>MIT</license>
   <author>Mathias Balling</author>
@@ -11,11 +11,15 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <build_depend>rcl</build_depend>
-  <build_depend>rcl_action</build_depend>
+  <build_depend>rcl_action</build_depend> 
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>sensor_msgs</build_depend>
   <build_depend>tf2_msgs</build_depend>
 
   <exec_depend>rcl</exec_depend>
-  <exec_depend>rcl_action</exec_depend>
+  <exec_depend>rcl_action</exec_depend> 
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
   <exec_depend>tf2_msgs</exec_depend>
 
   <export>
