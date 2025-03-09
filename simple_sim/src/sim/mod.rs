@@ -1,7 +1,6 @@
 mod pool;
 
 use std::{
-    collections::HashMap,
     f32::consts::PI,
     mem,
     sync::{mpsc, Arc},
@@ -9,8 +8,8 @@ use std::{
 };
 
 use botbrain::{
-    self, behaviors::BehaviorFn, debug::DebugType, grid::iter_circle, scaled_grid::ScaledGrid,
-    CamData, CamPoint,
+    self, behaviors::Behavior, debug::DebugType, grid::iter_circle, CamData, CamPoint, Control,
+    RobotId, RobotParameters,
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
@@ -23,31 +22,30 @@ const STEER_MULTIPLIER: f32 = 1.0;
 const LIDAR_RAYS: usize = 40;
 const CAMERA_RAYS: usize = 20;
 
-const SEARCH_GRID_SCALE: f32 = 0.20;
-
 const SIMULATION_DT: f32 = 1.0 / 60.0;
 
-#[derive(Clone)]
-pub struct Agent {
-    pub robot: botbrain::Robot,
+#[derive(Debug, Clone, Default)]
+pub struct AgentState {
+    pub pos: Pos2,
+    pub angle: f32,
+    pub vel: f32,
+    pub avel: f32,
     pub control: botbrain::Control,
 }
 
-impl Agent {
-    pub fn new_at(pos: Pos2, angle: f32) -> Self {
-        let robot = botbrain::Robot {
-            pos,
-            angle,
-            ..Default::default()
-        };
-        Self {
-            robot,
-            control: botbrain::Control::default(),
-        }
-    }
+pub struct Agent {
+    pub state: AgentState,
+    pub control: botbrain::Control,
+    pub robot: Box<dyn botbrain::Robot>,
+}
 
-    pub fn pos(&self) -> Pos2 {
-        self.robot.pos
+impl Clone for Agent {
+    fn clone(&self) -> Self {
+        Self {
+            state: self.state.clone(),
+            robot: self.robot.clone_box(),
+            control: self.control.clone(),
+        }
     }
 }
 
@@ -64,17 +62,17 @@ pub struct Simulator {
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
     pending_messages: Vec<botbrain::Message>,
     debug_channels: Vec<mpsc::Receiver<DebugType>>,
-    behavior: BehaviorFn,
+    behavior: Behavior,
     start_time: Instant,
     dt: f32,
 }
 
 impl Simulator {
-    pub fn new(world: World, sps: f32, behavior: BehaviorFn, threads: usize) -> Self {
+    pub fn new(world: World, sps: f32, behavior: Behavior, threads: usize) -> Self {
         let state = SimulatorState {
-            agents: vec![],
             world,
             sps,
+            agents: vec![],
             time: 0.0,
         };
         Self {
@@ -91,15 +89,24 @@ impl Simulator {
         }
     }
 
-    pub fn add_robot(&mut self, mut agent: Agent) {
+    pub fn add_robot(&mut self, pos: Pos2, angle: f32) {
+        let mut agent = Agent {
+            state: AgentState {
+                pos,
+                angle,
+                ..Default::default()
+            },
+            control: Control::default(),
+            robot: self.behavior.create_robot(),
+        };
+
+        agent.robot.input_pos(pos);
+        agent.robot.input_angle(angle);
+
         let id = self.state.agents.len() as u32;
-        agent.robot.id = botbrain::RobotId::new(id);
-        agent.robot.search_grid = ScaledGrid::new(
-            self.state.world.width(),
-            self.state.world.height(),
-            SEARCH_GRID_SCALE,
-        );
-        agent.robot.debug_soup = Some(HashMap::new());
+        agent.robot.set_id(RobotId::new(id));
+        agent.robot.set_world_size(self.state.world.size());
+        agent.robot.get_debug_soup_mut().activate();
         self.state.agents.push(agent);
     }
 
@@ -112,13 +119,13 @@ impl Simulator {
             agents: self.state.agents.clone(),
             world: self.state.world.clone(),
             time: self.start_time + Duration::from_secs_f32(self.state.time),
-            behavior: self.behavior,
             dt,
             msg_send_tx,
             pending_messages: mem::take(&mut self.pending_messages),
         });
 
         let agents = mem::replace(&mut self.state.agents, Vec::with_capacity(0));
+
         let input = agents.into_iter().map(|a| (a, args.clone())).collect();
         self.state.agents = self.pool.process(input);
 
@@ -134,7 +141,6 @@ struct StepArgs {
     agents: Vec<Agent>,
     world: World,
     time: Instant,
-    behavior: BehaviorFn,
     dt: f32,
     msg_send_tx: mpsc::Sender<botbrain::Message>,
     pending_messages: Vec<botbrain::Message>,
@@ -145,7 +151,6 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
         agents,
         world,
         time,
-        behavior,
         dt,
         msg_send_tx,
         pending_messages,
@@ -153,28 +158,47 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
 
     let dt = *dt;
 
-    // Call the behavior function
-    agent.control = (behavior)(&mut agent.robot, *time);
-    agent.robot.vel = agent.control.speed * SPEED_MULTIPLIER;
-    agent.robot.avel = agent.control.steer * STEER_MULTIPLIER;
+    let RobotParameters {
+        cam_fov,
+        cam_range,
+        diameter,
+        lidar_range,
+    } = *agent.robot.params();
 
-    // Update position of the robot
-    let vel = Vec2::angled(agent.robot.angle) * agent.robot.vel;
-    agent.robot.pos += vel * dt;
-    agent.robot.angle += agent.robot.avel * dt;
+    {
+        // Call the behavior function
+        agent.control = agent.robot.behavior(*time);
+        agent.state.vel = agent.control.speed * SPEED_MULTIPLIER;
+        agent.state.avel = agent.control.steer * STEER_MULTIPLIER;
 
-    // Send messages
-    for msg in agent.robot.outgoing_msg.drain(..) {
-        msg_send_tx.send(msg).unwrap();
+        // Update position of the robot
+        let vel = Vec2::angled(agent.state.angle) * agent.state.vel;
+        agent.state.pos += vel * dt;
+        agent.state.angle += agent.state.avel * dt;
+
+        // Set the new state of the robot
+        agent.robot.input_pos(agent.state.pos);
+        agent.robot.input_angle(agent.state.angle);
     }
 
-    // Receive messages
-    agent.robot.incoming_msg.extend(
-        pending_messages
-            .iter()
-            .filter(|m| m.sender_id != agent.robot.id)
-            .cloned(),
-    );
+    // Update postboxes
+    {
+        let robot_id = *agent.robot.id();
+        let postbox = agent.robot.get_postbox_mut();
+
+        // Send messages
+        for msg in postbox.empty() {
+            msg_send_tx.send(msg).unwrap();
+        }
+
+        // Receive messages
+        postbox.deposit(
+            pending_messages
+                .iter()
+                .filter(|m| m.sender_id != robot_id)
+                .cloned(),
+        );
+    }
 
     // Update lidar data
     {
@@ -185,38 +209,38 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 let (distance, _) = cast_ray(
                     world,
                     agents,
-                    robot.pos,
-                    robot.angle + angle,
-                    robot.params.diameter / 2.0,
-                    robot.params.lidar_range,
+                    agent.state.pos,
+                    agent.state.angle + angle,
+                    diameter / 2.0,
+                    lidar_range,
                     &[Cell::SearchItem],
                 );
                 botbrain::LidarPoint { angle, distance }
             })
             .collect();
-        robot.lidar = botbrain::LidarData::new(points);
+
+        robot.input_lidar(botbrain::LidarData::new(points));
     }
 
     // Update robot camera
     {
         let robot = &mut agent.robot;
-        let angle_step = robot.params.cam_fov / (CAMERA_RAYS - 1) as f32;
-        let max_camera_range = robot.params.cam_range;
+        let angle_step = cam_fov / (CAMERA_RAYS - 1) as f32;
         let points = (0..CAMERA_RAYS)
             .filter_map(|n| {
-                let angle = n as f32 * angle_step - robot.params.cam_fov / 2.0;
+                let angle = n as f32 * angle_step - cam_fov / 2.0;
                 let (distance, cell) = cast_ray(
                     world,
                     agents,
-                    robot.pos,
-                    robot.angle + angle,
-                    robot.params.diameter / 2.0,
-                    max_camera_range,
+                    agent.state.pos,
+                    agent.state.angle + angle,
+                    diameter / 2.0,
+                    cam_range,
                     &[],
                 );
                 match cell {
                     Some(Cell::SearchItem) => {
-                        let propability = (max_camera_range - distance) / max_camera_range;
+                        let propability = (cam_range - distance) / cam_range;
                         Some((n, botbrain::CamPoint { angle, propability }))
                     }
                     _ => None,
@@ -258,7 +282,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 }
             }
             consolidate_points(&mut adjacant, &mut sparse_points);
-            robot.cam = CamData(sparse_points);
+            robot.input_cam(CamData(sparse_points));
         }
     }
 
@@ -298,8 +322,8 @@ fn cast_ray(
 
         // Check for collisions with other robots
         if distance > robot_radius {
-            for robot in agents {
-                let d = (robot.pos() - pos).length();
+            for agent in agents {
+                let d = (agent.state.pos - pos).length();
                 if d < robot_radius {
                     return (distance, None);
                 }
@@ -312,24 +336,24 @@ fn cast_ray(
 
 fn resolve_robot_collisions(me: &mut Agent, agents: &[Agent]) {
     for other in agents {
-        if other.robot.id == me.robot.id {
+        if other.robot.id() == me.robot.id() {
             continue;
         }
-        let diameter = f32::max(me.robot.params.diameter, other.robot.params.diameter);
-        if (me.pos() - other.pos()).length() < diameter {
-            let diff = me.pos() - other.pos();
+        let diameter = f32::max(me.robot.params().diameter, other.robot.params().diameter);
+        if (me.state.pos - other.state.pos).length() < diameter {
+            let diff = me.state.pos - other.state.pos;
             let overlap = diameter - diff.length();
             let dir = diff.normalized() * overlap / 2.0;
-            me.robot.pos += dir;
+            me.state.pos += dir;
         }
     }
 }
 
 fn resolve_world_collisions(me: &mut Agent, world: &World) {
     // Look in a circle around the robot
-    let radius = me.robot.params.diameter / 2.0 * 1.4 / world.scale();
-
-    let center = world.world_to_grid(me.pos());
+    let radius = me.robot.params().diameter / 2.0 * 1.4 / world.scale();
+    let robot_diameter = me.robot.params().diameter;
+    let center = world.world_to_grid(me.state.pos);
     let mut nudge = Vec2::ZERO;
     let mut nudgers = 0;
     for (x, y) in iter_circle(center, radius) {
@@ -339,9 +363,9 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
                 x: x as f32,
                 y: y as f32,
             });
-            let diff = me.pos() - cell_center;
+            let diff = me.state.pos - cell_center;
 
-            let overlap = me.robot.params.diameter / 2.0 - diff.length() + 0.5 * world.scale();
+            let overlap = robot_diameter / 2.0 - diff.length() + 0.5 * world.scale();
             if overlap < 0.0 {
                 continue;
             }
@@ -359,13 +383,14 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
 
     if nudgers > 0 {
         // Only nudge in the direction with most difference
-        me.robot.pos += nudge / nudgers as f32;
+        me.state.pos += nudge / nudgers as f32;
     }
 }
 
 fn resolve_border_collisions(me: &mut Agent, world: &World) {
-    let pos = &mut me.robot.pos;
-    let radius = me.robot.params.diameter / 2.0;
+    let diameter = me.robot.params().diameter;
+    let pos = &mut me.state.pos;
+    let radius = diameter / 2.0;
     if pos.x - radius < -world.width() / 2.0 {
         pos.x = -world.width() / 2.0 + radius;
     }

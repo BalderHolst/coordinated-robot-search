@@ -4,7 +4,7 @@ use std::{
 };
 mod convert_msg;
 
-use clap::{self, Parser, ValueEnum};
+use clap::ValueEnum;
 use convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
 };
@@ -13,15 +13,13 @@ use r2r::{
     self, geometry_msgs, log_error, log_info, log_warn, search_agent_msgs, sensor_msgs, Publisher,
     QosProfile,
 };
-use botbrain::{behaviors::BehaviorFn, RobotId};
-
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct SearchAgent {
     node: r2r::Node,
-    robot: botbrain::Robot,
+    robot: Box<dyn botbrain::Robot>,
     nl: String,
-    behavior: BehaviorFn,
+    behavior: botbrain::behaviors::Behavior,
     pool: LocalPool,
     pose: Arc<Mutex<Option<geometry_msgs::msg::PoseWithCovarianceStamped>>>,
     scan: Arc<Mutex<Option<sensor_msgs::msg::LaserScan>>>,
@@ -56,9 +54,7 @@ impl SearchAgent {
             std::process::exit(1);
         };
 
-        let Ok(behavior) =
-            botbrain::behaviors::Behavior::from_str(&behavior_param, true).map(|b| b.get_fn())
-        else {
+        let Ok(behavior) = botbrain::behaviors::Behavior::from_str(&behavior_param, true) else {
             log_error!(
                 &nl,
                 "Invalid `behavior` parameter provided. Possible values: [{}]",
@@ -67,7 +63,7 @@ impl SearchAgent {
             std::process::exit(1);
         };
 
-        let mut robot = botbrain::Robot::default();
+        let mut robot = behavior.create_robot();
         let id = match node.get_parameter::<i64>("id") {
             Ok(id) => id.try_into().ok(),
             Err(_) => (|| {
@@ -80,7 +76,7 @@ impl SearchAgent {
         .unwrap_or_default();
 
         log_info!(&nl, "Robot ID: {}", id);
-        robot.id = RobotId::new(id);
+        robot.set_id(botbrain::RobotId::new(id));
 
         let channel_topic: String = node
             .get_parameter("channel_topic")
@@ -176,14 +172,14 @@ impl SearchAgent {
                 // Set the robot lidar input
                 if let Some(scan) = self.scan.lock().unwrap().take() {
                     let lidar = scan_to_lidar_data(&scan);
-                    self.robot.lidar = lidar;
+                    self.robot.input_lidar(lidar);
                 }
 
                 // Set the robot pose
                 if let Some(pose) = self.pose.lock().unwrap().take() {
                     let (pos, angle) = cov_pose_to_pose2d(&pose);
-                    self.robot.pos = pos;
-                    self.robot.angle = angle;
+                    self.robot.input_pos(pos);
+                    self.robot.input_angle(angle);
                 }
 
                 // Set incomming messages
@@ -199,12 +195,14 @@ impl SearchAgent {
                             }
                         }
                     });
-                    self.robot.incoming_msg.extend(msgs);
-                }
 
-                // Publish outgoing msgs
-                {
-                    self.robot.outgoing_msg.drain(..).for_each(|msg| {
+                    let postbox = self.robot.get_postbox_mut();
+
+                    // Deposit incoming msgs in the robot postbox
+                    postbox.deposit(msgs);
+
+                    // Empty the outgoing messages from the robot postbox and send them to via ROS2
+                    postbox.empty().into_iter().for_each(|msg| {
                         if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
                             self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
                         } else {
@@ -214,7 +212,8 @@ impl SearchAgent {
                 }
             }
 
-            let control = (self.behavior)(&mut self.robot, Instant::now());
+            // TODO: Subscribe to ros2 time to behave correctly in simulation
+            let control = self.robot.behavior(Instant::now());
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();

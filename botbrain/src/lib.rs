@@ -1,16 +1,12 @@
 #![allow(dead_code)]
 
-use std::{
-    collections::{HashMap, HashSet},
-    f32::consts::PI,
-    time::Instant,
-};
+use std::{collections::HashSet, f32::consts::PI, time::Instant};
 
-use debug::DebugType;
+use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
 use scaled_grid::ScaledGrid;
 use serde::{Deserialize, Serialize};
-use shapes::{Circle, Cone, Line, Shape};
+use shapes::{Cone, Shape};
 use utils::normalize_angle;
 
 pub mod behaviors;
@@ -219,7 +215,6 @@ pub struct RobotParameters {
 }
 
 impl RobotParameters {
-
     fn turtlebot4() -> Self {
         Self {
             diameter: 0.5,
@@ -228,92 +223,42 @@ impl RobotParameters {
             lidar_range: 5.0,
         }
     }
-
 }
 
-#[derive(Clone)]
-pub struct Robot {
-    /// The id of the robot
-    pub id: RobotId,
-
-    /// Parameters of the robot
-    pub params: RobotParameters,
-
-    /// The position of the robot
-    pub pos: Pos2,
-
-    /// The velocity of the robot
-    pub vel: f32,
-
-    /// The angle of the robot
-    pub angle: f32,
-
-    /// The angular velocity of the robot
-    pub avel: f32,
-
-    /// The data from the camera. Angles and probability of objects.
-    pub cam: CamData,
-
-    /// The data from the lidar. Distance to objects.
-    pub lidar: LidarData,
-
-    /// The messages from the other robots since the last call.
-    pub incoming_msg: Vec<Message>,
-
-    /// The indices of the messages that have been processed.
-    pub processed_msgs: HashSet<usize>,
-
-    /// The messages to be sent to the other robots.
-    pub outgoing_msg: Vec<Message>,
-
-    /// Grid containing probabilities of objects in the environment.
-    pub search_grid: ScaledGrid<f32>,
-
-    /// The time of the last search grid update
-    pub last_search_grid_update: Instant,
-
-    /// Debug object and their names. Used for visualization.
-    /// Set to `None` to disable debug visualization.
-    pub debug_soup: Option<HashMap<String, DebugType>>,
-}
-
-impl Default for Robot {
+impl Default for RobotParameters {
     fn default() -> Self {
-        Self {
-            id: Default::default(),
-            params: RobotParameters::turtlebot4(),
-            pos: Default::default(),
-            vel: Default::default(),
-            angle: Default::default(),
-            avel: Default::default(),
-            cam: Default::default(),
-            lidar: Default::default(),
-            incoming_msg: Default::default(),
-            processed_msgs: Default::default(),
-            outgoing_msg: Default::default(),
-            search_grid: Default::default(),
-            last_search_grid_update: Instant::now(),
-            debug_soup: None,
-        }
+        Self::turtlebot4()
     }
 }
 
-impl Robot {
-    /// Get the messages from the other robots since the last call
-    pub(crate) fn recv(&mut self) -> impl Iterator<Item = (usize, &Message)> {
+/// Manages incoming and outgoing messages
+#[derive(Clone, Default)]
+pub struct Postbox {
+    incoming_msg: Vec<Message>,
+    processed_msgs: HashSet<usize>,
+    outgoing_msg: Vec<Message>,
+}
+
+impl Postbox {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Get the messages from the other robots
+    pub fn recv(&mut self) -> impl Iterator<Item = (usize, &Message)> {
         self.incoming_msg
             .iter()
             .enumerate()
-            .filter(|(i, msg)| !self.processed_msgs.contains(i) && msg.sender_id != self.id)
+            .filter(|(i, _msg)| !self.processed_msgs.contains(i))
     }
 
     /// Mark a message as processed
-    pub(crate) fn set_processed(&mut self, idx: usize) {
+    pub fn set_processed(&mut self, idx: usize) {
         self.processed_msgs.insert(idx);
     }
 
     /// Clear the processed messages from the incoming messages list
-    pub(crate) fn clear_processed(&mut self) {
+    pub fn clean(&mut self) {
         self.incoming_msg = self
             .incoming_msg
             .iter()
@@ -326,139 +271,64 @@ impl Robot {
     }
 
     /// Send a message to the other robots.
-    pub(crate) fn post(&mut self, kind: MessageKind) {
-        self.outgoing_msg.push(Message {
-            sender_id: self.id,
-            kind,
-        });
+    pub fn post(&mut self, msg: Message) {
+        self.outgoing_msg.push(msg);
     }
 
-    pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {
-        for (point, cell) in self
-            .search_grid
-            .iter_cone(cone)
-            .filter_map(|(p, c)| {
-                let angle = (p - cone.center).angle();
-                let distance = (p - cone.center).length();
-                match distance <= lidar.interpolate(angle - cone.angle) {
-                    true => Some((p, c.cloned())),
-                    false => None,
-                }
-            })
-            .collect::<Vec<_>>()
-        {
-            if let Some(mut cell) = cell {
-                cell -= diff;
-                self.search_grid.set(point, cell);
-            }
-        }
+    /// Deposit messages into the postbox to be received by the robot
+    pub fn deposit(&mut self, msgs: impl Iterator<Item = Message>) {
+        self.incoming_msg.extend(msgs);
     }
 
-    pub(crate) fn update_search_line(&mut self, line: &Line, diff: f32) {
-        let dir = (line.end - line.start).normalized();
-        let step_size = self.search_grid.scale();
-        let radius = step_size * 2.0;
-        let mut distance = 0.0;
-        while distance < self.params.cam_range - radius / 2.0 {
-            let pos = line.start + dir * distance;
+    /// Gather the messages ready to be sent to the other robots
+    pub fn empty(&mut self) -> Vec<Message> {
+        std::mem::take(&mut self.outgoing_msg)
+    }
+}
 
-            // Nearness is in range [0, 1]
-            let nearness = distance / self.params.cam_range;
+pub trait Robot: Send + Sync {
+    fn id(&self) -> &RobotId;
 
-            for (point, mut cell) in self
-                .search_grid
-                .iter_circle(&Circle {
-                    center: pos,
-                    radius,
-                })
-                .filter_map(|(p, c)| Some((p, *c?)))
-                .collect::<Vec<_>>()
-            {
-                // We weight points closer to the robot more
-                cell += 2.0 * (diff * nearness);
+    fn set_id(&mut self, id: RobotId);
+    fn set_world_size(&mut self, size: Vec2);
 
-                self.search_grid.set(point, cell);
-            }
+    fn params(&self) -> &RobotParameters;
+    fn set_params(&mut self, params: RobotParameters);
 
-            distance += step_size;
-        }
+    fn get_postbox(&self) -> &Postbox;
+    fn get_postbox_mut(&mut self) -> &mut Postbox;
+
+    fn post(&mut self, kind: MessageKind) {
+        let sender_id = *self.id();
+        self.get_postbox_mut().post(Message { sender_id, kind });
     }
 
-    pub(crate) fn update_search_grid(&mut self, time: Instant) {
-        const HEAT_WIDTH: f32 = PI / 4.0;
-        const CAM_MULTPLIER: f32 = 20.0;
-
-        // How often to update the search grid (multiplied on all changes to the cells)
-        const UPDATE_INTERVAL: f32 = 0.1;
-
-        // Only update the search grid every UPDATE_INTERVAL seconds
-        if (time - self.last_search_grid_update).as_secs_f32() < UPDATE_INTERVAL {
-            return;
-        }
-        self.last_search_grid_update = time;
-
-        // Cool down the search grid within the view of the camera
-        {
-            let cone = Cone {
-                center: self.pos,
-                radius: self.params.cam_range,
-                angle: self.angle,
-                fov: self.params.cam_fov,
-            };
-            let lidar = self.lidar.within_fov(self.params.cam_fov);
-            let diff = 1.0 * UPDATE_INTERVAL;
-            self.update_search_cone(&cone, &lidar, diff);
-            self.post(MessageKind::CamDiff { cone, lidar, diff });
-        }
-
-        // Heat up the search grid in the direction of the search items
-        // detected by the camera
-        {
-            let CamData(cam) = self.cam.clone();
-            for cam_point in cam {
-                let angle = self.angle + cam_point.angle;
-                let dir = Vec2::angled(angle);
-                let start = self.pos;
-                let end = start + dir * self.params.cam_range;
-                let line = Line { start, end };
-
-                let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
-
-                self.update_search_line(&line, diff);
-                self.post(MessageKind::ShapeDiff {
-                    shape: Shape::Line(line),
-                    diff,
-                });
-            }
-        }
-
-        // Read incoming messages and update the search grid accordingly
-        for (msg_id, msg) in self
+    fn recv(&mut self) -> Vec<(usize, &Message)> {
+        let id = *self.id();
+        self.get_postbox_mut()
             .recv()
-            .map(|(id, msg)| (id, msg.kind.clone()))
-            .collect::<Vec<_>>()
-        {
-            match msg {
-                MessageKind::ShapeDiff { shape, diff } => {
-                    match shape {
-                        Shape::Cone(_cone) => todo!(),
-                        Shape::Line(line) => self.update_search_line(&line, diff),
-                        _ => {}
-                    }
-                    self.set_processed(msg_id);
-                }
-                MessageKind::CamDiff { cone, lidar, diff } => {
-                    self.update_search_cone(&cone, &lidar, diff);
-                    self.set_processed(msg_id);
-                }
-                MessageKind::Debug(_) => {}
-            }
-        }
+            .filter(move |(_, msg)| msg.sender_id != id)
+            .collect()
     }
 
-    pub(crate) fn debug<S: ToString>(&mut self, name: S, debug_type: DebugType) {
-        if let Some(m) = &mut self.debug_soup {
-            m.insert(name.to_string(), debug_type);
-        }
+    fn get_debug_soup(&self) -> &DebugSoup;
+    fn get_debug_soup_mut(&mut self) -> &mut DebugSoup;
+
+    fn debug(&mut self, name: &'static str, debug_type: DebugType) {
+        self.get_debug_soup_mut().add(name, debug_type);
     }
+
+    fn debug_enabled(&self) -> bool {
+        self.get_debug_soup().is_active()
+    }
+
+    fn input_pos(&mut self, pos: Pos2);
+    fn input_angle(&mut self, angle: f32);
+
+    fn input_cam(&mut self, cam: CamData);
+    fn input_lidar(&mut self, lidar: LidarData);
+
+    fn clone_box(&self) -> Box<dyn Robot>;
+
+    fn behavior(&mut self, time: Instant) -> Control;
 }
