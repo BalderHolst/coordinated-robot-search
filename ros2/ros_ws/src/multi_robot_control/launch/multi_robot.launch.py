@@ -220,7 +220,7 @@ def spawn_robots(context, *args, **kwargs):
         arguments=["--ros-args", "--log-level", "info"],
         parameters=[
             {"use_sim_time": use_sim_time},
-            {"autostart": True},
+            {"autostart": True},  # FIX: Not starting all amcl...
             {"node_names": lifecycle_manager_nodes},
         ],
     )
