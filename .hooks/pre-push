@@ -9,5 +9,5 @@ function lint()
     fi
 }
 
-lint robcore
+lint botbrain
 lint simple_sim
