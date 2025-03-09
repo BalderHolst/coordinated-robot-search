@@ -17,6 +17,8 @@ from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch_ros.parameter_descriptions import ParameterFile
+from nav2_common.launch import RewrittenYaml
 
 
 def generate_launch_description():
@@ -37,6 +39,7 @@ def generate_launch_description():
     world_sdf_xacro = ExecuteProcess(
         cmd=["xacro", "-o", world_sdf, ["headless:=", headless], world]
     )
+
     gazebo_server = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(
@@ -61,6 +64,7 @@ def generate_launch_description():
         condition=UnlessCondition(headless),
         launch_arguments={"gz_args": ["-v4 -g "]}.items(),
     )
+
     clock_bridge = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -112,7 +116,6 @@ def generate_launch_description():
             OpaqueFunction(
                 function=spawn_robots
             ),  # Ensures substitution happens at runtime
-            # TODO: Add nav stack for localization
         ]
     )
     return ld
@@ -120,8 +123,9 @@ def generate_launch_description():
 
 def spawn_robots(context, *args, **kwargs):
     desc_dir = get_package_share_directory("tb4_description")
+    sim_dir = get_package_share_directory("multi_robot_control")
 
-    use_sim_time = context.perform_substitution(LaunchConfiguration("use_sim_time"))
+    use_sim_time = LaunchConfiguration("use_sim_time")
     n_robots_value = int(context.perform_substitution(LaunchConfiguration("n_robots")))
     print(f"Spawning {n_robots_value} robots...")
 
@@ -135,6 +139,8 @@ def spawn_robots(context, *args, **kwargs):
     )
     robot_launch.append(tf_combiner)
 
+    lifecycle_manager_nodes = ["map_server"]
+    params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
     for i in range(n_robots_value):
         pose = {
             "x": str(-8.00 + float(i)),
@@ -151,7 +157,7 @@ def spawn_robots(context, *args, **kwargs):
                 os.path.join(desc_dir, "launch", "spawn_tb4.launch.py")
             ),
             launch_arguments={
-                "namespace": namespace,
+                "namespace": namespace + "/",
                 "robot_name": namespace,
                 "use_sim_time": use_sim_time,
                 "x_pose": pose["x"],
@@ -164,9 +170,61 @@ def spawn_robots(context, *args, **kwargs):
         )
         robot_launch.append(gz_robot)
         print("Starting AMCL for " + namespace)
-        # TODO: Add AMCL here
+        # Only used to add namespace to topics
+        configured_params = ParameterFile(
+            RewrittenYaml(
+                source_file=params_file,
+                root_key=namespace,
+                param_rewrites={
+                    "base_frame_id": namespace + "/base_link",
+                    "odom_frame_id": namespace + "/odom",
+                    # FIX: Change the initial pose for each robot!
+                },
+                convert_types=True,
+            ),
+            allow_substs=True,
+        )
 
-    # TODO: Add map server here
-    # TODO: Add Lifecycle manager here
+        lifecycle_manager_nodes.append(namespace + "/" + "amcl")
+        nav2_amcl = Node(
+            package="nav2_amcl",
+            executable="amcl",
+            name="amcl",
+            namespace=namespace,
+            output="screen",
+            respawn=True,
+            respawn_delay=2.0,
+            parameters=[configured_params],
+            arguments=["--ros-args", "--log-level", "info"],
+            remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
+        )
+        robot_launch.append(nav2_amcl)
+
+    map_yaml = os.path.join(sim_dir, "config", "maps", "depot.yaml")
+    map_server = Node(
+        package="nav2_map_server",
+        executable="map_server",
+        name="map_server",
+        output="screen",
+        respawn=True,
+        respawn_delay=2.0,
+        parameters=[{"yaml_filename": map_yaml}],
+        arguments=["--ros-args", "--log-level", "info"],
+    )
+    robot_launch.append(map_server)
+    lifecycle_node = Node(
+        package="nav2_lifecycle_manager",
+        executable="lifecycle_manager",
+        name="lifecycle_manager_localization",
+        output="screen",
+        arguments=["--ros-args", "--log-level", "info"],
+        parameters=[
+            {"use_sim_time": use_sim_time},
+            {"autostart": True},
+            {"node_names": lifecycle_manager_nodes},
+        ],
+    )
+    robot_launch.append(lifecycle_node)
+    print(lifecycle_manager_nodes)
 
     return robot_launch
