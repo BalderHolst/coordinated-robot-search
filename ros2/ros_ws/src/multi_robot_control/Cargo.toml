@@ -23,3 +23,4 @@ botbrain = { path = "../../../../botbrain", features = ["cli", "serde-bin"] }
 clap = { version = "4.5.31", features = ["derive"] }
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
+serde-binary = "0.5.0"
