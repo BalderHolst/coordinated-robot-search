@@ -39,7 +39,7 @@ def generate_launch_description():
         parameters=[
             {
                 "use_sim_time": use_sim_time,
-                # "tf_prefix": namespace, # Not needed with current setup
+                "frame_prefix": namespace,
                 "robot_description": Command(
                     ["xacro", " ", robot_sdf, " namespace:=", namespace]
                 ),
@@ -55,7 +55,7 @@ def generate_launch_description():
     bridge_cmd = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
-        name=robot_name,
+        name="ros_gz_bridge",
         namespace=namespace,
         parameters=[
             {

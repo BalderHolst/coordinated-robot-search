@@ -1,0 +1,25 @@
+[package]
+name = "multi_robot_control"
+version = "0.1.0"
+authors = ["Mathias Balling <math260r@gmail.com>"]
+edition = "2021"
+
+# We use a custom profile to keep colcon
+# separate from "normal" rust building.
+[profile.colcon]
+inherits = "release"
+
+[[bin]]
+name = "tf_topic_combiner"
+path = "src/tf_topic_combiner/main.rs"
+
+[[bin]]
+name = "search_agent"
+path = "src/search_agent/main.rs"
+
+[dependencies]
+r2r = "0.9"
+botbrain = { path = "../../../../botbrain", features = ["cli", "serde-bin"] }
+clap = { version = "4.5.31", features = ["derive"] }
+futures = "0.3"
+tokio = { version = "1", features = ["full"] }
