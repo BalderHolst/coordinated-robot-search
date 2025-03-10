@@ -1,14 +1,10 @@
 use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
-use std::{
-    sync::{Arc, Mutex},
-    time::{Duration, Instant},
-};
+use std::time::Duration;
 
 const DEFAULT_TOPIC: &str = "/search_channel";
 
-use futures::task::SpawnExt;
-use r2r::{self, ros_agent_msgs, QosProfile};
 use botbrain::MessageKind;
+use r2r::{self, ros_agent_msgs, QosProfile};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = r2r::Context::create().unwrap();
@@ -30,11 +26,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 (|msg: ros_agent_msgs::msg::AgentMessage| match MessageKind::try_from(msg.data) {
                     Ok(kind) => {
                         match kind {
-                            MessageKind::ShapeDiff { shape, diff } => {} // TODO: Print shape diff
-                            MessageKind::CamDiff { cone, lidar, diff } => {} // TODO: Print cam diff
+                            MessageKind::ShapeDiff { shape: _, diff: _ } => {} // TODO: Print shape diff
+                            MessageKind::CamDiff {
+                                cone: _,
+                                lidar: _,
+                                diff: _,
+                            } => {} // TODO: Print cam diff
                             MessageKind::Debug(s) => {
                                 r2r::log_info!(logger, "[{}] Debug: {}", msg.sender_id, s)
-                            },
+                            }
                         }
                     }
                     Err(e) => r2r::log_error!(logger, "[{}] Corrupt message: {}", msg.sender_id, e),

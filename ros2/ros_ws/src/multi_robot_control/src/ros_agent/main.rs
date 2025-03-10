@@ -4,7 +4,6 @@ use std::{
 };
 mod convert_msg;
 
-use clap::ValueEnum;
 use convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
 };
