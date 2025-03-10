@@ -20,7 +20,7 @@ pub struct Args {
     pub world: PathBuf,
 
     /// What behavior to run on the robots
-    #[arg(index = 2)]
+    #[arg(index = 2, value_parser = clap::value_parser!(Behavior))]
     pub behavior: Behavior,
 
     /// Start the simulation paused

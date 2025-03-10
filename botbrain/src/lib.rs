@@ -1,10 +1,9 @@
 #![allow(dead_code)]
 
-use std::{collections::HashSet, f32::consts::PI, time::Instant};
+use std::{collections::HashSet, f32::consts::PI};
 
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
-use scaled_grid::ScaledGrid;
 use serde::{Deserialize, Serialize};
 use shapes::{Cone, Shape};
 use utils::normalize_angle;
@@ -330,5 +329,5 @@ pub trait Robot: Send + Sync {
 
     fn clone_box(&self) -> Box<dyn Robot>;
 
-    fn behavior(&mut self, time: Instant) -> Control;
+    fn behavior(&mut self, index: usize, time: std::time::Instant) -> Control;
 }

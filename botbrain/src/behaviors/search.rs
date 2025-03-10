@@ -10,8 +10,8 @@ use crate::{
 };
 
 use super::{
-    debug, shapes::Circle, utils::normalize_angle, CamData, Cone, Control, DebugSoup, DebugType,
-    Message, MessageKind, Postbox, Robot, RobotId, RobotParameters, ScaledGrid,
+    debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, CamData, Cone, Control,
+    DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId, RobotParameters,
 };
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -140,10 +140,13 @@ impl Robot for SearchRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, time: Instant) -> Control {
-        self.search(time)
+    fn behavior(&mut self, index: usize, time: std::time::Instant) -> Control {
+        FUNC[index](self, time)
     }
 }
+
+pub const MENU: &[&str] = &["search"];
+pub const FUNC: &[fn(&mut SearchRobot, Instant) -> Control] = &[SearchRobot::search];
 
 impl SearchRobot {
     pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {

@@ -112,6 +112,7 @@ impl Simulator {
 
         let args = Arc::new(StepArgs {
             agents: self.state.agents.clone(),
+            behavior: self.behavior.clone(),
             world: self.state.world.clone(),
             time: self.start_time + Duration::from_secs_f32(self.state.time),
             dt,
@@ -134,6 +135,7 @@ impl Simulator {
 /// Shared state needed to step an agent forward in time
 struct StepArgs {
     agents: Vec<Agent>,
+    behavior: Behavior,
     world: World,
     time: Instant,
     dt: f32,
@@ -144,6 +146,7 @@ struct StepArgs {
 fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
     let StepArgs {
         agents,
+        behavior,
         world,
         time,
         dt,
@@ -162,7 +165,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
 
     {
         // Call the behavior function
-        agent.control = agent.robot.behavior(*time);
+        agent.control = behavior.run(&mut agent.robot, *time);
         agent.state.vel = agent.control.speed * SPEED_MULTIPLIER;
         agent.state.avel = agent.control.steer * STEER_MULTIPLIER;
 

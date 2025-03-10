@@ -4,14 +4,14 @@ use {
 };
 
 #[derive(Clone, Default)]
-pub struct CircleRobot {
+pub struct DumbRobot {
     id: RobotId,
     params: RobotParameters,
     postbox: Postbox,
     debug_soup: DebugSoup,
 }
 
-impl Robot for CircleRobot {
+impl Robot for DumbRobot {
     fn id(&self) -> &RobotId {
         &self.id
     }
@@ -55,7 +55,22 @@ impl Robot for CircleRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, _time: std::time::Instant) -> Control {
+    fn behavior(&mut self, index: usize, _time: std::time::Instant) -> Control {
+        (behaviors::FUNC[index])()
+    }
+}
+
+pub mod behaviors {
+    use super::*;
+
+    pub const MENU: &[&str] = &["nothing", "circle"];
+    pub const FUNC: &[fn() -> Control] = &[behaviors::nothing, behaviors::circle];
+
+    pub fn nothing() -> Control {
+        Control::default()
+    }
+
+    pub fn circle() -> Control {
         Control {
             speed: 1.0,
             steer: 0.5,

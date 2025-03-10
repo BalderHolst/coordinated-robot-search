@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, time::Instant};
+use std::f32::consts::PI;
 
 use emath::{Pos2, Vec2};
 
@@ -62,14 +62,16 @@ impl Robot for AvoidObstaclesRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, time: std::time::Instant) -> Control {
-        self.avoid_obstacles(time)
+    fn behavior(&mut self, index: usize, _time: std::time::Instant) -> Control {
+        [Self::avoid_obstacles][index](self)
     }
 }
 
+pub const MENU: &[&str] = &["avoid-closest"];
+
 /// Avoid obstacles by steering away from the closest point in front of the robot.
 impl AvoidObstaclesRobot {
-    pub fn avoid_obstacles(&mut self, _time: Instant) -> Control {
+    pub fn avoid_obstacles(&mut self) -> Control {
         const MIN_DISTANCE: f32 = 3.0;
         const FOV: f32 = PI / 1.8;
 
