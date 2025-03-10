@@ -2,9 +2,13 @@ use std::f32::consts::PI;
 
 use emath::{Pos2, Vec2};
 
-use crate::{LidarPoint, MessageKind};
+use crate::{cast_robot, LidarPoint, MessageKind};
 
-use super::{CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters};
+use super::{
+    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters,
+};
+
+pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
 
 #[derive(Clone, Default)]
 pub struct AvoidObstaclesRobot {
@@ -62,52 +66,50 @@ impl Robot for AvoidObstaclesRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, index: usize, _time: std::time::Instant) -> Control {
-        [Self::avoid_obstacles][index](self)
+    fn any(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
-pub const MENU: &[&str] = &["avoid-closest"];
-
 /// Avoid obstacles by steering away from the closest point in front of the robot.
-impl AvoidObstaclesRobot {
-    pub fn avoid_obstacles(&mut self) -> Control {
-        const MIN_DISTANCE: f32 = 3.0;
-        const FOV: f32 = PI / 1.8;
+pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
+    let robot = cast_robot::<AvoidObstaclesRobot>(robot);
 
-        let mut steer = 0.0;
-        let mut speed = 1.0;
+    const MIN_DISTANCE: f32 = 3.0;
+    const FOV: f32 = PI / 1.8;
 
-        // Find the closest point in front of the robot
-        let mut min_point = LidarPoint {
-            angle: 0.0,
-            distance: f32::INFINITY,
-        };
+    let mut steer = 0.0;
+    let mut speed = 1.0;
 
-        for point in self.lidar.points() {
-            let angle = point.angle;
-            if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV)
-                && point.distance < min_point.distance
-            {
-                min_point = point.clone();
-            }
+    // Find the closest point in front of the robot
+    let mut min_point = LidarPoint {
+        angle: 0.0,
+        distance: f32::INFINITY,
+    };
+
+    for point in robot.lidar.points() {
+        let angle = point.angle;
+        if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV)
+            && point.distance < min_point.distance
+        {
+            min_point = point.clone();
         }
-
-        // If the closest point is too close, steer away from it
-        if min_point.distance < MIN_DISTANCE {
-            let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
-            let how_close = how_close.powi(2);
-            steer = how_close * (-min_point.angle.signum());
-
-            self.post(MessageKind::Debug(format!(
-                "Close obstacle at {:.2}",
-                min_point.angle
-            )));
-
-            speed *= 1.0 - how_close;
-        }
-
-        self.postbox.clean();
-        Control { speed, steer }
     }
+
+    // If the closest point is too close, steer away from it
+    if min_point.distance < MIN_DISTANCE {
+        let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
+        let how_close = how_close.powi(2);
+        steer = how_close * (-min_point.angle.signum());
+
+        robot.post(MessageKind::Debug(format!(
+            "Close obstacle at {:.2}",
+            min_point.angle
+        )));
+
+        speed *= 1.0 - how_close;
+    }
+
+    robot.postbox.clean();
+    Control { speed, steer }
 }

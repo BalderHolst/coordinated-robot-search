@@ -1,7 +1,15 @@
 use {
-    super::{CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters},
+    super::{
+        BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
+        RobotParameters,
+    },
     emath::{Pos2, Vec2},
 };
+
+pub const MENU: &[(&str, BehaviorFn)] = &[
+    ("nothing", behaviors::nothing),
+    ("circle", behaviors::circle),
+];
 
 #[derive(Clone, Default)]
 pub struct DumbRobot {
@@ -55,22 +63,19 @@ impl Robot for DumbRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, index: usize, _time: std::time::Instant) -> Control {
-        (behaviors::FUNC[index])()
+    fn any(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
 
 pub mod behaviors {
     use super::*;
 
-    pub const MENU: &[&str] = &["nothing", "circle"];
-    pub const FUNC: &[fn() -> Control] = &[behaviors::nothing, behaviors::circle];
-
-    pub fn nothing() -> Control {
+    pub fn nothing(_robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
         Control::default()
     }
 
-    pub fn circle() -> Control {
+    pub fn circle(_robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
         Control {
             speed: 1.0,
             steer: 0.5,

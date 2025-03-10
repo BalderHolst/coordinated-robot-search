@@ -8,8 +8,10 @@ use std::{
 };
 
 use botbrain::{
-    self, behaviors::Behavior, grid::iter_circle, CamData, CamPoint, Control, RobotId,
-    RobotParameters,
+    self,
+    behaviors::{Behavior, BehaviorFn},
+    grid::iter_circle,
+    CamData, CamPoint, Control, RobotId, RobotParameters,
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
@@ -112,7 +114,7 @@ impl Simulator {
 
         let args = Arc::new(StepArgs {
             agents: self.state.agents.clone(),
-            behavior: self.behavior.clone(),
+            behavior_fn: self.behavior.behavior_fn(),
             world: self.state.world.clone(),
             time: self.start_time + Duration::from_secs_f32(self.state.time),
             dt,
@@ -135,7 +137,7 @@ impl Simulator {
 /// Shared state needed to step an agent forward in time
 struct StepArgs {
     agents: Vec<Agent>,
-    behavior: Behavior,
+    behavior_fn: BehaviorFn,
     world: World,
     time: Instant,
     dt: f32,
@@ -146,7 +148,7 @@ struct StepArgs {
 fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
     let StepArgs {
         agents,
-        behavior,
+        behavior_fn,
         world,
         time,
         dt,
@@ -165,7 +167,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
 
     {
         // Call the behavior function
-        agent.control = behavior.run(&mut agent.robot, *time);
+        agent.control = behavior_fn(&mut agent.robot, *time);
         agent.state.vel = agent.control.speed * SPEED_MULTIPLIER;
         agent.state.avel = agent.control.steer * STEER_MULTIPLIER;
 

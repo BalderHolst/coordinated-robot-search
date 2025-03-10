@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{collections::HashSet, f32::consts::PI};
+use std::{any::Any, collections::HashSet, f32::consts::PI};
 
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
@@ -328,6 +328,12 @@ pub trait Robot: Send + Sync {
     fn input_lidar(&mut self, lidar: LidarData);
 
     fn clone_box(&self) -> Box<dyn Robot>;
+    fn any(&mut self) -> &mut dyn Any;
+}
 
-    fn behavior(&mut self, index: usize, time: std::time::Instant) -> Control;
+fn cast_robot<T: 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
+    robot
+        .any()
+        .downcast_mut()
+        .expect("We should always be downcasting to the correct")
 }

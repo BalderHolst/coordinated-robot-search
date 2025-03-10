@@ -10,9 +10,12 @@ use crate::{
 };
 
 use super::{
-    debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, CamData, Cone, Control,
-    DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId, RobotParameters,
+    cast_robot, debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, BehaviorFn,
+    CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId,
+    RobotParameters,
 };
+
+pub const MENU: &[(&str, BehaviorFn)] = &[("search", search)];
 
 /// The range of the lidar sensor at which the robot moves away from an object
 const LIDAR_OBSTACLE_RANGE: f32 = 1.0;
@@ -140,13 +143,10 @@ impl Robot for SearchRobot {
         Box::new(self.clone())
     }
 
-    fn behavior(&mut self, index: usize, time: std::time::Instant) -> Control {
-        FUNC[index](self, time)
+    fn any(&mut self) -> &mut dyn std::any::Any {
+        self
     }
 }
-
-pub const MENU: &[&str] = &["search"];
-pub const FUNC: &[fn(&mut SearchRobot, Instant) -> Control] = &[SearchRobot::search];
 
 impl SearchRobot {
     pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {
@@ -278,34 +278,6 @@ impl SearchRobot {
 }
 
 impl SearchRobot {
-    /// Search for the object using a gradient on the heat map
-    pub fn search(&mut self, time: Instant) -> Control {
-        {
-            let lidar = &self.lidar;
-            let soup = &mut self.debug_soup;
-            let params = &self.params;
-            debug::common_routines::show_lidar(soup, lidar);
-            debug::common_routines::show_cam_range(soup, lidar, params);
-        }
-        show_search_grid(self);
-
-        self.update_search_grid(time);
-
-        let forward_bias = Vec2::angled(self.angle) * FORWARD_BIAS;
-        self.debug("Forward Bias", DebugType::Vector(forward_bias));
-
-        let mut target = Vec2::ZERO;
-        target += forward_bias;
-        target += self.gradient();
-        target += self.lidar();
-
-        self.debug("Target", DebugType::Vector(target));
-
-        self.postbox.clean();
-
-        self.control_towards(target)
-    }
-
     /// Calculate the gradient of the heat map around the robot
     fn gradient(&mut self) -> Vec2 {
         let mut gradient = Vec2::ZERO;
@@ -428,4 +400,34 @@ impl SearchRobot {
 
 pub(crate) fn show_search_grid(robot: &mut SearchRobot) {
     robot.debug("Search Grid", DebugType::Grid(robot.search_grid.clone()));
+}
+
+/// Search for the object using a gradient on the heat map
+pub fn search(robot: &mut Box<dyn Robot>, time: Instant) -> Control {
+    let robot = cast_robot::<SearchRobot>(robot);
+
+    {
+        let lidar = &robot.lidar;
+        let soup = &mut robot.debug_soup;
+        let params = &robot.params;
+        debug::common_routines::show_lidar(soup, lidar);
+        debug::common_routines::show_cam_range(soup, lidar, params);
+    }
+    show_search_grid(robot);
+
+    robot.update_search_grid(time);
+
+    let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
+    robot.debug("Forward Bias", DebugType::Vector(forward_bias));
+
+    let mut target = Vec2::ZERO;
+    target += forward_bias;
+    target += robot.gradient();
+    target += robot.lidar();
+
+    robot.debug("Target", DebugType::Vector(target));
+
+    robot.postbox.clean();
+
+    robot.control_towards(target)
 }
