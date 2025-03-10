@@ -139,7 +139,6 @@ def spawn_robots(context, *args, **kwargs):
     )
     robot_launch.append(tf_combiner)
 
-    lifecycle_manager_nodes = ["map_server"]
     params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
     for i in range(n_robots_value):
         pose = {
@@ -185,7 +184,6 @@ def spawn_robots(context, *args, **kwargs):
             allow_substs=True,
         )
 
-        lifecycle_manager_nodes.append(namespace + "/" + "amcl")
         nav2_amcl = Node(
             package="nav2_amcl",
             executable="amcl",
@@ -198,6 +196,20 @@ def spawn_robots(context, *args, **kwargs):
             arguments=["--ros-args", "--log-level", "info"],
             remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
         )
+        lifecycle_node = Node(
+            package="nav2_lifecycle_manager",
+            executable="lifecycle_manager",
+            name="lifecycle_manager_localization",
+            namespace=namespace,
+            output="screen",
+            arguments=["--ros-args", "--log-level", "info"],
+            parameters=[
+                {"use_sim_time": use_sim_time},
+                {"autostart": True},
+                {"node_names": ["amcl"]},
+            ],
+        )
+        robot_launch.append(lifecycle_node)
         robot_launch.append(nav2_amcl)
 
     map_yaml = os.path.join(sim_dir, "config", "maps", "depot.yaml")
@@ -217,12 +229,11 @@ def spawn_robots(context, *args, **kwargs):
         executable="lifecycle_manager",
         name="lifecycle_manager_localization",
         output="screen",
-        arguments=["--ros-args", "--log-level", "info"],
+        arguments=["--ros-args", "--log-level", "warn"],
         parameters=[
             {"use_sim_time": use_sim_time},
             {"autostart": True},
-            {"bond_timeout": 10.0},  # FIX: Not starting all amcl...
-            {"node_names": lifecycle_manager_nodes},
+            {"node_names": ["map_server"]},
         ],
     )
     robot_launch.append(lifecycle_node)
