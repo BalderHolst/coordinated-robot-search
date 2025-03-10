@@ -10,12 +10,12 @@ use convert_msg::{
 };
 use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
 use r2r::{
-    self, geometry_msgs, log_error, log_info, log_warn, search_agent_msgs, sensor_msgs, Publisher,
+    self, geometry_msgs, log_error, log_info, log_warn, ros_agent_msgs, sensor_msgs, Publisher,
     QosProfile,
 };
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
-pub struct SearchAgent {
+pub struct RosAgent {
     node: r2r::Node,
     robot: Box<dyn botbrain::Robot>,
     nl: String,
@@ -23,21 +23,14 @@ pub struct SearchAgent {
     pool: LocalPool,
     pose: Arc<Mutex<Option<geometry_msgs::msg::PoseWithCovarianceStamped>>>,
     scan: Arc<Mutex<Option<sensor_msgs::msg::LaserScan>>>,
-    incomming_msgs: Arc<Mutex<Vec<search_agent_msgs::msg::AgentMessage>>>,
-    outgoing_msgs_pub: Publisher<search_agent_msgs::msg::AgentMessage>,
+    incomming_msgs: Arc<Mutex<Vec<ros_agent_msgs::msg::AgentMessage>>>,
+    outgoing_msgs_pub: Publisher<ros_agent_msgs::msg::AgentMessage>,
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
     // pub map: Arc<Mutex<Option<r2r::nav_msgs::msg::OccupancyGrid>>>,
     // had_map_update: Arc<Mutex<bool>>,
 }
 
-impl SearchAgent {
-    fn behaviors() -> Vec<String> {
-        botbrain::behaviors::Behavior::value_variants()
-            .iter()
-            .filter_map(|v| Some(v.to_possible_value()?.get_name().to_string()))
-            .collect()
-    }
-
+impl RosAgent {
     pub fn new() -> Self {
         let ctx = r2r::Context::create().unwrap();
 
@@ -49,18 +42,17 @@ impl SearchAgent {
             log_error!(
                 &nl,
                 "No `behavior` parameter provided. Please provide one. Possible values: [{}]",
-                Self::behaviors().join(", ")
+                botbrain::behaviors::Behavior::behavior_names().join(", ")
             );
             std::process::exit(1);
         };
 
-        let Ok(behavior) = botbrain::behaviors::Behavior::from_str(&behavior_param, true) else {
-            log_error!(
-                &nl,
-                "Invalid `behavior` parameter provided. Possible values: [{}]",
-                Self::behaviors().join(", ")
-            );
-            std::process::exit(1);
+        let behavior = match botbrain::behaviors::Behavior::parse(&behavior_param) {
+            Ok(behavior) => behavior,
+            Err(e) => {
+                log_error!(&nl, "Invalid `behavior` parameter provided: {}", e);
+                std::process::exit(1);
+            }
         };
 
         let mut robot = behavior.create_robot();
@@ -94,10 +86,10 @@ impl SearchAgent {
 
         let qos = QosProfile::default().volatile();
         let msgs_pub = node
-            .create_publisher::<search_agent_msgs::msg::AgentMessage>(&channel_topic, qos.clone())
+            .create_publisher::<ros_agent_msgs::msg::AgentMessage>(&channel_topic, qos.clone())
             .unwrap();
         let mut msgs_sub = node
-            .subscribe::<search_agent_msgs::msg::AgentMessage>(&channel_topic, qos)
+            .subscribe::<ros_agent_msgs::msg::AgentMessage>(&channel_topic, qos)
             .unwrap();
 
         let qos = QosProfile::default().volatile();
@@ -213,7 +205,8 @@ impl SearchAgent {
             }
 
             // TODO: Subscribe to ros2 time to behave correctly in simulation
-            let control = self.robot.behavior(Instant::now());
+            let time = Instant::now();
+            let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();
@@ -228,6 +221,6 @@ impl SearchAgent {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut agent = SearchAgent::new();
+    let mut agent = RosAgent::new();
     agent.run()
 }

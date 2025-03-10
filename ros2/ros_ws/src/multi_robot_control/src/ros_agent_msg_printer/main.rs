@@ -7,7 +7,7 @@ use std::{
 const DEFAULT_TOPIC: &str = "/search_channel";
 
 use futures::task::SpawnExt;
-use r2r::{self, search_agent_msgs, QosProfile};
+use r2r::{self, ros_agent_msgs, QosProfile};
 use botbrain::MessageKind;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,7 +19,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let qos = QosProfile::default().volatile();
     let mut sub = node
-        .subscribe::<search_agent_msgs::msg::AgentMessage>(&topic, qos)
+        .subscribe::<ros_agent_msgs::msg::AgentMessage>(&topic, qos)
         .unwrap();
 
     let mut pool = LocalPool::new();
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .spawn_local(async move {
             r2r::log_info!(logger, "Printing messages over topic: {}", topic);
             while let Some(msg) = sub.next().await {
-                (|msg: search_agent_msgs::msg::AgentMessage| match MessageKind::try_from(msg.data) {
+                (|msg: ros_agent_msgs::msg::AgentMessage| match MessageKind::try_from(msg.data) {
                     Ok(kind) => {
                         match kind {
                             MessageKind::ShapeDiff { shape, diff } => {} // TODO: Print shape diff

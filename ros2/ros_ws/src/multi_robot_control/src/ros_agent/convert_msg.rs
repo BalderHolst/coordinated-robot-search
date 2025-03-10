@@ -1,4 +1,4 @@
-use r2r::{geometry_msgs, search_agent_msgs, sensor_msgs};
+use r2r::{geometry_msgs, ros_agent_msgs, sensor_msgs};
 use botbrain::{self, LidarData, LidarPoint, RobotId};
 
 pub fn scan_to_lidar_data(scan: &sensor_msgs::msg::LaserScan) -> botbrain::LidarData {
@@ -24,7 +24,7 @@ pub fn cov_pose_to_pose2d(
 }
 
 pub fn ros2_msg_to_agent_msg(
-    msg: search_agent_msgs::msg::AgentMessage,
+    msg: ros_agent_msgs::msg::AgentMessage,
 ) -> Option<botbrain::Message> {
     Some(botbrain::Message {
         sender_id: RobotId::new(msg.sender_id),
@@ -34,8 +34,8 @@ pub fn ros2_msg_to_agent_msg(
 
 pub fn agent_msg_to_ros2_msg(
     msg: botbrain::Message,
-) -> Option<search_agent_msgs::msg::AgentMessage> {
-    Some(search_agent_msgs::msg::AgentMessage {
+) -> Option<ros_agent_msgs::msg::AgentMessage> {
+    Some(ros_agent_msgs::msg::AgentMessage {
         sender_id: msg.sender_id.as_u32(),
         data: msg.kind.try_into().ok()?,
     })

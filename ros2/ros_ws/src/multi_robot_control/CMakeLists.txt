@@ -22,7 +22,7 @@ r2r_cargo(rcl                    # we need the c ros2 api
           geometry_msgs
           sensor_msgs
           tf2_msgs
-          search_agent_msgs)
+          ros_agent_msgs)
 
 # install binaries
 if(WIN32)
@@ -35,8 +35,8 @@ endif()
 # From [[bin]] or just cargo name
 set(PROGRAMS_LIST
   tf_topic_combiner
-  search_agent
-  search_agent_msg_printer
+  ros_agent
+  ros_agent_msg_printer
 )
 
 # use a loop to install each program

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(search_agent_msgs)
+project(ros_agent_msgs)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
