@@ -36,6 +36,7 @@ endif()
 set(PROGRAMS_LIST
   tf_topic_combiner
   search_agent
+  search_agent_msg_printer
 )
 
 # use a loop to install each program
