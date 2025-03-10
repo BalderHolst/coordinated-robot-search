@@ -177,7 +177,9 @@ def spawn_robots(context, *args, **kwargs):
                 param_rewrites={
                     "base_frame_id": namespace + "/base_link",
                     "odom_frame_id": namespace + "/odom",
-                    # FIX: Change the initial pose for each robot!
+                    "x": str(float(i)),
+                    # "y": str(float(i)),   # Not relevant ATM
+                    # "yam": str(float(i)), # Not relevant ATM
                 },
                 convert_types=True,
             ),
