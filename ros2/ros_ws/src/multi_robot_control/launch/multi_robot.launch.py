@@ -108,6 +108,11 @@ def generate_launch_description():
                 default_value="1",
                 description="How many robots to spawn",
             ),
+            DeclareLaunchArgument(
+                "behavior",
+                default_value="dumb:nothing",
+                description="What behavior to run on the robots",
+            ),
             world_sdf_xacro,
             remove_temp_sdf_file,
             gazebo_server,
@@ -127,9 +132,11 @@ def spawn_robots(context, *args, **kwargs):
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     n_robots_value = int(context.perform_substitution(LaunchConfiguration("n_robots")))
+    behavior = str(context.perform_substitution(LaunchConfiguration("behavior")))
     print(f"Spawning {n_robots_value} robots...")
 
     robot_launch = []
+
     tf_combiner = Node(
         package="multi_robot_control",
         executable="tf_topic_combiner",
@@ -168,6 +175,7 @@ def spawn_robots(context, *args, **kwargs):
             }.items(),
         )
         robot_launch.append(gz_robot)
+
         print("Starting AMCL for " + namespace)
         # Only used to add namespace to topics
         configured_params = ParameterFile(
@@ -213,6 +221,17 @@ def spawn_robots(context, *args, **kwargs):
         )
         robot_launch.append(lifecycle_node)
         robot_launch.append(nav2_amcl)
+
+        print("Starting behavior for " + namespace)
+        robot_launch.append(Node(
+            package="multi_robot_control",
+            executable="ros_agent",
+            namespace=namespace,
+            name="ros_agent",
+            parameters=[{"behavior": behavior}],
+        ))
+
+
 
     map_yaml = os.path.join(sim_dir, "config", "maps", "depot.yaml")
     map_server = Node(
