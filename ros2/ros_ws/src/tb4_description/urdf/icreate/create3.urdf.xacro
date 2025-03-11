@@ -3,7 +3,7 @@
   <xacro:include filename="$(find tb4_description)/urdf/icreate/bumper.urdf.xacro" />
   <xacro:include filename="$(find tb4_description)/urdf/icreate/caster.urdf.xacro" />
   <xacro:include filename="$(find tb4_description)/urdf/icreate/common_properties.urdf.xacro"/>
-  <xacro:include filename="$(find tb4_description)/urdf/icreate/sensors/imu.urdf.xacro" />
+  <!-- <xacro:include filename="$(find tb4_description)/urdf/icreate/sensors/imu.urdf.xacro" /> -->
   <xacro:include filename="$(find tb4_description)/urdf/icreate/wheel.urdf.xacro" />
 
 
@@ -88,9 +88,9 @@
   </xacro:caster>
 
   <!-- IMU -->
-  <xacro:imu_sensor gazebo="$(arg gazebo)" namespace="${clean_namespace}">
-    <origin xyz="0.050613 0.043673 ${0.0202 + base_link_z_offset}"/>
-  </xacro:imu_sensor>
+  <!-- <xacro:imu_sensor gazebo="$(arg gazebo)" namespace="${clean_namespace}"> -->
+  <!--   <origin xyz="0.050613 0.043673 ${0.0202 + base_link_z_offset}"/> -->
+  <!-- </xacro:imu_sensor> -->
 
   <gazebo>
       <plugin

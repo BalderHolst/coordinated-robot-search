@@ -109,15 +109,15 @@
   </joint>
 
   <!-- IMU -->
-  <link name="${name}_imu_frame">
-    <xacro:inertial_dummy/>
-  </link>
+  <!-- <link name="${name}_imu_frame"> -->
+  <!--   <xacro:inertial_dummy/> -->
+  <!-- </link> -->
 
-  <joint name="${name}_imu_joint" type="fixed">
-      <parent link="${base_frame}"/>
-      <child link="${name}_imu_frame"/>
-      <origin xyz="0 0 0" rpy="-${M_PI/2} 0 -${M_PI/2}" />
-  </joint>
+  <!-- <joint name="${name}_imu_joint" type="fixed"> -->
+  <!--     <parent link="${base_frame}"/> -->
+  <!--     <child link="${name}_imu_frame"/> -->
+  <!--     <origin xyz="0 0 0" rpy="-${M_PI/2} 0 -${M_PI/2}" /> -->
+  <!-- </joint> -->
 
   <!-- Gazebo links and joints -->
   <gazebo reference="${name}_rgb_camera_frame">
@@ -170,9 +170,9 @@
     <preserveFixedJoint>true</preserveFixedJoint>
   </gazebo>
 
-  <gazebo reference="${name}_imu_joint">
-    <preserveFixedJoint>true</preserveFixedJoint>
-  </gazebo>
+  <!-- <gazebo reference="${name}_imu_joint"> -->
+  <!--   <preserveFixedJoint>true</preserveFixedJoint> -->
+  <!-- </gazebo> -->
 
 </xacro:macro>
 </robot>
