@@ -14,33 +14,33 @@ cmake_minimum_required(VERSION "3.21")
 
 # traverse dependencies for all message packages.
 function(get_idl_deps OUT_PKG_DIRS PKG)
-    find_package(${PKG} REQUIRED)
-    target_link_libraries(dummy ${${PKG}_LIBRARIES})
-    include_directories(dummy ${${PKG}_INCLUDE_DIRS})
+  find_package(${PKG} REQUIRED)
+  target_link_libraries(dummy ${${PKG}_LIBRARIES})
+  include_directories(dummy ${${PKG}_INCLUDE_DIRS})
 
-    list(APPEND VISITED_TARGETS ${PKG})
+  list(APPEND VISITED_TARGETS ${PKG})
 
-    # only keep track of packages that include idl files
-    set(PKG_DIRS "")
-    if(DEFINED ${PKG}_IDL_FILES)
-        list(APPEND PKG_DIRS ${${PKG}_DIR})
+  # only keep track of packages that include idl files
+  set(PKG_DIRS "")
+  if(DEFINED ${PKG}_IDL_FILES)
+    list(APPEND PKG_DIRS ${${PKG}_DIR})
+  endif()
+
+  foreach(LIB ${${PKG}_DEPENDENCIES})
+    list(FIND VISITED_TARGETS ${LIB} VISITED)
+    if (${VISITED} EQUAL -1)
+      get_idl_deps(NEW_PKG_DIRS ${LIB})
+      list(APPEND PKG_DIRS ${NEW_PKG_DIRS})
+      list(REMOVE_DUPLICATES PKG_DIRS)
     endif()
-
-    foreach(LIB ${${PKG}_DEPENDENCIES})
-        list(FIND VISITED_TARGETS ${LIB} VISITED)
-        if (${VISITED} EQUAL -1)
-            get_idl_deps(NEW_PKG_DIRS ${LIB})
-            list(APPEND PKG_DIRS ${NEW_PKG_DIRS})
-            list(REMOVE_DUPLICATES PKG_DIRS)
-        endif()
-    endforeach()
-    set(VISITED_TARGETS ${VISITED_TARGETS} PARENT_SCOPE)
-    set(${OUT_PKG_DIRS} ${PKG_DIRS} PARENT_SCOPE)
+  endforeach()
+  set(VISITED_TARGETS ${VISITED_TARGETS} PARENT_SCOPE)
+  set(${OUT_PKG_DIRS} ${PKG_DIRS} PARENT_SCOPE)
 endfunction()
 
 function(r2r_cargo)
   # pretend that we want to compile c code to get all library paths etc...
-  add_executable (dummy EXCLUDE_FROM_ALL dummy.c)
+  add_executable (dummy EXCLUDE_FROM_ALL ./.r2r/dummy.c)
 
   # traverse list of wanted packages to add dependencies
   foreach(f ${ARGN})
@@ -67,7 +67,7 @@ function(r2r_cargo)
       list(APPEND CMAKE_LIBRARIES "${_LIBLOC}")
       get_filename_component(_PARENT "${_LIBLOC}" DIRECTORY)
       if(IS_DIRECTORY ${_PARENT})
-          list(APPEND RUSTFLAGS "-C link-arg=-Wl,-rpath,${_PARENT}")
+        list(APPEND RUSTFLAGS "-C link-arg=-Wl,-rpath,${_PARENT}")
       endif()
     endif()
   endforeach()
@@ -85,13 +85,13 @@ function(r2r_cargo)
   # custom target for building using cargo
   option(CARGO_CLEAN "Invoke cargo clean before building" OFF)
   if(CARGO_CLEAN)
-        add_custom_target(cargo_target ALL
+    add_custom_target(cargo_target ALL
               COMMAND ${CMAKE_COMMAND} "-E" "env" "cargo" "clean" "--profile" "colcon"
               COMMAND ${CMAKE_COMMAND} "-E" "env" "RUSTFLAGS=$ENV{RUSTFLAGS}" "CMAKE_IDL_PACKAGES=$ENV{CMAKE_IDL_PACKAGES}" "CMAKE_INCLUDE_DIRS=$ENV{CMAKE_INCLUDE_DIRS}" "cargo" "build" "--profile" "colcon"
               WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
               )
   else()
-          add_custom_target(cargo_target ALL
+    add_custom_target(cargo_target ALL
               COMMAND ${CMAKE_COMMAND} "-E" "env" "RUSTFLAGS=$ENV{RUSTFLAGS}" "CMAKE_IDL_PACKAGES=$ENV{CMAKE_IDL_PACKAGES}" "CMAKE_INCLUDE_DIRS=$ENV{CMAKE_INCLUDE_DIRS}" "cargo" "build" "--quiet" "--profile" "colcon"
              WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
               )

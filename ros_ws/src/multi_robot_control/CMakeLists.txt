@@ -12,7 +12,7 @@ install(
   DESTINATION share/${PROJECT_NAME}
 )
 
-include(r2r_cargo.cmake)
+include(./.r2r/r2r_cargo.cmake)
 
 
 
