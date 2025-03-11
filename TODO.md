@@ -11,6 +11,7 @@
 - [ ] Proximity Grid
 - [ ] Pathing
 - [ ] Look into machine learning
+- [ ] Show search grid as overlay in Rviz
 
 # Think about
 
