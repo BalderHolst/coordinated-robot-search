@@ -11,19 +11,23 @@ inherits = "release"
 
 [[bin]]
 name = "tf_topic_combiner"
-path = "src/tf_topic_combiner/main.rs"
+path = "./src/tf_topic_combiner/main.rs"
 
 [[bin]]
 name = "ros_agent"
-path = "src/ros_agent/main.rs"
+path = "./src/ros_agent/main.rs"
 
 [[bin]]
 name = "ros_agent_msg_printer"
-path = "src/ros_agent_msg_printer/main.rs"
+path = "./src/ros_agent_msg_printer/main.rs"
+
+[[bin]]
+name = "map_overlay_testing"
+path = "./src/map_overlay_testing/main.rs"
 
 [dependencies]
 r2r = "0.9"
-botbrain = { path = "../../../../botbrain", features = ["cli", "serde-bin"] }
+botbrain = { path = "../../../botbrain", features = ["cli", "serde-bin"] }
 clap = { version = "4.5.31", features = ["derive"] }
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
