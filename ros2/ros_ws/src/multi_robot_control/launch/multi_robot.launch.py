@@ -130,9 +130,9 @@ def spawn_robots(context, *args, **kwargs):
     desc_dir = get_package_share_directory("tb4_description")
     sim_dir = get_package_share_directory("multi_robot_control")
 
-    use_sim_time = LaunchConfiguration("use_sim_time")
     n_robots_value = int(context.perform_substitution(LaunchConfiguration("n_robots")))
-    behavior = str(context.perform_substitution(LaunchConfiguration("behavior")))
+    use_sim_time = LaunchConfiguration("use_sim_time")
+    behavior = LaunchConfiguration("behavior")
     print(f"Spawning {n_robots_value} robots...")
 
     robot_launch = []
@@ -223,15 +223,15 @@ def spawn_robots(context, *args, **kwargs):
         robot_launch.append(nav2_amcl)
 
         print("Starting behavior for " + namespace)
-        robot_launch.append(Node(
-            package="multi_robot_control",
-            executable="ros_agent",
-            namespace=namespace,
-            name="ros_agent",
-            parameters=[{"behavior": behavior}],
-        ))
-
-
+        robot_launch.append(
+            Node(
+                package="multi_robot_control",
+                executable="ros_agent",
+                namespace=namespace,
+                name="ros_agent",
+                parameters=[{"behavior": behavior}],
+            )
+        )
 
     map_yaml = os.path.join(sim_dir, "config", "maps", "depot.yaml")
     map_server = Node(
