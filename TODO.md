@@ -1,7 +1,9 @@
 # TODO list
-- [ ] Realsense? 
-- [ ] Update URDF (remove imu?)
-- [ ] Localization in multi-robot enviornment
+
+- [x] Realsense?
+- [x] Update URDF (remove imu?)
+- [x] Localization in multi-robot enviornment
+- [ ] Fine-tune AMCL parameters
 
 - [x] ROS2 Messaging between robots
 - [ ] ROS2 Image Recognition
@@ -11,5 +13,5 @@
 - [x] Multi-threaded simple simulation
 
 # Think about
-- When should we create a task?
 
+- When should we create a task?

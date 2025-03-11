@@ -32,7 +32,7 @@ else()
 endif()
 
 # Define the list of programs to install
-# From [[bin]] or just cargo name
+# From [[bin]] name in cargo.toml
 set(PROGRAMS_LIST
   tf_topic_combiner
   ros_agent
