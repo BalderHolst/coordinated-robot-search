@@ -1,3 +1,5 @@
+//! Dumb robot with dumb behaviors
+
 use {
     super::{
         BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,

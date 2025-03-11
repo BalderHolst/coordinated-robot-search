@@ -285,23 +285,42 @@ impl Postbox {
     }
 }
 
+/// A trait representing a robot. This is the interface that all robots must implement.
+///
+/// Methods starting with `set_` should be called after creating the robot to set the
+/// internal parameters of the robot.
+///
+/// Methods starting with `input_` are used to input data into the robot and should be
+/// called before calling a behavior function on the robot.
 pub trait Robot: Send + Sync {
+    /// Get the id of the robot
     fn id(&self) -> &RobotId;
 
+    /// Set the id of the robot
     fn set_id(&mut self, id: RobotId);
+
+    /// Set the size of the world
     fn set_world_size(&mut self, size: Vec2);
 
+    /// Get the parameters of the robot
     fn params(&self) -> &RobotParameters;
+
+    /// Set the parameters of the robot
     fn set_params(&mut self, params: RobotParameters);
 
+    /// Get the robot postbox
     fn get_postbox(&self) -> &Postbox;
+
+    /// Get the robot postbox mutably
     fn get_postbox_mut(&mut self) -> &mut Postbox;
 
+    /// Post a message to the other robots
     fn post(&mut self, kind: MessageKind) {
         let sender_id = *self.id();
         self.get_postbox_mut().post(Message { sender_id, kind });
     }
 
+    /// Receive messages from the other robots
     fn recv(&mut self) -> Vec<(usize, &Message)> {
         let id = *self.id();
         self.get_postbox_mut()
@@ -310,27 +329,42 @@ pub trait Robot: Send + Sync {
             .collect()
     }
 
+    /// Get the debug soup
     fn get_debug_soup(&self) -> &DebugSoup;
+
+    /// Get the debug soup mutably
     fn get_debug_soup_mut(&mut self) -> &mut DebugSoup;
 
+    /// Add a debug object to the debug soup
     fn debug(&mut self, name: &'static str, debug_type: DebugType) {
         self.get_debug_soup_mut().add(name, debug_type);
     }
 
+    /// Check if the debug soup is active
     fn debug_enabled(&self) -> bool {
         self.get_debug_soup().is_active()
     }
 
+    /// Input the position of the robot
     fn input_pos(&mut self, pos: Pos2);
+
+    /// Input the angle of the robot
     fn input_angle(&mut self, angle: f32);
 
+    /// Input data from the camera
     fn input_cam(&mut self, cam: CamData);
+
+    /// Input data from the lidar
     fn input_lidar(&mut self, lidar: LidarData);
 
+    /// Clone a dynamic instance of the [Robot] trait
     fn clone_box(&self) -> Box<dyn Robot>;
+
+    /// Get the robot as [Any]. This is used for downcasting the robot to a specific type.
     fn any(&mut self) -> &mut dyn Any;
 }
 
+/// Cast a robot to a specific type
 fn cast_robot<T: 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
     robot
         .any()

@@ -13,6 +13,7 @@ use super::*;
 
 pub type BehaviorFn = fn(&mut Box<dyn Robot>, Instant) -> Control;
 
+/// The kind of robot. Behaviors can only be run the robot kind they were designed for.
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 #[derive(Clone, Debug)]
 pub enum RobotKind {
@@ -22,6 +23,7 @@ pub enum RobotKind {
 }
 
 impl RobotKind {
+    /// Get the menu of behaviors for the robot kind.
     fn menu(&self) -> &[(&'static str, BehaviorFn)] {
         match self {
             RobotKind::Dumb => dumb::MENU,
@@ -30,6 +32,8 @@ impl RobotKind {
         }
     }
 }
+
+/// A behavior defines the kind of robot and the behavior function to run on the robot.
 #[derive(Clone, Debug)]
 pub struct Behavior {
     robot_kind: RobotKind,
@@ -38,10 +42,13 @@ pub struct Behavior {
 }
 
 impl Behavior {
+    /// Get the behavior function
     pub fn behavior_fn(&self) -> BehaviorFn {
         self.behavior_fn
     }
 
+    /// Create a new robot that corresponds to the behavior.
+    /// This is the main way to create a `Box<dyn Robot>`.
     pub fn create_robot(&self) -> Box<dyn Robot> {
         match &self.robot_kind {
             RobotKind::Dumb => Box::new(dumb::DumbRobot::default()),
