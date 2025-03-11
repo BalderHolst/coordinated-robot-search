@@ -164,7 +164,7 @@ impl SearchRobot {
             .collect::<Vec<_>>()
         {
             if let Some(mut cell) = cell {
-                cell -= diff;
+                cell += diff;
                 self.search_grid.set(point, cell);
             }
         }
@@ -222,7 +222,7 @@ impl SearchRobot {
                 fov: self.params.cam_fov,
             };
             let lidar = self.lidar.within_fov(self.params.cam_fov);
-            let diff = 1.0 * UPDATE_INTERVAL;
+            let diff = -1.0 * UPDATE_INTERVAL;
             self.update_search_cone(&cone, &lidar, diff);
             self.postbox.post(Message {
                 sender_id: self.id,
