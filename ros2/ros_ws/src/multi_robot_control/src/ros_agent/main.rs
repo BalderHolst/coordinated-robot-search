@@ -121,6 +121,7 @@ impl RosAgent {
                 .spawn_local(async move {
                     log_info!(&nl, "Pose listener started");
                     while let Some(msg) = sub_pose.next().await {
+                        log_info!(&nl, "Pose: {:?}", msg);
                         pose.lock().unwrap().replace(msg);
                     }
                 })
@@ -171,6 +172,7 @@ impl RosAgent {
                     let (pos, angle) = cov_pose_to_pose2d(&pose);
                     self.robot.input_pos(pos);
                     self.robot.input_angle(angle);
+                    log_info!(&self.nl, "Pos: {:?}, angle: {:?} ", pos, angle)
                 }
 
                 // Set incomming messages
@@ -216,6 +218,12 @@ impl RosAgent {
                 log_warn!(&self.nl, "Error publishing twist: {}", e);
             }
         }
+    }
+}
+
+impl Default for RosAgent {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
