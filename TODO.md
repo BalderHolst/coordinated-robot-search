@@ -1,17 +1,17 @@
 # TODO list
 
-- [x] Realsense?
-- [x] Update URDF (remove imu?)
-- [x] Localization in multi-robot enviornment
-- [x] ROS2 Messaging between robots
-- [x] Multi-threaded simple simulation
+[x] Realsense? NO
+[x] Update URDF (remove imu?)
+[x] Localization in multi-robot enviornment
+[x] ROS2 Messaging between robots
+[x] Multi-threaded simple simulation
 
-- [ ] Fine-tune AMCL parameters
-- [ ] ROS2 Image Recognition
-- [ ] Proximity Grid
-- [ ] Pathing
-- [ ] Look into machine learning
-- [ ] Show search grid as overlay in Rviz
+[ ] Show search grid as overlay in Rviz
+[ ] Fine-tune AMCL parameters
+[ ] Proximity Grid
+[ ] Pathing
+[ ] ROS2 Image Recognition
+[ ] Look into machine learning
 
 # Think about
 
