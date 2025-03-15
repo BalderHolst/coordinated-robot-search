@@ -1,16 +1,16 @@
 use std::{
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 mod convert_msg;
 
 use convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
 };
-use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
+use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use r2r::{
-    self, geometry_msgs, log_error, log_info, log_warn, ros_agent_msgs, sensor_msgs, Publisher,
-    QosProfile,
+    self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, ros_agent_msgs,
+    sensor_msgs,
 };
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
@@ -203,8 +203,7 @@ impl RosAgent {
                 }
             }
 
-            // TODO: Subscribe to ros2 time to behave correctly in simulation
-            let time = Instant::now();
+            let time = Duration::default(); // FIX: Use ros2 time
             let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot

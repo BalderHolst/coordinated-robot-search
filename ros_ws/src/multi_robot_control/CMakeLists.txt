@@ -23,6 +23,7 @@ r2r_cargo(rcl                    # we need the c ros2 api
           sensor_msgs
           tf2_msgs
           nav_msgs
+          rosgraph_msgs
           ros_agent_msgs)
 
 # install binaries
@@ -38,6 +39,8 @@ set(PROGRAMS_LIST
   tf_topic_combiner
   ros_agent
   ros_agent_msg_printer
+  ros2time
+  map_overlay_testing
 )
 
 # use a loop to install each program

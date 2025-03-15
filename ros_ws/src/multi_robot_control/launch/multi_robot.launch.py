@@ -240,7 +240,7 @@ def spawn_robots(context, *args, **kwargs):
                 executable="ros_agent",
                 namespace=namespace,
                 name="ros_agent",
-                parameters=[{"behavior": behavior}],
+                parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
             )
         )
 

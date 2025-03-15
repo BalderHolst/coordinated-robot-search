@@ -25,6 +25,10 @@ path = "./src/ros_agent_msg_printer/main.rs"
 name = "map_overlay_testing"
 path = "./src/map_overlay_testing/main.rs"
 
+[[bin]]
+name = "ros2time"
+path = "./src/ros2time/main.rs"
+
 [dependencies]
 r2r = "0.9"
 botbrain = { path = "../../../botbrain", features = ["cli", "serde-bin"] }

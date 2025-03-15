@@ -56,7 +56,7 @@ function(r2r_cargo)
 
   # On OSX colcon eats the DYLD_LIBRARY_PATH... so we need to add the rpaths
   # manually...
-  set(RUSTFLAGS "")
+  set(RUSTFLAGS "--cfg r2r__rosgraph_msgs__msg__Clock")
 
   # get imported libs
   get_property(importTargets DIRECTORY "${CMAKE_SOURCE_DIR}" PROPERTY IMPORTED_TARGETS)

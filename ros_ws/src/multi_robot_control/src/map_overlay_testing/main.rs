@@ -1,6 +1,6 @@
 use std::{
     sync::{Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 mod convert_msg;
 
@@ -246,8 +246,7 @@ impl RosAgent {
                 }
             }
 
-            // TODO: Subscribe to ros2 time to behave correctly in simulation
-            let time = Instant::now();
+            let time = Duration::default(); // FIX: Use ros2 time
             let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot
