@@ -110,7 +110,6 @@ impl Simulator {
 
         let (msg_send_tx, msg_send_rx) = mpsc::channel();
 
-        println!("stepping: {}", self.state.time.as_secs_f32());
         let args = Arc::new(StepArgs {
             agents: self.state.agents.clone(),
             behavior_fn: self.behavior.behavior_fn(),

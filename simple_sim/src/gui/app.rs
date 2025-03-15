@@ -18,8 +18,8 @@ use eframe::{
     self,
     egui::{
         self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, ImageData, Key,
-        Margin, Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureFilter, TextureId, TextureOptions,
-        Vec2,
+        Margin, Painter, Pos2, Rect, Rgba, Sense, Separator, Stroke, TextureFilter, TextureId,
+        TextureOptions, Vec2,
     },
     epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
@@ -82,6 +82,7 @@ pub struct App {
     target_sps_bg: Arc<Mutex<f32>>,
     target_sps: usize,
     target_fps: f32,
+    actual_sps: f32,
     pub cam: Camera,
     pub sim_state: SimulatorState,
     global_opts: GlobalOptions,
@@ -176,6 +177,7 @@ impl App {
             actual_sps_bg,
             target_sps_bg,
             target_fps: args.target_fps,
+            actual_sps: args.target_sps as f32,
             global_opts,
             robot_opts,
             textures: AppTextures {
@@ -507,12 +509,21 @@ impl eframe::App for App {
                         });
                     }
 
+
+                    ui.add(Separator::default().vertical());
+
+                    if let Ok(actual_sps) = self.actual_sps_bg.lock() {
+                        self.actual_sps = *actual_sps;
+                    }
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
                         ui.label(format!("FPS: {:.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
-                        if let Ok(sps) = self.actual_sps_bg.lock() {
-                            ui.label(format!("SPS: {:.0}", sps));
-                        }
+                        ui.label(format!("SPS: {:.0}", self.actual_sps));
+
+                        ui.add(Separator::default().vertical());
+
+                        ui.label(format!("Time: {:.1}s", self.sim_state.time.as_secs_f64()));
                     });
+
                 });
             });
 
