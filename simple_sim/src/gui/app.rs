@@ -71,22 +71,14 @@ impl Default for GlobalOptions {
 
 #[derive(Clone)]
 pub struct RobotOptions {
-    show_lidar: bool,
-    show_cam_range: bool,
-    show_search_grid: bool,
     debug_items: HashSet<String>,
-    show_velocity: bool,
 }
 
 #[allow(clippy::derivable_impls)]
 impl Default for RobotOptions {
     fn default() -> Self {
         Self {
-            show_lidar: false,
-            show_cam_range: false,
-            show_search_grid: false,
             debug_items: Default::default(),
-            show_velocity: true,
         }
     }
 }
@@ -257,14 +249,12 @@ impl App {
             }
 
             // Draw velocity vector (arrow)
-            if robot_opts.show_velocity {
-                let vel = Vec2::angled(robot_angle) * (robot_state.vel + diameter * 0.5);
-                let end = robot_pos + self.cam.scaled(vel);
-                let stroke_width = self.cam.scaled(0.05);
-                let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
-                painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
-                painter.arrow(robot_pos, end - robot_pos, stroke);
-            }
+            let vel = Vec2::angled(robot_angle) * (robot_state.vel + diameter * 0.5);
+            let end = robot_pos + self.cam.scaled(vel);
+            let stroke_width = self.cam.scaled(0.05);
+            let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
+            painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
+            painter.arrow(robot_pos, end - robot_pos, stroke);
 
             // Draw id of robot
             let font_id = FontId {
@@ -609,16 +599,6 @@ impl eframe::App for App {
                 ui.label(format!("Position: {:?}", robot_state.pos));
                 ui.separator();
 
-                ui.label("Visualization Options");
-                ui.toggle_value(&mut robot_opts.show_velocity, "Show Velocity");
-                ui.toggle_value(&mut robot_opts.show_lidar, "Show Lidar");
-                ui.toggle_value(&mut robot_opts.show_cam_range, "Show Cam Range");
-
-                ui.separator();
-                ui.heading("Grids");
-                ui.toggle_value(&mut robot_opts.show_search_grid, "Show Search Grid");
-
-                ui.separator();
                 ui.heading("Debug Items");
                 if let DebugSoup(Some(soup)) = agent.robot.get_debug_soup() {
                     let mut names: Vec<_> = soup.keys().collect();
