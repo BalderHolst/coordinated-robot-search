@@ -13,10 +13,7 @@ use crate::{
 };
 
 use super::camera::Camera;
-use botbrain::{
-    debug::{DebugSoup, DebugType},
-    RobotParameters,
-};
+use botbrain::{debug::DebugType, RobotParameters};
 use eframe::{
     self,
     egui::{
@@ -76,6 +73,7 @@ enum CursorState {
     #[default]
     Picking,
     SpawnRobot,
+    SpawnManyRobots,
 }
 
 pub struct App {
@@ -468,6 +466,14 @@ impl App {
             }
         }
     }
+
+    fn spawn_robot(&mut self, pos: Pos2) {
+        let mut sim = self.sim_bg.lock().unwrap();
+        let angle = PI / 2.0 * self.sim_state.agents.len() as f32;
+        sim.add_robot(pos, angle);
+        self.robot_opts.push(RobotOptions::default());
+        self.global_opts.focused = Some(self.robot_opts.len() - 1);
+    }
 }
 
 impl eframe::App for App {
@@ -541,13 +547,13 @@ impl eframe::App for App {
 
                     //Spawn Robot Button
                     ui.selectable_label(
-                        matches!(self.cursor_state, CursorState::SpawnRobot),
+                        matches!(self.cursor_state, CursorState::SpawnManyRobots),
                         "Spawn Robots",
                     )
                     .clicked()
                     .then(|| match self.cursor_state {
-                        CursorState::SpawnRobot => self.cursor_state = CursorState::default(),
-                        _ => self.cursor_state = CursorState::SpawnRobot,
+                        CursorState::SpawnManyRobots => self.cursor_state = CursorState::default(),
+                        _ => self.cursor_state = CursorState::SpawnManyRobots,
                     });
                 });
             });
@@ -556,7 +562,11 @@ impl eframe::App for App {
             .resizable(true)
             .show_animated(ctx, self.global_opts.focused.is_some(), |ui| {
                 let n = self.global_opts.focused.unwrap_or(0);
-                let agent = &self.sim_state.agents[n];
+
+                let Some(agent) = &self.sim_state.agents.get(n) else {
+                    return;
+                };
+
                 let robot_state = &agent.state;
                 let robot_opts = &mut self.robot_opts[n];
 
@@ -665,6 +675,18 @@ impl eframe::App for App {
                     bind_down!(i; Key::Escape => {
                         self.global_opts.focused = None;
                         self.global_opts.follow = None;
+                        self.cursor_state = CursorState::default();
+                    });
+
+                    bind_pressed!(i; Key::N => {
+                        match self.cursor_state {
+                            CursorState::SpawnRobot => {
+                                self.cursor_state = CursorState::default();
+                            }
+                            _ => {
+                                self.cursor_state = CursorState::SpawnRobot;
+                            }
+                        }
                     });
 
                     bind_pressed!(i; Key::Space => {
@@ -682,10 +704,11 @@ impl eframe::App for App {
 
                     match self.cursor_state {
                         CursorState::SpawnRobot => {
-                            let mut sim = self.sim_bg.lock().unwrap();
-                            let angle = PI / 2.0 * self.sim_state.agents.len() as f32;
-                            sim.add_robot(pos, angle);
-                            self.robot_opts.push(RobotOptions::default());
+                            self.spawn_robot(pos);
+                            self.cursor_state = CursorState::Picking;
+                        }
+                        CursorState::SpawnManyRobots => {
+                            self.spawn_robot(pos);
                         }
                         CursorState::Picking => {
                             // Check if we clicked on a robot
