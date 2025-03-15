@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use emath::{Pos2, Vec2};
 
@@ -6,15 +6,15 @@ use crate::scaled_grid::ScaledGrid;
 
 #[derive(Clone)]
 struct InnerSoup {
-    unnamed: HashMap<&'static str, DebugType>,
-    named: HashMap<&'static str, HashMap<&'static str, DebugType>>,
+    unnamed: BTreeMap<&'static str, DebugType>,
+    named: BTreeMap<&'static str, BTreeMap<&'static str, DebugType>>,
 }
 
 impl InnerSoup {
     fn new() -> Self {
         Self {
-            unnamed: HashMap::new(),
-            named: HashMap::new(),
+            unnamed: BTreeMap::new(),
+            named: BTreeMap::new(),
         }
     }
 }
@@ -68,7 +68,7 @@ impl DebugSoup {
                     inner
                         .named
                         .entry(category)
-                        .or_insert_with(HashMap::new)
+                        .or_insert_with(BTreeMap::new)
                         .insert(key, value);
                 }
             }
