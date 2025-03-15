@@ -5,11 +5,26 @@ use emath::{Pos2, Vec2};
 use crate::scaled_grid::ScaledGrid;
 
 #[derive(Clone)]
-pub struct DebugSoup(pub Option<HashMap<&'static str, DebugType>>);
+struct InnerSoup {
+    unnamed: HashMap<&'static str, DebugType>,
+    named: HashMap<&'static str, HashMap<&'static str, DebugType>>,
+}
+
+impl InnerSoup {
+    fn new() -> Self {
+        Self {
+            unnamed: HashMap::new(),
+            named: HashMap::new(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct DebugSoup(Option<InnerSoup>);
 
 impl DebugSoup {
     pub fn new_active() -> Self {
-        Self(Some(HashMap::with_capacity(0)))
+        Self(Some(InnerSoup::new()))
     }
 
     pub fn new_inactive() -> Self {
@@ -17,22 +32,61 @@ impl DebugSoup {
     }
 
     pub fn activate(&mut self) {
-        self.0 = Some(HashMap::with_capacity(0));
+        self.0 = Some(InnerSoup::new());
     }
 
     pub fn deactivate(&mut self) {
         self.0 = None;
     }
 
-    pub fn add(&mut self, key: &'static str, value: DebugType) {
-        if let Some(map) = &mut self.0 {
-            map.insert(key, value);
+    pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, &DebugType)> {
+        let unnamed_iter = self
+            .0
+            .iter()
+            .flat_map(|inner| inner.unnamed.iter().map(|(key, value)| (key, value)));
+        let named_iter = self
+            .0
+            .iter()
+            .flat_map(|inner| inner.named.iter())
+            .filter_map(|(category, map)| match *category {
+                "" => None,
+                _ => Some(map.iter().map(move |(key, value)| (*category, *key, value))),
+            })
+            .flatten();
+        unnamed_iter
+            .map(|(key, value)| ("", *key, value))
+            .chain(named_iter)
+    }
+
+    pub fn add(&mut self, category: &'static str, key: &'static str, value: DebugType) {
+        if let Some(inner) = &mut self.0 {
+            match category {
+                "" => {
+                    inner.unnamed.insert(key, value);
+                }
+                _ => {
+                    inner
+                        .named
+                        .entry(category)
+                        .or_insert_with(HashMap::new)
+                        .insert(key, value);
+                }
+            }
         }
     }
 
-    pub fn remove(&mut self, key: &str) {
+    pub fn remove(&mut self, category: &'static str, key: &'static str) {
         if let Some(map) = &mut self.0 {
-            map.remove(key);
+            match category {
+                "" => {
+                    map.unnamed.remove(key);
+                }
+                _ => {
+                    map.named.entry(category).and_modify(|m| {
+                        m.remove(key);
+                    });
+                }
+            }
         }
     }
 
@@ -83,7 +137,7 @@ pub mod common_routines {
             return;
         }
         let rays = lidar.points().map(|p| (p.angle, p.distance)).collect();
-        soup.add("Lidar", DebugType::RobotRays(rays));
+        soup.add("Sensors", "Lidar", DebugType::RobotRays(rays));
     }
 
     pub(crate) fn show_cam_range(
@@ -104,6 +158,6 @@ pub mod common_routines {
                 Vec2::angled(angle) * dist
             })
             .collect();
-        soup.add("Cam Range", DebugType::RobotLine(points));
+        soup.add("Sensors", "Cam Range", DebugType::RobotLine(points));
     }
 }

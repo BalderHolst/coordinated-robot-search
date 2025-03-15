@@ -336,8 +336,8 @@ pub trait Robot: Send + Sync {
     fn get_debug_soup_mut(&mut self) -> &mut DebugSoup;
 
     /// Add a debug object to the debug soup
-    fn debug(&mut self, name: &'static str, debug_type: DebugType) {
-        self.get_debug_soup_mut().add(name, debug_type);
+    fn debug(&mut self, category: &'static str, name: &'static str, debug_type: DebugType) {
+        self.get_debug_soup_mut().add(category, name, debug_type);
     }
 
     /// Check if the debug soup is active

@@ -296,7 +296,7 @@ impl SearchRobot {
                     robot_points.push((pos, cell));
                 }
                 robot_heat /= robot_points.len() as f32;
-                self.debug("Robot Heat", DebugType::Number(robot_heat));
+                self.debug("Gradient", "Robot Heat", DebugType::Number(robot_heat));
             }
 
             let mut points = vec![];
@@ -352,13 +352,14 @@ impl SearchRobot {
 
             gradient *= GRADIENT_WEIGHT;
 
-            self.debug("Gradient Values", DebugType::NumberPoints(points));
+            self.debug("Gradient", "Values", DebugType::NumberPoints(points));
             self.debug(
+                "Gradient",
                 "Average Weight",
                 DebugType::Number(total_weight / total_cells as f32),
             );
-            self.debug("Gradient", DebugType::Vector(gradient));
-            self.debug("Gradient Length", DebugType::Number(gradient.length()));
+            self.debug("Gradient", "Vector", DebugType::Vector(gradient));
+            self.debug("Gradient", "Length", DebugType::Number(gradient.length()));
         }
 
         gradient
@@ -383,7 +384,11 @@ impl SearchRobot {
 
             lidar_contribution *= LIDAR_WEIGHT;
 
-            self.debug("Lidar Contribution", DebugType::Vector(lidar_contribution));
+            self.debug(
+                "Sensors",
+                "Lidar Contribution",
+                DebugType::Vector(lidar_contribution),
+            );
         }
         lidar_contribution
     }
@@ -399,7 +404,11 @@ impl SearchRobot {
 }
 
 pub(crate) fn show_search_grid(robot: &mut SearchRobot) {
-    robot.debug("Search Grid", DebugType::Grid(robot.search_grid.clone()));
+    robot.debug(
+        "Grids",
+        "Search Grid",
+        DebugType::Grid(robot.search_grid.clone()),
+    );
 }
 
 /// Search for the object using a gradient on the heat map
@@ -418,14 +427,14 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
     robot.update_search_grid(time);
 
     let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
-    robot.debug("Forward Bias", DebugType::Vector(forward_bias));
+    robot.debug("", "Forward Bias", DebugType::Vector(forward_bias));
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
     target += robot.gradient();
     target += robot.lidar();
 
-    robot.debug("Target", DebugType::Vector(target));
+    robot.debug("", "Target", DebugType::Vector(target));
 
     robot.postbox.clean();
 

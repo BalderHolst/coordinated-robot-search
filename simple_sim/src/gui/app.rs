@@ -1,12 +1,8 @@
 use std::{
-    collections::{HashMap, HashSet},
-    f32::consts::PI,
-    hash::{self, Hash, Hasher},
-    sync::{
+    collections::{HashMap, HashSet}, f32::consts::PI, sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
-    },
-    thread,
+    }, thread
 };
 
 use crate::{
@@ -39,14 +35,6 @@ const ROBOT_COLOR: Hsva = Hsva {
     a: 1.0,
 };
 
-fn string_color(s: &str) -> Color32 {
-    let mut hasher = hash::DefaultHasher::new();
-    s.hash(&mut hasher);
-    let hash = hasher.finish();
-    let hue = hash as f32 / u64::MAX as f32;
-    Hsva::new(hue, 0.8, 0.8, 1.0).into()
-}
-
 /// Textures used by the app
 struct AppTextures {
     world: TextureId,
@@ -71,7 +59,7 @@ impl Default for GlobalOptions {
 
 #[derive(Clone)]
 pub struct RobotOptions {
-    debug_items: HashSet<String>,
+    debug_items: HashSet<(&'static str, &'static str)>,
 }
 
 #[allow(clippy::derivable_impls)]
@@ -270,217 +258,211 @@ impl App {
             );
 
             let mut numbers = 0;
-            if let DebugSoup(Some(soup)) = &agent.robot.get_debug_soup() {
-                for (name, data) in soup.iter() {
-                    if !robot_opts.debug_items.contains(*name) {
-                        continue;
+            for (n, (category, name, data)) in agent.robot.get_debug_soup().iter().enumerate() {
+                if !robot_opts.debug_items.contains(&(category, name)) {
+                    continue;
+                }
+                let color = get_color(n);
+                match data {
+                    DebugType::Vector(vec) => {
+                        let end = robot_pos + self.cam.scaled(*vec);
+                        painter.arrow(
+                            robot_pos,
+                            end - robot_pos,
+                            Stroke::new(self.cam.scaled(0.03), color),
+                        );
                     }
-                    let color = string_color(name);
-                    match data {
-                        DebugType::Vector(vec) => {
+                    DebugType::Vectors(vecs) => {
+                        for vec in vecs {
                             let end = robot_pos + self.cam.scaled(*vec);
                             painter.arrow(
                                 robot_pos,
                                 end - robot_pos,
-                                Stroke::new(self.cam.scaled(0.03), color),
+                                Stroke::new(self.cam.scaled(0.01), color.gamma_multiply(0.3)),
                             );
                         }
-                        DebugType::Vectors(vecs) => {
-                            for vec in vecs {
-                                let end = robot_pos + self.cam.scaled(*vec);
-                                painter.arrow(
-                                    robot_pos,
-                                    end - robot_pos,
-                                    Stroke::new(self.cam.scaled(0.01), color.gamma_multiply(0.3)),
-                                );
-                            }
-                        }
-                        DebugType::WeightedVectors(vecs) => {
-                            let max_weight = vecs.iter().map(|(_, w)| w.abs()).sum::<f32>();
-                            for (vec, weight) in vecs {
-                                let alpha = *weight / max_weight;
-                                let color = color.gamma_multiply(1.0 - alpha);
-                                let end = robot_pos + self.cam.scaled(*vec);
-                                painter.arrow(
-                                    robot_pos,
-                                    end - robot_pos,
-                                    Stroke::new(self.cam.scaled(0.01), color),
-                                );
-                            }
-                        }
-                        DebugType::Radius(radius) => {
-                            painter.circle_stroke(
+                    }
+                    DebugType::WeightedVectors(vecs) => {
+                        let max_weight = vecs.iter().map(|(_, w)| w.abs()).sum::<f32>();
+                        for (vec, weight) in vecs {
+                            let alpha = *weight / max_weight;
+                            let color = color.gamma_multiply(1.0 - alpha);
+                            let end = robot_pos + self.cam.scaled(*vec);
+                            painter.arrow(
                                 robot_pos,
-                                self.cam.scaled(*radius),
-                                Stroke::new(self.cam.scaled(0.02), color),
+                                end - robot_pos,
+                                Stroke::new(self.cam.scaled(0.01), color),
                             );
                         }
-                        DebugType::Point(p) => {
+                    }
+                    DebugType::Radius(radius) => {
+                        painter.circle_stroke(
+                            robot_pos,
+                            self.cam.scaled(*radius),
+                            Stroke::new(self.cam.scaled(0.02), color),
+                        );
+                    }
+                    DebugType::Point(p) => {
+                        let p = self.cam.world_to_viewport(*p);
+                        painter.circle_filled(p, self.cam.scaled(0.05), color);
+                    }
+                    DebugType::Points(ps) => {
+                        for p in ps {
                             let p = self.cam.world_to_viewport(*p);
-                            painter.circle_filled(p, self.cam.scaled(0.05), color);
+                            painter.circle_filled(p, self.cam.scaled(0.03), color);
                         }
-                        DebugType::Points(ps) => {
-                            for p in ps {
-                                let p = self.cam.world_to_viewport(*p);
-                                painter.circle_filled(p, self.cam.scaled(0.03), color);
-                            }
+                    }
+                    DebugType::WeightedPoints(ps) => {
+                        let max_weight =
+                            ps.iter()
+                                .map(|(_, w)| w)
+                                .fold(0.0, |acc, w| match *w > acc {
+                                    true => *w,
+                                    false => acc,
+                                });
+                        let min_weight =
+                            ps.iter()
+                                .map(|(_, w)| w)
+                                .fold(0.0, |acc, w| match *w < acc {
+                                    true => *w,
+                                    false => acc,
+                                });
+                        for (p, w) in ps {
+                            let p = self.cam.world_to_viewport(*p);
+                            let alpha = (*w - min_weight) / (max_weight - min_weight);
+                            let color = color.gamma_multiply(alpha);
+                            painter.circle_filled(p, self.cam.scaled(0.03), color);
                         }
-                        DebugType::WeightedPoints(ps) => {
-                            let max_weight =
-                                ps.iter()
-                                    .map(|(_, w)| w)
-                                    .fold(0.0, |acc, w| match *w > acc {
-                                        true => *w,
-                                        false => acc,
-                                    });
-                            let min_weight =
-                                ps.iter()
-                                    .map(|(_, w)| w)
-                                    .fold(0.0, |acc, w| match *w < acc {
-                                        true => *w,
-                                        false => acc,
-                                    });
-                            for (p, w) in ps {
-                                let p = self.cam.world_to_viewport(*p);
-                                let alpha = (*w - min_weight) / (max_weight - min_weight);
-                                let color = color.gamma_multiply(alpha);
-                                painter.circle_filled(p, self.cam.scaled(0.03), color);
-                            }
-                        }
-                        DebugType::NumberPoints(ps) => {
-                            let font_id = FontId {
-                                size: self.cam.scaled(0.08),
-                                family: FontFamily::Monospace,
-                            };
-                            for (p, w) in ps {
-                                let p = self.cam.world_to_viewport(*p);
-                                painter.text(
-                                    p,
-                                    Align2::CENTER_CENTER,
-                                    format!("{:.1}", w),
-                                    font_id.clone(),
-                                    color,
-                                );
-                            }
-                        }
-                        DebugType::Number(n) => {
-                            let font_id = FontId {
-                                size: self.cam.scaled(0.2),
-                                family: FontFamily::Monospace,
-                            };
+                    }
+                    DebugType::NumberPoints(ps) => {
+                        let font_id = FontId {
+                            size: self.cam.scaled(0.08),
+                            family: FontFamily::Monospace,
+                        };
+                        for (p, w) in ps {
+                            let p = self.cam.world_to_viewport(*p);
                             painter.text(
-                                robot_pos
-                                    + Vec2::new(
-                                        0.0,
-                                        -self.cam.scaled(0.5)
-                                            - numbers as f32 * self.cam.scaled(0.2),
-                                    ),
+                                p,
                                 Align2::CENTER_CENTER,
-                                format!("{name}: {n:.3}"),
-                                font_id,
+                                format!("{:.1}", w),
+                                font_id.clone(),
                                 color,
                             );
-                            numbers += 1;
                         }
-                        DebugType::RobotRays(rays) => {
-                            for (angle, distance) in rays {
-                                let color = Hsva::new(
-                                    distance / self.sim_state.world.width() * 2.0,
-                                    0.8,
-                                    0.8,
-                                    0.5,
+                    }
+                    DebugType::Number(n) => {
+                        let font_id = FontId {
+                            size: self.cam.scaled(0.2),
+                            family: FontFamily::Monospace,
+                        };
+                        painter.text(
+                            robot_pos
+                                + Vec2::new(
+                                    0.0,
+                                    -self.cam.scaled(0.5) - numbers as f32 * self.cam.scaled(0.2),
+                                ),
+                            Align2::CENTER_CENTER,
+                            format!("{name}: {n:.3}"),
+                            font_id,
+                            color,
+                        );
+                        numbers += 1;
+                    }
+                    DebugType::RobotRays(rays) => {
+                        for (angle, distance) in rays {
+                            let color = Hsva::new(
+                                distance / self.sim_state.world.width() * 2.0,
+                                0.8,
+                                0.8,
+                                0.5,
+                            );
+                            let dir = Vec2::angled(robot_angle + *angle);
+                            let start = robot_pos + dir * self.cam.scaled(*diameter / 2.0);
+                            let end = robot_pos + dir * self.cam.scaled(*distance);
+                            painter.line(
+                                vec![start, end],
+                                PathStroke::new(self.cam.scaled(0.01), color),
+                            );
+                        }
+                    }
+                    DebugType::RobotLine(points) => {
+                        let points = points
+                            .iter()
+                            .map(|p| {
+                                let len = p.length();
+                                let angle = robot_angle + p.angle();
+                                robot_pos + Vec2::angled(angle) * self.cam.scaled(len)
+                            })
+                            .collect();
+                        painter.line(points, PathStroke::new(self.cam.scaled(0.01), color));
+                    }
+                    DebugType::Grid(grid) => {
+                        let (min, max) = self.sim_state.world.bounds();
+                        let min = self.cam.world_to_viewport(min);
+                        let max = self.cam.world_to_viewport(max);
+                        let canvas = Rect::from_min_max(min, max);
+
+                        let mut min: f32 = 0.0;
+                        let mut max: f32 = 0.0;
+                        for (_, _, cell) in grid.grid().iter() {
+                            min = min.min(*cell);
+                            max = max.max(*cell);
+                        }
+
+                        const COOL_COLOR: Color32 = Color32::LIGHT_BLUE;
+                        const COLD_COLOR: Color32 = Color32::BLUE;
+                        const UNCERTAIN_COLOR: Color32 = Color32::WHITE;
+                        const WARM_COLOR: Color32 = Color32::YELLOW;
+                        const HOT_COLOR: Color32 = Color32::RED;
+
+                        const THRESHOLD: f32 = 10.0;
+
+                        fn ease_out_quart(c: f32) -> f32 {
+                            1. - f32::powi(1. - c, 4)
+                        }
+
+                        let image = grid_to_image(grid.grid(), |c| {
+                            match c {
+                                c if c > 0.0 => {
+                                    WARM_COLOR.lerp_to_gamma(HOT_COLOR, ease_out_quart(c / max))
+                                }
+                                c if c < 0.0 => {
+                                    COOL_COLOR.lerp_to_gamma(COLD_COLOR, ease_out_quart(c / min))
+                                }
+                                _ => UNCERTAIN_COLOR,
+                            }
+                            .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
+                        });
+
+                        let texture_manager = &painter.ctx().tex_manager();
+                        let mut texture_manager = texture_manager.write();
+
+                        let texture_options = TextureOptions {
+                            magnification: TextureFilter::Nearest,
+                            ..Default::default()
+                        };
+
+                        let maybe_id = self.textures.others.get(name).cloned();
+                        let id = match maybe_id {
+                            Some(id) => {
+                                texture_manager.set(id, ImageDelta::full(image, texture_options));
+                                id
+                            }
+                            None => {
+                                let id = texture_manager.alloc(
+                                    format!("{}-grid-image", name),
+                                    ImageData::from(image),
+                                    texture_options,
                                 );
-                                let dir = Vec2::angled(robot_angle + *angle);
-                                let start = robot_pos + dir * self.cam.scaled(*diameter / 2.0);
-                                let end = robot_pos + dir * self.cam.scaled(*distance);
-                                painter.line(
-                                    vec![start, end],
-                                    PathStroke::new(self.cam.scaled(0.01), color),
-                                );
+                                // Add to cache
+                                println!("[INFO] Allocated new texture for {} (id={:?})", name, id);
+                                self.textures.others.insert(name.to_string(), id);
+                                id
                             }
-                        }
-                        DebugType::RobotLine(points) => {
-                            let points = points
-                                .iter()
-                                .map(|p| {
-                                    let len = p.length();
-                                    let angle = robot_angle + p.angle();
-                                    robot_pos + Vec2::angled(angle) * self.cam.scaled(len)
-                                })
-                                .collect();
-                            painter.line(points, PathStroke::new(self.cam.scaled(0.01), color));
-                        }
-                        DebugType::Grid(grid) => {
-                            let (min, max) = self.sim_state.world.bounds();
-                            let min = self.cam.world_to_viewport(min);
-                            let max = self.cam.world_to_viewport(max);
-                            let canvas = Rect::from_min_max(min, max);
+                        };
 
-                            let mut min: f32 = 0.0;
-                            let mut max: f32 = 0.0;
-                            for (_, _, cell) in grid.grid().iter() {
-                                min = min.min(*cell);
-                                max = max.max(*cell);
-                            }
-
-                            const COOL_COLOR: Color32 = Color32::LIGHT_BLUE;
-                            const COLD_COLOR: Color32 = Color32::BLUE;
-                            const UNCERTAIN_COLOR: Color32 = Color32::WHITE;
-                            const WARM_COLOR: Color32 = Color32::YELLOW;
-                            const HOT_COLOR: Color32 = Color32::RED;
-
-                            const THRESHOLD: f32 = 10.0;
-
-                            fn ease_out_quart(c: f32) -> f32 {
-                                1. - f32::powi(1. - c, 4)
-                            }
-
-                            let image = grid_to_image(grid.grid(), |c| {
-                                match c {
-                                    c if c > 0.0 => {
-                                        WARM_COLOR.lerp_to_gamma(HOT_COLOR, ease_out_quart(c / max))
-                                    }
-                                    c if c < 0.0 => COOL_COLOR
-                                        .lerp_to_gamma(COLD_COLOR, ease_out_quart(c / min)),
-                                    _ => UNCERTAIN_COLOR,
-                                }
-                                .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
-                            });
-
-                            let texture_manager = &painter.ctx().tex_manager();
-                            let mut texture_manager = texture_manager.write();
-
-                            let texture_options = TextureOptions {
-                                magnification: TextureFilter::Nearest,
-                                ..Default::default()
-                            };
-
-                            let maybe_id = self.textures.others.get(*name).cloned();
-                            let id = match maybe_id {
-                                Some(id) => {
-                                    texture_manager
-                                        .set(id, ImageDelta::full(image, texture_options));
-                                    id
-                                }
-                                None => {
-                                    let id = texture_manager.alloc(
-                                        format!("{}-grid-image", name),
-                                        ImageData::from(image),
-                                        texture_options,
-                                    );
-                                    // Add to cache
-                                    println!(
-                                        "[INFO] Allocated new texture for {} (id={:?})",
-                                        name, id
-                                    );
-                                    self.textures.others.insert(name.to_string(), id);
-                                    id
-                                }
-                            };
-
-                            let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-                            painter.image(id, canvas, uv, Color32::from_white_alpha(128));
-                        }
+                        let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+                        painter.image(id, canvas, uv, Color32::from_white_alpha(128));
                     }
                 }
             }
@@ -600,35 +582,38 @@ impl eframe::App for App {
                 ui.separator();
 
                 ui.heading("Debug Items");
-                if let DebugSoup(Some(soup)) = agent.robot.get_debug_soup() {
-                    let mut names: Vec<_> = soup.keys().collect();
-                    names.sort();
-                    for name in names {
-                        ui.horizontal(|ui| {
-                            let color = string_color(name);
 
-                            let (_, painter) = ui.allocate_painter(
-                                Vec2::splat(10.0),
-                                Sense {
-                                    click: false,
-                                    drag: false,
-                                    focusable: false,
-                                },
-                            );
-
-                            painter.rect_filled(painter.clip_rect(), 0.0, color);
-
-                            let mut shown = robot_opts.debug_items.contains(*name);
-                            let resp = ui.toggle_value(&mut shown, *name);
-                            if resp.changed() {
-                                match shown {
-                                    true => robot_opts.debug_items.insert(name.to_string()),
-                                    false => robot_opts.debug_items.remove(*name),
-                                };
-                            }
-                        });
+                let mut current_category = "";
+                for (n, (category, name, _items)) in agent.robot.get_debug_soup().iter().enumerate()
+                {
+                    if category != current_category {
+                        ui.label(category);
+                        current_category = category;
                     }
+                    draw_debug_item_label(ui, get_color(n), category, name, robot_opts);
                 }
+
+                // if let DebugSoup(Some(soup)) = agent.robot.get_debug_soup() {
+                //     let mut n = 0;
+
+                //     if let Some(global_items) = soup.get("") {
+                //         for name in global_items.keys() {
+                //             draw_debug_item_label(ui, get_color(n), "", *name, robot_opts);
+                //             n += 1;
+                //         }
+                //     }
+
+                //     for (category, items) in soup.iter() {
+                //         if category.is_empty() {
+                //             continue;
+                //         }
+                //         ui.label(*category);
+                //         for name in items.keys() {
+                //             draw_debug_item_label(ui, get_color(n), *category, *name, robot_opts);
+                //             n += 1;
+                //         }
+                //     }
+                // }
 
                 // Keep new size for next frame
                 ui.allocate_space(ui.available_size());
@@ -728,4 +713,39 @@ impl eframe::App for App {
                 self.draw_robots(&painter);
             });
     }
+}
+
+fn draw_debug_item_label(
+    ui: &mut egui::Ui,
+    color: Color32,
+    category: &'static str,
+    name: &'static str,
+    robot_opts: &mut RobotOptions,
+) {
+    ui.horizontal(|ui| {
+        let (_, painter) = ui.allocate_painter(
+            Vec2::splat(10.0),
+            Sense {
+                click: false,
+                drag: false,
+                focusable: false,
+            },
+        );
+
+        painter.rect_filled(painter.clip_rect(), 0.0, color);
+
+        let mut shown = robot_opts.debug_items.contains(&(category, name));
+        let resp = ui.toggle_value(&mut shown, name);
+        if resp.changed() {
+            match shown {
+                true => robot_opts.debug_items.insert((category, name)),
+                false => robot_opts.debug_items.remove(&(category, name)),
+            };
+        }
+    });
+}
+
+fn get_color(n: usize) -> Color32 {
+    let hue = n as f32 / 10.0;
+    Hsva::new(hue, 0.8, 0.8, 1.0).into()
 }
