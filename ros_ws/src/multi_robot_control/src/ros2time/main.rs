@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use futures::{executor::LocalPool, task::LocalSpawnExt};
 
+#[cfg(r2r__rosgraph_msgs__msg__Clock)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = r2r::Context::create()?;
     let mut node = r2r::Node::create(ctx, "ros2time", "")?;
@@ -34,7 +35,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 }
 
-// #[cfg(not(r2r__rosgraph_msgs__msg__Clock))]
-// fn main() {
-//     panic!("Sim_time_publisher example is not compiled with 'rosgraph_msgs'.");
-// }
+#[cfg(not(r2r__rosgraph_msgs__msg__Clock))]
+fn main() {
+    panic!("Error not compiled with 'rosgraph_msgs'.");
+}
