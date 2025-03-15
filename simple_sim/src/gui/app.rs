@@ -433,17 +433,26 @@ impl App {
                                 max = max.max(*cell);
                             }
 
-                            const COOL_COLOR: Color32 = Color32::BLUE;
+                            const COOL_COLOR: Color32 = Color32::LIGHT_BLUE;
+                            const COLD_COLOR: Color32 = Color32::BLUE;
                             const UNCERTAIN_COLOR: Color32 = Color32::WHITE;
                             const WARM_COLOR: Color32 = Color32::YELLOW;
                             const HOT_COLOR: Color32 = Color32::RED;
 
                             const THRESHOLD: f32 = 10.0;
 
+                            fn ease_out_quart(c: f32) -> f32 {
+                                1. - f32::powi(1. - c, 4)
+                            }
+
                             let image = grid_to_image(grid.grid(), |c| {
-                                match c >= 0.0 {
-                                    true => WARM_COLOR.lerp_to_gamma(HOT_COLOR, c / max),
-                                    false => UNCERTAIN_COLOR.lerp_to_gamma(COOL_COLOR, c / min),
+                                match c {
+                                    c if c > 0.0 => {
+                                        WARM_COLOR.lerp_to_gamma(HOT_COLOR, ease_out_quart(c / max))
+                                    }
+                                    c if c < 0.0 => COOL_COLOR
+                                        .lerp_to_gamma(COLD_COLOR, ease_out_quart(c / min)),
+                                    _ => UNCERTAIN_COLOR,
                                 }
                                 .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
                             });
