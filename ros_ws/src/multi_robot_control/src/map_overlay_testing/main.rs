@@ -7,10 +7,10 @@ mod convert_msg;
 use convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
 };
-use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
+use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use r2r::{
-    self, geometry_msgs, log_error, log_info, log_warn, ros_agent_msgs, sensor_msgs, Publisher,
-    QosProfile,
+    self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
+    ros_agent_msgs, sensor_msgs,
 };
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
@@ -25,8 +25,8 @@ pub struct RosAgent {
     incomming_msgs: Arc<Mutex<Vec<ros_agent_msgs::msg::AgentMessage>>>,
     outgoing_msgs_pub: Publisher<ros_agent_msgs::msg::AgentMessage>,
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
-    // pub map: Arc<Mutex<Option<r2r::nav_msgs::msg::OccupancyGrid>>>,
-    // had_map_update: Arc<Mutex<bool>>,
+    map: Arc<Mutex<Option<nav_msgs::msg::OccupancyGrid>>>,
+    map_overlay_pub: Arc<Mutex<Option<nav_msgs::msg::OccupancyGrid>>>,
 }
 
 impl RosAgent {
@@ -69,63 +69,25 @@ impl RosAgent {
         log_info!(&nl, "Robot ID: {}", id);
         robot.set_id(botbrain::RobotId::new(id));
 
+        let pool = LocalPool::new();
+
+        // Subscribe/publish to the channel topic
         let channel_topic: String = node
             .get_parameter("channel_topic")
             .unwrap_or(DEFAULT_CHANNEL_TOPIC.into());
-
-        let qos = QosProfile::default().volatile();
-        let mut sub_scan = node
-            .subscribe::<sensor_msgs::msg::LaserScan>("scan", qos)
-            .unwrap();
-
-        let qos = QosProfile::default().transient_local();
-        let mut sub_pose = node
-            .subscribe::<r2r::geometry_msgs::msg::PoseWithCovarianceStamped>("amcl_pose", qos)
-            .unwrap();
-
-        let qos = QosProfile::default().volatile();
+        let incomming_msgs = Arc::new(Mutex::new(Vec::new()));
         let msgs_pub = node
-            .create_publisher::<ros_agent_msgs::msg::AgentMessage>(&channel_topic, qos.clone())
+            .create_publisher::<ros_agent_msgs::msg::AgentMessage>(
+                &channel_topic,
+                QosProfile::default().volatile(),
+            )
             .unwrap();
         let mut msgs_sub = node
-            .subscribe::<ros_agent_msgs::msg::AgentMessage>(&channel_topic, qos)
+            .subscribe::<ros_agent_msgs::msg::AgentMessage>(
+                &channel_topic,
+                QosProfile::default().volatile(),
+            )
             .unwrap();
-
-        let qos = QosProfile::default().volatile();
-        let cmd_pub = node
-            .create_publisher::<geometry_msgs::msg::Twist>("cmd_vel", qos)
-            .unwrap();
-
-        let scan = Arc::new(Mutex::new(None));
-        let pose = Arc::new(Mutex::new(None));
-        let incomming_msgs = Arc::new(Mutex::new(Vec::new()));
-
-        let pool = LocalPool::new();
-        {
-            let nl = nl.clone();
-            let scan = scan.clone();
-            pool.spawner()
-                .spawn_local(async move {
-                    log_info!(&nl, "Scan listener started");
-                    while let Some(msg) = sub_scan.next().await {
-                        scan.lock().unwrap().replace(msg);
-                    }
-                    log_info!(&nl, "Scan listener broken");
-                })
-                .unwrap();
-        }
-        {
-            let nl = nl.clone();
-            let pose = pose.clone();
-            pool.spawner()
-                .spawn_local(async move {
-                    log_info!(&nl, "Pose listener started");
-                    while let Some(msg) = sub_pose.next().await {
-                        pose.lock().unwrap().replace(msg);
-                    }
-                })
-                .unwrap();
-        }
         {
             let nl = nl.clone();
             let incomming_msgs = incomming_msgs.clone();
@@ -139,6 +101,85 @@ impl RosAgent {
                 })
                 .unwrap();
         }
+
+        // Subscribe to laser scan
+        let mut sub_scan = node
+            .subscribe::<sensor_msgs::msg::LaserScan>("scan", QosProfile::sensor_data())
+            .unwrap();
+        let scan = Arc::new(Mutex::new(None));
+        {
+            let nl = nl.clone();
+            let scan = scan.clone();
+            pool.spawner()
+                .spawn_local(async move {
+                    log_info!(&nl, "Scan listener started");
+                    while let Some(msg) = sub_scan.next().await {
+                        scan.lock().unwrap().replace(msg);
+                    }
+                    log_info!(&nl, "Scan listener broken");
+                })
+                .unwrap();
+        }
+
+        // Subscribe to amcl_pose
+        let pose = Arc::new(Mutex::new(None));
+        let mut sub_pose = node
+            .subscribe::<r2r::geometry_msgs::msg::PoseWithCovarianceStamped>(
+                "amcl_pose",
+                QosProfile::default().transient_local(),
+            )
+            .unwrap();
+        {
+            let nl = nl.clone();
+            let pose = pose.clone();
+            pool.spawner()
+                .spawn_local(async move {
+                    log_info!(&nl, "Pose listener started");
+                    while let Some(msg) = sub_pose.next().await {
+                        pose.lock().unwrap().replace(msg);
+                    }
+                })
+                .unwrap();
+        }
+
+        // Publish to cmd_vel
+        let cmd_pub = node
+            .create_publisher::<geometry_msgs::msg::Twist>(
+                "cmd_vel",
+                QosProfile::default().volatile(),
+            )
+            .unwrap();
+
+        // Subscribe to map
+        let map = Arc::new(Mutex::new(None));
+        let mut sub_map = node
+            .subscribe::<nav_msgs::msg::OccupancyGrid>(
+                "/map",
+                QosProfile::default().transient_local(),
+            )
+            .unwrap();
+        {
+            let nl = nl.clone();
+            let map = map.clone();
+            pool.spawner()
+                .spawn_local(async move {
+                    log_info!(&nl, "Map listener started");
+                    while let Some(msg) = sub_map.next().await {
+                        map.lock().unwrap().replace(msg);
+                    }
+                })
+                .unwrap();
+        }
+
+        // Publish to map_overlay
+        let map_overlay_pub = Arc::new(Mutex::new(None));
+        let sub_map_overlay = node
+            .create_publisher::<nav_msgs::msg::OccupancyGrid>(
+                "map_overlay",
+                QosProfile::default().volatile(),
+            )
+            .unwrap();
+
         Self {
             node,
             robot,
@@ -150,6 +191,8 @@ impl RosAgent {
             incomming_msgs,
             outgoing_msgs_pub: msgs_pub,
             cmd_pub,
+            map,
+            map_overlay_pub,
         }
     }
 

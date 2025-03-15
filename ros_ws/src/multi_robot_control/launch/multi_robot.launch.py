@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
+from launch import LaunchDescription, condition
 from launch.actions import (
     AppendEnvironmentVariable,
     DeclareLaunchArgument,
@@ -12,7 +12,7 @@ from launch.actions import (
     OpaqueFunction,
     RegisterEventHandler,
 )
-from launch.conditions import UnlessCondition
+from launch.conditions import IfCondition, UnlessCondition
 from launch.event_handlers import OnShutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
@@ -101,7 +101,12 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "world",
                 default_value=os.path.join(sim_dir, "config", "worlds", "depot.sdf"),
-                description="Full path to world model file to load",
+                description="Full path to xacro world model file to load",
+            ),
+            DeclareLaunchArgument(
+                "map",
+                default_value=os.path.join(sim_dir, "config", "maps", "depot.yaml"),
+                description="Full path to map yaml file to load",
             ),
             DeclareLaunchArgument(
                 "n_robots",
@@ -112,6 +117,11 @@ def generate_launch_description():
                 "behavior",
                 default_value="dumb:nothing",
                 description="What behavior to run on the robots",
+            ),
+            DeclareLaunchArgument(
+                "use_control",
+                default_value="True",
+                description="Whether to run the control node",
             ),
             world_sdf_xacro,
             remove_temp_sdf_file,
@@ -225,6 +235,7 @@ def spawn_robots(context, *args, **kwargs):
         print("Starting behavior for " + namespace)
         robot_launch.append(
             Node(
+                condition=IfCondition(LaunchConfiguration("use_control")),
                 package="multi_robot_control",
                 executable="ros_agent",
                 namespace=namespace,
@@ -233,7 +244,7 @@ def spawn_robots(context, *args, **kwargs):
             )
         )
 
-    map_yaml = os.path.join(sim_dir, "config", "maps", "depot.yaml")
+    map_yaml = LaunchConfiguration("map")
     map_server = Node(
         package="nav2_map_server",
         executable="map_server",

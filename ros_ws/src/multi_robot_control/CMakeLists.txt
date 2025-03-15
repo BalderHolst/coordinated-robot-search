@@ -22,6 +22,7 @@ r2r_cargo(rcl                    # we need the c ros2 api
           geometry_msgs
           sensor_msgs
           tf2_msgs
+          nav_msgs
           ros_agent_msgs)
 
 # install binaries
