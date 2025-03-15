@@ -4,8 +4,6 @@ mod avoid_obstacles;
 mod dumb;
 mod search;
 
-use std::time::Instant;
-
 #[cfg(feature = "cli")]
 use clap::ValueEnum;
 
@@ -35,7 +33,7 @@ impl Behavior {
         }
     }
 
-    pub fn run(&self, robot: &mut Box<dyn Robot>, time: Instant) -> Control {
+    pub fn run(&self, robot: &mut Box<dyn Robot>, time: Duration) -> Control {
         robot.behavior(self.behavior_index, time)
     }
 }

@@ -1,6 +1,6 @@
 //! This module contains robot `search` behavior.
 
-use std::{f32::consts::PI, time::Instant};
+use std::{f32::consts::PI, time::Duration};
 
 use emath::{Pos2, Vec2};
 
@@ -60,7 +60,7 @@ pub struct SearchRobot {
     pub search_grid: ScaledGrid<f32>,
 
     /// The time of the last search grid update
-    pub last_search_grid_update: Instant,
+    pub last_search_grid_update: Duration,
 
     /// Debug object and their names. Used for visualization.
     /// Set to `None` to disable debug visualization.
@@ -80,7 +80,7 @@ impl Default for SearchRobot {
             lidar: Default::default(),
             postbox: Default::default(),
             search_grid: Default::default(),
-            last_search_grid_update: Instant::now(),
+            last_search_grid_update: Duration::default(),
             debug_soup: DebugSoup::new_inactive(),
         }
     }
@@ -200,7 +200,7 @@ impl SearchRobot {
         }
     }
 
-    pub(crate) fn update_search_grid(&mut self, time: Instant) {
+    pub(crate) fn update_search_grid(&mut self, time: Duration) {
         const HEAT_WIDTH: f32 = PI / 4.0;
         const CAM_MULTPLIER: f32 = 20.0;
 
@@ -403,7 +403,7 @@ pub(crate) fn show_search_grid(robot: &mut SearchRobot) {
 }
 
 /// Search for the object using a gradient on the heat map
-pub fn search(robot: &mut Box<dyn Robot>, time: Instant) -> Control {
+pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
     let robot = cast_robot::<SearchRobot>(robot);
 
     {

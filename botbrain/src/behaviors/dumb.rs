@@ -71,13 +71,15 @@ impl Robot for DumbRobot {
 }
 
 pub mod behaviors {
+    use std::time::Duration;
+
     use super::*;
 
-    pub fn nothing(_robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
+    pub fn nothing(_robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
         Control::default()
     }
 
-    pub fn circle(_robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
+    pub fn circle(_robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
         Control {
             speed: 1.0,
             steer: 0.5,

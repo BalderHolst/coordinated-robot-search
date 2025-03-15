@@ -4,14 +4,14 @@ mod avoid_obstacles;
 mod dumb;
 mod search;
 
-use std::time::Instant;
+use std::time::Duration;
 
 #[cfg(feature = "cli")]
 use clap::ValueEnum;
 
 use super::*;
 
-pub type BehaviorFn = fn(&mut Box<dyn Robot>, Instant) -> Control;
+pub type BehaviorFn = fn(&mut Box<dyn Robot>, Duration) -> Control;
 
 /// The kind of robot. Behaviors can only be run the robot kind they were designed for.
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
@@ -62,14 +62,13 @@ impl Behavior {
 impl Behavior {
     pub fn behavior_names() -> Vec<String> {
         RobotKind::value_variants()
-            .into_iter()
-            .map(|b| {
+            .iter()
+            .flat_map(|b| {
                 let robot_kind_name = b.to_possible_value().unwrap().get_name().to_string();
                 b.menu()
                     .iter()
                     .map(move |(behavior_name, _)| format!("{robot_kind_name}:{behavior_name}"))
             })
-            .flatten()
             .collect::<Vec<_>>()
     }
 
@@ -96,7 +95,7 @@ impl Behavior {
 
         let (behavior_name, behavior_fn) = robot_kind
             .menu()
-            .into_iter()
+            .iter()
             .find(|(name, _)| *name == behavior_name)
             .map(|(n, f)| (*n, *f))
             .ok_or(format!(

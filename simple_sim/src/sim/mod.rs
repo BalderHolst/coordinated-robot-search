@@ -4,7 +4,7 @@ use std::{
     f32::consts::PI,
     mem,
     sync::{mpsc, Arc},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use botbrain::{
@@ -54,7 +54,7 @@ impl Clone for Agent {
 pub struct SimulatorState {
     pub agents: Vec<Agent>,
     pub world: World,
-    pub time: f32,
+    pub time: Duration,
 }
 
 pub struct Simulator {
@@ -62,7 +62,6 @@ pub struct Simulator {
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
     pending_messages: Vec<botbrain::Message>,
     behavior: Behavior,
-    start_time: Instant,
     dt: f32,
 }
 
@@ -71,7 +70,7 @@ impl Simulator {
         let state = SimulatorState {
             world,
             agents: vec![],
-            time: 0.0,
+            time: Duration::default(),
         };
         Self {
             state,
@@ -81,7 +80,6 @@ impl Simulator {
             }),
             pending_messages: vec![],
             behavior,
-            start_time: Instant::now(),
             dt: SIMULATION_DT,
         }
     }
@@ -112,11 +110,12 @@ impl Simulator {
 
         let (msg_send_tx, msg_send_rx) = mpsc::channel();
 
+        println!("stepping: {}", self.state.time.as_secs_f32());
         let args = Arc::new(StepArgs {
             agents: self.state.agents.clone(),
             behavior_fn: self.behavior.behavior_fn(),
             world: self.state.world.clone(),
-            time: self.start_time + Duration::from_secs_f32(self.state.time),
+            time: self.state.time,
             dt,
             msg_send_tx,
             pending_messages: mem::take(&mut self.pending_messages),
@@ -130,7 +129,7 @@ impl Simulator {
         // Collect all pending messages
         self.pending_messages = msg_send_rx.try_iter().collect::<Vec<botbrain::Message>>();
 
-        self.state.time += dt;
+        self.state.time += Duration::from_secs_f32(dt);
     }
 }
 
@@ -139,7 +138,7 @@ struct StepArgs {
     agents: Vec<Agent>,
     behavior_fn: BehaviorFn,
     world: World,
-    time: Instant,
+    time: Duration,
     dt: f32,
     msg_send_tx: mpsc::Sender<botbrain::Message>,
     pending_messages: Vec<botbrain::Message>,

@@ -1,4 +1,4 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, time::Duration};
 
 use emath::{Pos2, Vec2};
 
@@ -72,7 +72,7 @@ impl Robot for AvoidObstaclesRobot {
 }
 
 /// Avoid obstacles by steering away from the closest point in front of the robot.
-pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: std::time::Instant) -> Control {
+pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
     let robot = cast_robot::<AvoidObstaclesRobot>(robot);
 
     const MIN_DISTANCE: f32 = 3.0;
