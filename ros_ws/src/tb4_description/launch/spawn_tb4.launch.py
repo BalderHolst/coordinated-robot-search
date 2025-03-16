@@ -48,10 +48,6 @@ def generate_launch_description():
         remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
     )
 
-    robot_bridge_namespaced = ReplaceString(
-        source_file=os.path.join(desc_dir, "params", "bridge_robot_tmp.yaml"),
-        replacements={"<gz_namespace>": ("/", namespace)},
-    )
     bridge_cmd = Node(
         package="ros_gz_bridge",
         executable="parameter_bridge",
@@ -59,7 +55,8 @@ def generate_launch_description():
         namespace=namespace,
         parameters=[
             {
-                "config_file": robot_bridge_namespaced,
+                "config_file": os.path.join(desc_dir, "params", "bridge_robot.yaml"),
+                "expand_gz_topic_names": True,
                 "use_sim_time": use_sim_time,
             }
         ],

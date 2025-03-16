@@ -37,6 +37,15 @@ impl RosAgent {
 
         let nl = node.logger().to_string();
 
+        if node.get_parameter::<bool>("use_sim_time").unwrap_or(false) {
+            node.get_time_source()
+                .enable_sim_time(&mut node)
+                .expect("Could not use sim time");
+            log_info!(&nl, "Using simulated time");
+        } else {
+            log_info!(&nl, "Using system time");
+        }
+
         let Ok(behavior_param) = node.get_parameter::<String>("behavior") else {
             log_error!(
                 &nl,
@@ -203,7 +212,14 @@ impl RosAgent {
                 }
             }
 
-            let time = Duration::default(); // FIX: Use ros2 time
+            let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
+            if time.is_zero() {
+                // Simulated time is not available yet
+                log_warn!(&self.nl, "Time not ready yet: {:?}", time);
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                continue;
+            }
+
             let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot
