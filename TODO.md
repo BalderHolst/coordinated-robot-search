@@ -7,6 +7,7 @@
 [x] Multi-threaded simple simulation
 
 [ ] Show search grid as overlay in Rviz
+[ ] Show debug vectors in Rviz using markers
 [ ] Fine-tune AMCL parameters
 [ ] Proximity Grid
 [ ] Pathing
