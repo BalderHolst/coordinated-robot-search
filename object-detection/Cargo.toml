@@ -1,0 +1,8 @@
+[package]
+name = "object-detection"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+opencv = { version = "0.94", features = ["clang-runtime"] }
+rand = "0.9"
