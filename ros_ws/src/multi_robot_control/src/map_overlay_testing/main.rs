@@ -1,4 +1,5 @@
 use std::{
+    borrow::Borrow,
     sync::{Arc, Mutex},
     time::Duration,
 };
@@ -26,7 +27,7 @@ pub struct RosAgent {
     outgoing_msgs_pub: Publisher<ros_agent_msgs::msg::AgentMessage>,
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
     map: Arc<Mutex<Option<nav_msgs::msg::OccupancyGrid>>>,
-    map_overlay_pub: Arc<Mutex<Option<nav_msgs::msg::OccupancyGrid>>>,
+    map_overlay_pub: Publisher<nav_msgs::msg::OccupancyGrid>,
 }
 
 impl RosAgent {
@@ -175,14 +176,14 @@ impl RosAgent {
                     log_info!(&nl, "Map listener started");
                     while let Some(msg) = sub_map.next().await {
                         map.lock().unwrap().replace(msg);
+                        log_info!(&nl, "Map received");
                     }
                 })
                 .unwrap();
         }
 
         // Publish to map_overlay
-        let map_overlay_pub = Arc::new(Mutex::new(None));
-        let sub_map_overlay = node
+        let map_overlay_pub = node
             .create_publisher::<nav_msgs::msg::OccupancyGrid>(
                 "map_overlay",
                 QosProfile::default().volatile(),
@@ -206,6 +207,8 @@ impl RosAgent {
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        let mut last_map_update = Duration::default();
+        let mut map_val = 0;
         loop {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
@@ -262,7 +265,6 @@ impl RosAgent {
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
             }
-            log_info!(&self.nl, "Time: {:?}", time);
 
             let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
@@ -270,6 +272,18 @@ impl RosAgent {
             let mut twist = geometry_msgs::msg::Twist::default();
             twist.linear.x = control.speed as f64;
             twist.angular.z = control.steer as f64;
+
+            if time > last_map_update + Duration::from_secs_f32(0.5) {
+                last_map_update = time;
+                if let Some(mut map) = self.map.lock().unwrap().clone() {
+                    map.data.iter_mut().for_each(|v| *v = map_val);
+                    if let Err(e) = self.map_overlay_pub.publish(&map) {
+                        log_warn!(&self.nl, "Error publishing map_overlay: {}", e);
+                    }
+                    map_val += 10;
+                    map_val %= 100;
+                }
+            }
 
             if let Err(e) = self.cmd_pub.publish(&twist) {
                 log_warn!(&self.nl, "Error publishing twist: {}", e);

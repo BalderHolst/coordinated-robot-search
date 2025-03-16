@@ -71,7 +71,7 @@ def generate_launch_description():
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", os.path.join(sim_dir, "config", "rviz", "config.rviz")],
+        arguments=["-d", os.path.join(sim_dir, "config", "rviz", "map_overlay.rviz")],
         parameters=[{"use_sim_time": use_sim_time}],
     )
 
