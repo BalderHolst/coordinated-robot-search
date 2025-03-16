@@ -253,7 +253,7 @@ def spawn_robots(context, *args, **kwargs):
             Node(
                 condition=IfCondition(LaunchConfiguration("use_control")),
                 package="multi_robot_control",
-                executable="ros_agent",
+                executable="map_overlay_testing",
                 namespace=namespace,
                 name="ros_agent",
                 parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
