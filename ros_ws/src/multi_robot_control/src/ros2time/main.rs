@@ -1,15 +1,14 @@
 use std::time::Duration;
 
-use futures::{executor::LocalPool, task::LocalSpawnExt};
-
 #[cfg(r2r__rosgraph_msgs__msg__Clock)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = r2r::Context::create()?;
     let mut node = r2r::Node::create(ctx, "ros2time", "")?;
-    let mut pool = LocalPool::new();
-    let spawner = pool.spawner();
-    let (paramater_handler, _parameter_events) = node.make_parameter_handler()?;
-    spawner.spawn_local(paramater_handler)?;
+    if node.get_parameter::<bool>("use_sim_time").unwrap_or(false) {
+        node.get_time_source()
+            .enable_sim_time(&mut node)
+            .expect("Could not use sim time");
+    }
     loop {
         {
             let clock = node.get_ros_clock();
@@ -31,7 +30,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!();
         std::thread::sleep(std::time::Duration::from_secs_f32(0.1));
         node.spin_once(Duration::from_secs_f32(0.1));
-        pool.run_until_stalled();
     }
 }
 
