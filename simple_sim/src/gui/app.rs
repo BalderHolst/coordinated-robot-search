@@ -30,8 +30,8 @@ use eframe::{
 
 const ROBOT_COLOR: Hsva = Hsva {
     h: 1.2,
-    s: 0.2,
-    v: 0.8,
+    s: 0.1,
+    v: 0.6,
     a: 1.0,
 };
 
@@ -806,6 +806,6 @@ fn draw_debug_item_label(
 }
 
 fn get_color(n: usize) -> Color32 {
-    let hue = n as f32 / 10.0;
+    let hue = n as f32 * PI / 10.0;
     Hsva::new(hue, 0.8, 0.8, 1.0).into()
 }
