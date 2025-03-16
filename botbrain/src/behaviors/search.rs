@@ -34,6 +34,7 @@ const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 const PROXIMITY_GRID_SCALE: f32 = 0.40;
 const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 1.0;
 const PROXIMITY_WEIGHT: f32 = 10.0;
+const PROXIMITY_GRADIENT_RANGE: f32 = 5.0;
 
 const ROBOT_SPACING: f32 = 3.0;
 
@@ -308,92 +309,41 @@ impl SearchRobot {
 }
 
 impl SearchRobot {
-    /// Calculate the gradient of the heat map around the robot
-    fn gradient(&mut self) -> Vec2 {
-        let mut gradient = Vec2::ZERO;
-        {
-            // Get the heat under the robot
-            let mut robot_heat: f32 = 0.0;
-            {
-                let mut robot_points = vec![];
-                for pos in self.search_grid.iter_circle(
-                    &(Circle {
-                        center: self.pos,
-                        radius: self.params.diameter * 2.0,
-                    }),
-                ) {
-                    let cell = self.search_grid.get(pos);
-                    robot_heat += cell.unwrap_or(&0.0);
-                    robot_points.push((pos, cell));
-                }
-                robot_heat /= robot_points.len() as f32;
-                self.debug("Gradient", "Robot Heat", DebugType::Number(robot_heat));
-            }
 
-            let mut points = vec![];
-            let mut total_weight: f32 = 0.0;
-            let mut total_cells = 0;
+    fn search_gradient(&mut self) -> Vec2 {
+        let g = gradient(
+            self.pos,
+            self.angle,
+            self.params.lidar_range,
+            self.params.diameter * 2.0,
+            self.lidar.clone(),
+            &self.search_grid,
+        );
+        self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
+        g
+    }
 
-            for pos in self.search_grid.iter_circle(
-                &(Circle {
-                    center: self.pos,
-                    radius: self.params.lidar_range,
-                }),
-            ) {
-                let angle = (pos - self.pos).angle() - self.angle;
-                let dist = (pos - self.pos).length();
-                if dist > self.lidar.interpolate(angle) {
-                    continue;
-                }
-
-                // Skip cells which are out of bounds
-                let Some(cell) = self.search_grid.get(pos) else {
-                    continue;
-                };
-
-                // The relative position of the cell to the robot
-                let vec = pos - self.pos;
-
-                // Weight is the difference between the cell and the robot heat
-                let weight = cell - robot_heat;
-
-                // Ignore cells that are colder than the robot as this ends up
-                // repelling the robot leading to situations where the robot
-                // gets stuck at the edge of the map
-                if weight <= 0.0 {
-                    continue;
-                }
-
-                // We want the weight to be stronger the closer we are to the robot
-                let nearness = 1.0 - vec.length() / self.params.lidar_range;
-                let weight = weight * nearness;
-
-                points.push((pos, weight));
-
-                gradient += vec.normalized() * weight;
-
-                total_cells += 1;
-                total_weight += weight;
-            }
-
-            if total_cells == 0 {
-                total_cells = 1;
-            }
-            gradient /= total_cells as f32;
-
-            gradient *= GRADIENT_WEIGHT;
-
-            self.debug("Gradient", "Values", DebugType::NumberPoints(points));
-            self.debug(
-                "Gradient",
-                "Average Weight",
-                DebugType::Number(total_weight / total_cells as f32),
-            );
-            self.debug("Gradient", "Vector", DebugType::Vector(gradient));
-            self.debug("Gradient", "Length", DebugType::Number(gradient.length()));
-        }
-
-        gradient
+    fn proximity_gradient(&mut self) -> Vec2 {
+        let g = gradient(
+            self.pos,
+            self.angle,
+            PROXIMITY_GRADIENT_RANGE,
+            self.params.diameter * 2.0,
+            self.lidar.clone(),
+            &self.proximity_grid,
+        );
+        self.debug("Gradient", "Proximity Gradient", DebugType::Vector(g));
+        self.debug(
+            "Gradient",
+            "Proximity Gradient Range",
+            DebugType::Grid(self.proximity_grid.clone()),
+        );
+        self.debug(
+            "",
+            "Communication Range",
+            DebugType::Radius(self.params.communication_range),
+        );
+        g
     }
 
     /// Calculate the lidar contribution to the control
@@ -434,6 +384,84 @@ impl SearchRobot {
     }
 }
 
+/// Calculate the gradient of the heat map around the robot
+fn gradient(
+    pos: Pos2,
+    angle: f32,
+    range: f32,
+    center_range: f32,
+    lidar: LidarData,
+    grid: &ScaledGrid<f32>,
+) -> Vec2 {
+    let mut total_heat = 0.0;
+    let mut robot_points: usize = 0;
+    for pos in grid.iter_circle(
+        &(Circle {
+            center: pos,
+            radius: center_range,
+        }),
+    ) {
+        let cell = grid.get(pos);
+        total_heat += cell.unwrap_or(&0.0);
+        robot_points += 1;
+    }
+
+    let robot_heat = total_heat / robot_points as f32;
+
+    let mut gradient = Vec2::ZERO;
+    {
+        let mut total_cells = 0;
+
+        for cell_pos in grid.iter_circle(
+            &(Circle {
+                center: pos,
+                radius: range,
+            }),
+        ) {
+            let angle = (cell_pos - pos).angle() - angle;
+            let dist = (cell_pos - pos).length();
+            if dist > lidar.interpolate(angle) {
+                continue;
+            }
+
+            // Skip cells which are out of bounds
+            let Some(cell) = grid.get(cell_pos) else {
+                continue;
+            };
+
+            // The relative position of the cell to the robot
+            let vec = cell_pos - pos;
+
+            // Weight is the difference between the cell and the robot heat
+            let weight = cell - robot_heat;
+
+            // Ignore cells that are colder than the robot as this ends up
+            // repelling the robot leading to situations where the robot
+            // gets stuck at the edge of the map
+            if weight <= 0.0 {
+                continue;
+            }
+
+            // We want the weight to be stronger the closer we are to the robot
+            let nearness = 1.0 - vec.length() / range;
+            let weight = weight * nearness;
+
+            gradient += vec.normalized() * weight;
+
+            total_cells += 1;
+        }
+
+        if total_cells == 0 {
+            total_cells = 1;
+        }
+        gradient /= total_cells as f32;
+
+        gradient *= GRADIENT_WEIGHT;
+    }
+
+    gradient
+}
+
 /// Search for the object using a gradient on the heat map
 pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
     let robot = cast_robot::<SearchRobot>(robot);
@@ -471,10 +499,6 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
             "Proximity Grid",
             DebugType::Grid(robot.proximity_grid.clone()),
         );
-
-        let mut sum = robot.search_grid.clone();
-        sum.add_sampled_grid(&robot.proximity_grid, 1.0);
-        soup.add("Grids", "Sum Grid", DebugType::Grid(sum));
     }
 
     robot.update_search_grid(time);
@@ -487,7 +511,8 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
-    target += robot.gradient();
+    target += robot.search_gradient();
+    target += robot.proximity_gradient();
     target += robot.lidar();
 
     robot.debug("", "Target", DebugType::Vector(target));
