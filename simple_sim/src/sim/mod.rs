@@ -10,7 +10,6 @@ use std::{
 use botbrain::{
     self,
     behaviors::{Behavior, BehaviorFn},
-    grid::iter_circle,
     CamData, CamPoint, Control, RobotId, RobotParameters,
 };
 use eframe::egui::{Pos2, Vec2};
@@ -161,6 +160,7 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
         cam_range,
         diameter,
         lidar_range,
+        ..
     } = *agent.robot.params();
 
     {
@@ -354,8 +354,9 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
     let center = world.world_to_grid(me.state.pos);
     let mut nudge = Vec2::ZERO;
     let mut nudgers = 0;
-    for (x, y) in iter_circle(center, radius) {
-        let cell = world.grid().get(x, y);
+    let grid = world.grid();
+    for (x, y) in grid.iter_circle(center, radius) {
+        let cell = grid.get(x, y);
         if matches!(cell, Some(Cell::Wall) | None) {
             let cell_center = world.grid_to_world(Pos2 {
                 x: x as f32,

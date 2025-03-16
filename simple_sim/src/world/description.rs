@@ -75,10 +75,10 @@ impl WorldDescription {
             }) => {
                 let mut world = World::new(width, height, scale);
                 for shape in obstacles {
-                    world.shape(&shape, Cell::Wall);
+                    world.set_shape(&shape, Cell::Wall);
                 }
                 for search_item in search_items {
-                    world.shape(&search_item, Cell::SearchItem);
+                    world.set_shape(&search_item, Cell::SearchItem);
                 }
                 world
             }

@@ -211,6 +211,9 @@ pub struct RobotParameters {
 
     /// Range of the lidar sensor (in meters)
     pub lidar_range: f32,
+
+    /// Range of communication (in meters)
+    communication_range: f32,
 }
 
 impl RobotParameters {
@@ -220,6 +223,7 @@ impl RobotParameters {
             cam_range: 3.0,
             cam_fov: PI / 2.0,
             lidar_range: 5.0,
+            communication_range: 30.0,
         }
     }
 }

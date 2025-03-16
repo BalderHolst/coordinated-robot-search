@@ -40,6 +40,13 @@ impl<C: Clone + Default> Grid<C> {
         self.height
     }
 
+    pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut C> {
+        if x >= self.width || y >= self.height {
+            return None;
+        }
+        self.cells.get_mut(y * self.width + x)
+    }
+
     /// Get the cell at the given position. Returns `None` if the position is out of bounds.
     pub fn get(&self, x: usize, y: usize) -> Option<&C> {
         if x >= self.width || y >= self.height {
@@ -73,6 +80,13 @@ impl<C: Clone + Default> Grid<C> {
         })
     }
 
+    /// Fill the grid with a value
+    pub fn fill(&mut self, value: C) {
+        for cell in self.cells.iter_mut() {
+            *cell = value.clone();
+        }
+    }
+
     /// Draw a line of cells on the grid
     pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let delta = end - start;
@@ -86,18 +100,23 @@ impl<C: Clone + Default> Grid<C> {
 
     /// Draw a circle of cells on the grid
     pub fn circle(&mut self, center: Pos2, radius: f32, cell: C) {
-        iter_circle(center, radius).for_each(|(x, y)| {
+        self.iter_circle(center, radius).for_each(|(x, y)| {
             self.set(x, y, cell.clone());
         });
     }
-}
 
-/// Iterate over coordinates within a circle
-pub fn iter_circle(center: Pos2, radius: f32) -> impl Iterator<Item = (usize, usize)> {
-    let radius2 = radius * radius;
-    ((center.y - radius).ceil() as usize..=(center.y + radius).floor() as usize).flat_map(
-        move |y| {
-            ((center.x - radius).ceil() as usize..=(center.x + radius).floor() as usize)
+    /// Iterate over coordinates within a circle
+    pub fn iter_circle(&self, center: Pos2, radius: f32) -> impl Iterator<Item = (usize, usize)> {
+        let radius2 = radius * radius;
+
+        let min_y = f32::max((center.y - radius).ceil(), 0.0) as usize;
+        let max_y = f32::min((center.y + radius).floor(), self.height as f32 - 1.0) as usize;
+
+        let min_x = f32::max((center.x - radius).ceil(), 0.0) as usize;
+        let max_x = f32::min((center.x + radius).floor(), self.width as f32 - 1.0) as usize;
+
+        (min_y..=max_y).flat_map(move |y| {
+            (min_x..=max_x)
                 .filter(move |x| {
                     let pos = Pos2 {
                         x: *x as f32,
@@ -106,8 +125,8 @@ pub fn iter_circle(center: Pos2, radius: f32) -> impl Iterator<Item = (usize, us
                     (pos - center).length().powf(2.0) <= radius2
                 })
                 .map(move |x| (x, y))
-        },
-    )
+        })
+    }
 }
 
 impl<C: Clone + Default> Debug for Grid<C> {

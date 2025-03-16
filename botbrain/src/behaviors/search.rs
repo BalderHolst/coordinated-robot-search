@@ -1,6 +1,6 @@
 //! This module contains robot `search` behavior.
 
-use std::{collections::HashMap, f32::consts::PI, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, iter, time::Duration};
 
 use emath::{Pos2, Vec2};
 
@@ -27,6 +27,15 @@ const FORWARD_BIAS: f32 = 0.05;
 const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
+
+/// How often to update the search grid (multiplied on all changes to the cells)
+const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
+
+const PROXIMITY_GRID_SCALE: f32 = 0.40;
+const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 1.0;
+const PROXIMITY_WEIGHT: f32 = 10.0;
+
+const ROBOT_SPACING: f32 = 3.0;
 
 #[derive(Clone, Default)]
 pub struct SearchRobot {
@@ -66,6 +75,9 @@ pub struct SearchRobot {
     /// the positions of other robots
     pub proximity_grid: ScaledGrid<f32>,
 
+    /// The time of the last proximity grid update
+    pub last_proximity_grid_update: Duration,
+
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
 
@@ -85,6 +97,7 @@ impl Robot for SearchRobot {
 
     fn set_world_size(&mut self, size: Vec2) {
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
+        self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
     }
 
     fn params(&self) -> &RobotParameters {
@@ -138,23 +151,22 @@ impl Robot for SearchRobot {
 
 impl SearchRobot {
     pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {
-        for (point, cell) in self
+        for (point, mut cell) in self
             .search_grid
             .iter_cone(cone)
-            .filter_map(|(p, c)| {
+            .filter_map(|p| {
                 let angle = (p - cone.center).angle();
                 let distance = (p - cone.center).length();
+                let cell = self.search_grid.get(p)?;
                 match distance <= lidar.interpolate(angle - cone.angle) {
-                    true => Some((p, c.cloned())),
+                    true => Some((p, *cell)),
                     false => None,
                 }
             })
             .collect::<Vec<_>>()
         {
-            if let Some(mut cell) = cell {
-                cell += diff;
-                self.search_grid.set(point, cell);
-            }
+            cell += diff;
+            self.search_grid.set(point, cell);
         }
     }
 
@@ -175,7 +187,7 @@ impl SearchRobot {
                     center: pos,
                     radius,
                 })
-                .filter_map(|(p, c)| Some((p, *c?)))
+                .filter_map(|p| self.search_grid.get(p).map(|c| (p, *c)))
                 .collect::<Vec<_>>()
             {
                 // We weight points closer to the robot more
@@ -192,11 +204,8 @@ impl SearchRobot {
         const HEAT_WIDTH: f32 = PI / 4.0;
         const CAM_MULTPLIER: f32 = 20.0;
 
-        // How often to update the search grid (multiplied on all changes to the cells)
-        const UPDATE_INTERVAL: f32 = 0.1;
-
         // Only update the search grid every UPDATE_INTERVAL seconds
-        if (time - self.last_search_grid_update).as_secs_f32() < UPDATE_INTERVAL {
+        if (time - self.last_search_grid_update).as_secs_f32() < SEARCH_GRID_UPDATE_INTERVAL {
             return;
         }
         self.last_search_grid_update = time;
@@ -210,7 +219,7 @@ impl SearchRobot {
                 fov: self.params.cam_fov,
             };
             let lidar = self.lidar.within_fov(self.params.cam_fov);
-            let diff = -1.0 * UPDATE_INTERVAL;
+            let diff = -1.0 * SEARCH_GRID_UPDATE_INTERVAL;
             self.update_search_cone(&cone, &lidar, diff);
             self.postbox.post(Message {
                 sender_id: self.id,
@@ -229,13 +238,42 @@ impl SearchRobot {
                 let end = start + dir * self.params.cam_range;
                 let line = Line { start, end };
 
-                let diff = CAM_MULTPLIER * cam_point.propability * UPDATE_INTERVAL;
+                let diff = CAM_MULTPLIER * cam_point.propability * SEARCH_GRID_UPDATE_INTERVAL;
 
                 self.update_search_line(&line, diff);
                 self.post(MessageKind::ShapeDiff {
                     shape: Shape::Line(line),
                     diff,
                 });
+            }
+        }
+    }
+
+    fn update_proximity_grid(&mut self, time: Duration) {
+        // Don't update the proximity grid too often
+        if (time - self.last_proximity_grid_update).as_secs_f32() < PROXIMITY_GRID_UPDATE_INTERVAL {
+            return;
+        }
+        self.last_proximity_grid_update = time;
+
+        self.proximity_grid.fill(0.0);
+
+        let r = self.params.communication_range;
+
+        for (pos, _angle) in self.others.values() {
+            let circle = Circle {
+                center: *pos,
+                radius: r,
+            };
+
+            for point in self.proximity_grid.iter_circle(&circle).collect::<Vec<_>>() {
+                let d = (point - *pos).length();
+                if d < ROBOT_SPACING {
+                    continue;
+                }
+                if let Some(cell) = self.proximity_grid.get(point) {
+                    self.proximity_grid.set(point, *cell + PROXIMITY_WEIGHT);
+                }
             }
         }
     }
@@ -278,12 +316,13 @@ impl SearchRobot {
             let mut robot_heat: f32 = 0.0;
             {
                 let mut robot_points = vec![];
-                for (pos, cell) in self.search_grid.iter_circle(
+                for pos in self.search_grid.iter_circle(
                     &(Circle {
                         center: self.pos,
                         radius: self.params.diameter * 2.0,
                     }),
                 ) {
+                    let cell = self.search_grid.get(pos);
                     robot_heat += cell.unwrap_or(&0.0);
                     robot_points.push((pos, cell));
                 }
@@ -295,7 +334,7 @@ impl SearchRobot {
             let mut total_weight: f32 = 0.0;
             let mut total_cells = 0;
 
-            for (pos, cell) in self.search_grid.iter_circle(
+            for pos in self.search_grid.iter_circle(
                 &(Circle {
                     center: self.pos,
                     radius: self.params.lidar_range,
@@ -308,7 +347,7 @@ impl SearchRobot {
                 }
 
                 // Skip cells which are out of bounds
-                let Some(cell) = cell else {
+                let Some(cell) = self.search_grid.get(pos) else {
                     continue;
                 };
 
@@ -409,11 +448,17 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
         let params = &robot.params;
         debug::common_routines::show_cam_range(soup, lidar, params);
 
-        soup.add("", "Other Positions", DebugType::VectorField(robot
-            .others
-            .values()
-            .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * robot.params.diameter / 2.0))
-            .collect()));
+        soup.add(
+            "",
+            "Other Positions",
+            DebugType::VectorField(
+                robot
+                    .others
+                    .values()
+                    .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * robot.params.diameter / 2.0))
+                    .collect(),
+            ),
+        );
 
         soup.add(
             "Grids",
@@ -429,6 +474,7 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
     }
 
     robot.update_search_grid(time);
+    robot.update_proximity_grid(time);
 
     robot.process_messages();
 

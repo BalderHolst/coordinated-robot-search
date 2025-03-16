@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use emath::{Pos2, Vec2};
 
 use crate::{
-    grid::{iter_circle, Grid},
+    grid::Grid,
     shapes::{Circle, Cone, Line, Shape, WideLine},
     utils,
 };
@@ -142,20 +142,33 @@ impl<C: Clone + Default> ScaledGrid<C> {
         }
     }
 
+    pub fn iter(&self) -> impl Iterator<Item = (f32, f32, &C)> {
+        self.grid.iter().map(move |(x, y, cell)| {
+            let x = x as f32 * self.cell_size - self.width / 2.0;
+            let y = y as f32 * self.cell_size - self.height / 2.0;
+            (x, y, cell)
+        })
+    }
+
+    /// Fill the grid with a value
+    pub fn fill(&mut self, cell: C) {
+        self.grid.fill(cell);
+    }
+
     /// Set the cells in a [Shape] to a value
-    pub fn shape(&mut self, shape: &Shape, cell: C) {
+    pub fn set_shape(&mut self, shape: &Shape, cell: C) {
         match shape {
-            Shape::Circle(Circle { center, radius }) => self.circle(*center, *radius, cell),
-            Shape::Line(Line { start, end }) => self.line(*start, *end, self.cell_size, cell),
+            Shape::Circle(Circle { center, radius }) => self.set_circle(*center, *radius, cell),
+            Shape::Line(Line { start, end }) => self.set_line(*start, *end, self.cell_size, cell),
             Shape::WideLine(WideLine { start, end, width }) => {
-                self.line(*start, *end, *width, cell)
+                self.set_line(*start, *end, *width, cell)
             }
             Shape::Cone(_cone) => todo!(),
         }
     }
 
     /// Set the cells in a line to a value
-    pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
+    pub fn set_line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let width = width / self.cell_size;
         let start = self.world_to_grid(start);
         let end = self.world_to_grid(end);
@@ -163,26 +176,24 @@ impl<C: Clone + Default> ScaledGrid<C> {
     }
 
     /// Set the cells in a circle to a value
-    pub fn circle(&mut self, center: Pos2, radius: f32, cell: C) {
+    pub fn set_circle(&mut self, center: Pos2, radius: f32, cell: C) {
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
         self.grid.circle(center, radius, cell);
     }
 
     /// Iterate over cells within a [Circle]
-    pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = (Pos2, Option<&C>)> + '_ {
+    pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = Pos2> + '_ {
         let Circle { center, radius } = circle;
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(*center);
-        iter_circle(center, radius).map(move |(x, y)| {
-            let pos = self.grid_to_world(Pos2::new(x as f32, y as f32));
-            let cell = self.grid.get(x, y);
-            (pos, cell)
-        })
+        self.grid
+            .iter_circle(center, radius)
+            .map(move |(x, y)| self.grid_to_world(Pos2::new(x as f32, y as f32)))
     }
 
     /// Iterate over cells within a [Cone]
-    pub fn iter_cone(&self, cone: &Cone) -> impl Iterator<Item = (Pos2, Option<&C>)> + '_ {
+    pub fn iter_cone(&self, cone: &Cone) -> impl Iterator<Item = Pos2> + '_ {
         let Cone {
             center,
             radius,
@@ -190,7 +201,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
             fov,
         } = cone.clone();
         self.iter_circle(&Circle { center, radius })
-            .filter(move |(point, _cell)| {
+            .filter(move |point| {
                 let offset = *point - center;
                 let angle = offset.angle() - angle;
                 let angle = utils::normalize_angle(angle);
