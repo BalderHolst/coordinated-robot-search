@@ -16,7 +16,7 @@ pub mod shapes;
 mod utils;
 
 /// A unique identifier for a robot
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RobotId(u32);
 
 impl Copy for RobotId {}

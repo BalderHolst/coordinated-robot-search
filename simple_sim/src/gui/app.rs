@@ -1,8 +1,11 @@
 use std::{
-    collections::{HashMap, HashSet}, f32::consts::PI, sync::{
+    collections::{HashMap, HashSet},
+    f32::consts::PI,
+    sync::{
         atomic::{AtomicBool, Ordering},
         Arc, Mutex,
-    }, thread
+    },
+    thread,
 };
 
 use crate::{
@@ -42,6 +45,7 @@ pub struct GlobalOptions {
     paused: Arc<AtomicBool>,
     focused: Option<usize>,
     follow: Option<usize>,
+    show_only: Option<usize>,
 }
 
 impl Default for GlobalOptions {
@@ -50,6 +54,7 @@ impl Default for GlobalOptions {
             paused: Arc::new(AtomicBool::new(false)),
             focused: None,
             follow: None,
+            show_only: None,
         }
     }
 }
@@ -200,62 +205,65 @@ impl App {
             let robot_pos = self.cam.world_to_viewport(agent.state.pos);
             let robot_angle = agent.state.angle;
 
-            // Draw FOV
-            const FOV_INIDICATOR_LEN: f32 = 0.1;
-            const FOV_INIDICATOR_WIDTH: f32 = 0.02;
-            {
-                let left = Vec2::angled(robot_angle - cam_fov / 2.0);
-                painter.line_segment(
-                    [
+            if self.global_opts.show_only.is_none_or(|f| f == n) {
+                // Draw robot (as a circle)
+                {
+                    let stroke = match self.global_opts.focused {
+                        Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
+                        _ => Stroke::NONE,
+                    };
+                    painter.circle(
                         robot_pos,
-                        robot_pos + left * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
-                    ],
-                    PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
-                );
-                let right = Vec2::angled(robot_angle + cam_fov / 2.0);
-                painter.line_segment(
-                    [
-                        robot_pos,
-                        robot_pos + right * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
-                    ],
-                    PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
-                );
-            }
+                        self.cam.scaled(diameter / 2.0),
+                        ROBOT_COLOR,
+                        stroke,
+                    );
+                }
 
-            // Draw robot (as a circle)
-            {
-                let stroke = match self.global_opts.focused {
-                    Some(f) if f == n => Stroke::new(self.cam.scaled(0.04), Rgba::WHITE),
-                    _ => Stroke::NONE,
+                // Draw FOV
+                const FOV_INIDICATOR_LEN: f32 = 0.1;
+                const FOV_INIDICATOR_WIDTH: f32 = 0.02;
+                {
+                    let left = Vec2::angled(robot_angle - cam_fov / 2.0);
+                    painter.line_segment(
+                        [
+                            robot_pos,
+                            robot_pos + left * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        ],
+                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                    );
+                    let right = Vec2::angled(robot_angle + cam_fov / 2.0);
+                    painter.line_segment(
+                        [
+                            robot_pos,
+                            robot_pos
+                                + right * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
+                        ],
+                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                    );
+                }
+
+                // Draw velocity vector (arrow)
+                let vel = Vec2::angled(robot_angle) * (robot_state.vel + diameter * 0.5);
+                let end = robot_pos + self.cam.scaled(vel);
+                let stroke_width = self.cam.scaled(0.05);
+                let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
+                painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
+                painter.arrow(robot_pos, end - robot_pos, stroke);
+
+                // Draw id of robot
+                let font_id = FontId {
+                    size: self.cam.scaled(0.3),
+                    family: FontFamily::Monospace,
                 };
-                painter.circle(
+                painter.text(
                     robot_pos,
-                    self.cam.scaled(diameter / 2.0),
-                    ROBOT_COLOR,
-                    stroke,
+                    Align2::CENTER_CENTER,
+                    agent.robot.id().as_u32().to_string(),
+                    font_id,
+                    Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
                 );
             }
-
-            // Draw velocity vector (arrow)
-            let vel = Vec2::angled(robot_angle) * (robot_state.vel + diameter * 0.5);
-            let end = robot_pos + self.cam.scaled(vel);
-            let stroke_width = self.cam.scaled(0.05);
-            let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
-            painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
-            painter.arrow(robot_pos, end - robot_pos, stroke);
-
-            // Draw id of robot
-            let font_id = FontId {
-                size: self.cam.scaled(0.3),
-                family: FontFamily::Monospace,
-            };
-            painter.text(
-                robot_pos,
-                Align2::CENTER_CENTER,
-                agent.robot.id().as_u32().to_string(),
-                font_id,
-                Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
-            );
 
             let mut numbers = 0;
             for (n, (category, name, data)) in agent.robot.get_debug_soup().iter().enumerate() {
@@ -292,6 +300,17 @@ impl App {
                                 robot_pos,
                                 end - robot_pos,
                                 Stroke::new(self.cam.scaled(0.01), color),
+                            );
+                        }
+                    }
+                    DebugType::VectorField(field) => {
+                        for (pos, vec) in field {
+                            let pos = self.cam.world_to_viewport(*pos);
+                            let end = pos + self.cam.scaled(*vec);
+                            painter.arrow(
+                                pos,
+                                end - pos,
+                                Stroke::new(self.cam.scaled(0.05), color),
                             );
                         }
                     }
@@ -509,7 +528,6 @@ impl eframe::App for App {
                         });
                     }
 
-
                     ui.add(Separator::default().vertical());
 
                     if let Ok(actual_sps) = self.actual_sps_bg.lock() {
@@ -523,7 +541,6 @@ impl eframe::App for App {
 
                         ui.label(format!("Time: {:.1}s", self.sim_state.time.as_secs_f64()));
                     });
-
                 });
             });
 
@@ -583,23 +600,32 @@ impl eframe::App for App {
 
                 ui.horizontal(|ui| {
                     ui.heading(format!("Robot [{n}]"));
-                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| match self
-                        .global_opts
-                        .follow
-                    {
-                        Some(_) => ui.button("Unfollow").clicked().then(|| {
-                            self.global_opts.follow = None;
-                        }),
-                        None => ui.button("Follow").clicked().then(|| {
-                            self.global_opts.follow = Some(n);
-                        }),
-                    });
                 });
 
                 ui.separator();
                 ui.label(format!("Speed: {:.3}", robot_state.vel));
                 ui.label(format!("Angle: {:.3}", robot_state.angle));
                 ui.label(format!("Position: {:?}", robot_state.pos));
+                ui.separator();
+
+                match self.global_opts.follow {
+                    Some(_) => ui.button("Unfollow").clicked().then(|| {
+                        self.global_opts.follow = None;
+                    }),
+                    None => ui.button("Follow").clicked().then(|| {
+                        self.global_opts.follow = Some(n);
+                    }),
+                };
+
+                match self.global_opts.show_only {
+                    Some(_) => ui.button("Show All").clicked().then(|| {
+                        self.global_opts.show_only = None;
+                    }),
+                    None => ui.button("Show Only").clicked().then(|| {
+                        self.global_opts.show_only = Some(n);
+                    }),
+                };
+
                 ui.separator();
 
                 ui.heading("Debug Items");

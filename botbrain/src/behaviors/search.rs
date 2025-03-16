@@ -1,6 +1,6 @@
 //! This module contains robot `search` behavior.
 
-use std::{f32::consts::PI, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
 use emath::{Pos2, Vec2};
 
@@ -28,7 +28,7 @@ const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SearchRobot {
     /// The id of the robot
     pub id: RobotId,
@@ -62,28 +62,16 @@ pub struct SearchRobot {
     /// The time of the last search grid update
     pub last_search_grid_update: Duration,
 
+    /// Grid containing position preferences for the robot based on
+    /// the positions of other robots
+    pub proximity_grid: ScaledGrid<f32>,
+
+    /// Other robots and their positions
+    pub others: HashMap<RobotId, (Pos2, f32)>,
+
     /// Debug object and their names. Used for visualization.
     /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
-}
-
-impl Default for SearchRobot {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            params: RobotParameters::turtlebot4(),
-            pos: Default::default(),
-            vel: Default::default(),
-            angle: Default::default(),
-            avel: Default::default(),
-            cam: Default::default(),
-            lidar: Default::default(),
-            postbox: Default::default(),
-            search_grid: Default::default(),
-            last_search_grid_update: Duration::default(),
-            debug_soup: DebugSoup::new_inactive(),
-        }
-    }
 }
 
 impl Robot for SearchRobot {
@@ -250,29 +238,33 @@ impl SearchRobot {
                 });
             }
         }
+    }
 
+    /// Process incoming messages
+    fn process_messages(&mut self) {
         // Read incoming messages and update the search grid accordingly
         for (msg_id, msg) in self
             .recv()
             .into_iter()
-            .map(|(id, msg)| (id, msg.kind.clone()))
+            .map(|(id, msg)| (id, msg.clone()))
             .collect::<Vec<_>>()
         {
-            match msg {
-                MessageKind::ShapeDiff { shape, diff } => {
-                    match shape {
-                        Shape::Cone(_cone) => todo!(),
-                        Shape::Line(line) => self.update_search_line(&line, diff),
-                        _ => {}
-                    }
-                    self.postbox.set_processed(msg_id);
-                }
+            match &msg.kind {
+                MessageKind::ShapeDiff { shape, diff } => match shape {
+                    Shape::Cone(_cone) => todo!(),
+                    Shape::Line(line) => self.update_search_line(&line, *diff),
+                    _ => {}
+                },
                 MessageKind::CamDiff { cone, lidar, diff } => {
-                    self.update_search_cone(&cone, &lidar, diff);
-                    self.postbox.set_processed(msg_id);
+                    // Update the position of the other robot
+                    self.others.insert(msg.sender_id, (cone.center, cone.angle));
+
+                    // Update the search grid based on the camera data
+                    self.update_search_cone(&cone, &lidar, *diff);
                 }
                 MessageKind::Debug(_) => {}
             }
+            self.postbox.set_processed(msg_id);
         }
     }
 }
@@ -403,28 +395,42 @@ impl SearchRobot {
     }
 }
 
-pub(crate) fn show_search_grid(robot: &mut SearchRobot) {
-    robot.debug(
-        "Grids",
-        "Search Grid",
-        DebugType::Grid(robot.search_grid.clone()),
-    );
-}
-
 /// Search for the object using a gradient on the heat map
 pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
     let robot = cast_robot::<SearchRobot>(robot);
 
+    // Debug visualization
     {
-        let lidar = &robot.lidar;
         let soup = &mut robot.debug_soup;
-        let params = &robot.params;
+
+        let lidar = &robot.lidar;
         debug::common_routines::show_lidar(soup, lidar);
+
+        let params = &robot.params;
         debug::common_routines::show_cam_range(soup, lidar, params);
+
+        soup.add("", "Other Positions", DebugType::VectorField(robot
+            .others
+            .values()
+            .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * robot.params.diameter / 2.0))
+            .collect()));
+
+        soup.add(
+            "Grids",
+            "Search Grid",
+            DebugType::Grid(robot.search_grid.clone()),
+        );
+
+        soup.add(
+            "Grids",
+            "Proximity Grid",
+            DebugType::Grid(robot.proximity_grid.clone()),
+        );
     }
-    show_search_grid(robot);
 
     robot.update_search_grid(time);
+
+    robot.process_messages();
 
     let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
     robot.debug("", "Forward Bias", DebugType::Vector(forward_bias));

@@ -105,11 +105,26 @@ impl Default for DebugSoup {
 #[derive(Clone, Debug)]
 pub enum DebugType {
     Radius(f32),
+
+    /// Vector from the robot's position with an angle relative to the robot's orientation
     Vector(Vec2),
+
+    /// Multiple vectors from the robot's position with an angle relative to the robot's orientation
     Vectors(Vec<Vec2>),
+
+    /// Multiple weighted vectors from the robot's position with an angle relative to the robot's orientation
     WeightedVectors(Vec<(Vec2, f32)>),
+
+    /// A vector field with vectors originating from the given global positions and angles
+    VectorField(Vec<(Pos2, Vec2)>),
+
+    /// A global point
     Point(Pos2),
+
+    /// Multiple global points
     Points(Vec<Pos2>),
+
+    /// Multiple weighted global points
     WeightedPoints(Vec<(Pos2, f32)>),
 
     /// Rays originating from the robot with a given (angle, length) pair.
