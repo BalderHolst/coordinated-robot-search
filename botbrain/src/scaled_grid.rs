@@ -210,6 +210,41 @@ impl<C: Clone + Default> ScaledGrid<C> {
     }
 }
 
+fn linspace(start: f32, end: f32, n: usize) -> impl Iterator<Item = f32> {
+    let step = (end - start) / (n as f32 - 1.0);
+    (0..n).map(move |i| start + step * i as f32)
+}
+
+impl ScaledGrid<f32> {
+    pub fn add_sampled_grid(&mut self, other: &ScaledGrid<f32>, weight: f32) {
+        let grid = &mut self.grid;
+        for (grid_y, y) in
+            linspace(-self.height / 2.0, self.height / 2.0, grid.height()).enumerate()
+        {
+            for (grid_x, x) in
+                linspace(-self.width / 2.0, self.width / 2.0, grid.width()).enumerate()
+            {
+                let Some(other_value) = other.get(Pos2::new(x, y)) else {
+                    continue;
+                };
+                if let Some(value) = grid.get_mut(grid_x, grid_y) {
+                    *value += other_value * weight;
+                }
+            }
+        }
+    }
+
+    pub fn from_stack(stack: &[&Self], width: f32, height: f32, cell_size: f32) -> Self {
+        let mut grid = Self::new(width, height, cell_size);
+
+        stack.iter().for_each(|&other| {
+            grid.add_sampled_grid(other, 1.0);
+        });
+
+        grid
+    }
+}
+
 impl<C: Clone + Default> Debug for ScaledGrid<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -217,5 +252,36 @@ impl<C: Clone + Default> Debug for ScaledGrid<C> {
             "ScaledGrid({}x{} at {})",
             self.width, self.height, self.cell_size
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_position_conversions() {
+        let grid = ScaledGrid::<f32>::new(10.0, 10.0, 1.0);
+        let world_pos = Pos2::new(1.5, 1.5);
+        let grid_pos = grid.world_to_grid(world_pos);
+        let world_pos2 = grid.grid_to_world(grid_pos);
+
+        assert_eq!(grid_pos, Pos2::new(6.0, 6.0));
+        assert_eq!(world_pos, world_pos2);
+    }
+
+    #[test]
+    fn test_grid_addition() {
+        let mut grid1 = ScaledGrid::new(10.0, 10.0, 1.0);
+        grid1.fill(1.0);
+
+        let grid2 = grid1.clone();
+
+        grid1.add_sampled_grid(&grid2, 1.0);
+
+        println!("{:?}", grid1.grid().get(2, 2));
+        println!("{:?}", grid2.grid().get(2, 2));
+
+        assert_eq!(grid1.grid().get(0, 0), Some(&2.0));
     }
 }

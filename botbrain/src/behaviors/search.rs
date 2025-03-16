@@ -471,6 +471,10 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
             "Proximity Grid",
             DebugType::Grid(robot.proximity_grid.clone()),
         );
+
+        let mut sum = robot.search_grid.clone();
+        sum.add_sampled_grid(&robot.proximity_grid, 1.0);
+        soup.add("Grids", "Sum Grid", DebugType::Grid(sum));
     }
 
     robot.update_search_grid(time);
