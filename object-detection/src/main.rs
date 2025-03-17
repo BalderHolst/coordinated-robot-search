@@ -15,125 +15,129 @@ const HEIGHT: usize = 600;
 // sensor_msgs/msg/Image
 // sensor_msgs/msg/CameraInfo - This is more relevant for non-simulation cameras
 
-fn main() {
-    // Pixels to angles conversion example
-    let cam = Camera::new(1920, 1080, f32::to_radians(69.39), f32::to_radians(40.82));
-    println!(
-        "H=0: {} rad or {} degree",
-        cam.get_angle_h(0),
-        f32::to_degrees(cam.get_angle_h(0))
-    );
-    println!(
-        "H=1920: {} rad or {} degree",
-        cam.get_angle_h(1920),
-        f32::to_degrees(cam.get_angle_h(1920))
-    );
-
-    println!(
-        "V=0: {} rad or {} degree",
-        cam.get_angle_v(0),
-        f32::to_degrees(cam.get_angle_h(0))
-    );
-    println!(
-        "V=1080: {} rad or {} degree",
-        cam.get_angle_v(1080),
-        f32::to_degrees(cam.get_angle_h(1080))
-    );
-
-    println!("H=720, V=480 : {:?}", cam.get_angles(720, 480));
-
-    ///////////////////// Opencv stuff ////////////////////
-    let img = make_test_img();
-
-    // Search for the object
-    // Convert to HSV
-    let mut hsv = Mat::default();
-    imgproc::cvt_color(
-        &img,
-        &mut hsv,
-        imgproc::COLOR_BGR2HLS,
-        0,
-        AlgorithmHint::ALGO_HINT_DEFAULT,
-    )
-    .expect("cvt_color failed");
-
-    // Define lower and upper bounds for yellow color
-    let lower_yellow = Scalar::new(28.0, 100.0, 200.0, 0.0);
-    let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
-
-    // Create a mask
-    let mut mask =
-        Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC1, Scalar::all(0.0))
-            .expect("Mat failed");
-    opencv::core::in_range(&hsv, &lower_yellow, &upper_yellow, &mut mask).expect("in_range failed");
-
-    // Extract yellow ball using bitwise operation
-    let mut result =
-        Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC3, Scalar::all(0.0))
-            .expect("Mat failed");
-    opencv::core::bitwise_and(&img, &img, &mut result, &mask).expect("bitwise_and failed");
-
-    // Find contours
-    let mut contours = Vector::<Vector<Point2i>>::new();
-    imgproc::find_contours(
-        &mask,
-        &mut contours,
-        imgproc::RETR_EXTERNAL,
-        imgproc::CHAIN_APPROX_SIMPLE,
-        opencv::core::Point::new(0, 0),
-    )
-    .expect("find_contours failed");
-
-    // Draw bounding circle if any contours found
-    if !contours.is_empty() {
-        // Find the largest
-        // TODO: Maybe use most yellow contour? Or combination of size and color?
-        let largest_contour = contours
-            .iter()
-            .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
-            .unwrap();
-
-        let mut center = opencv::core::Point2f::new(0.0, 0.0);
-        let mut radius = 0.0;
-        imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
-            .expect("min_enclosing_circle failed");
-        let center = opencv::core::Point::new(center.x as i32, center.y as i32);
-
-        imgproc::circle(
-            &mut result,
-            center,
-            radius as i32 + 5,
-            Scalar::new(255.0, 0.0, 0.0, 0.0),
-            2,
-            imgproc::LINE_AA,
-            0,
-        )
-        .expect("circle failed");
-
-        imgproc::put_text(
-            &mut result,
-            &format!("Ball center: ({},{})", center.x, center.y),
-            Point2i::new((WIDTH / 2) as i32 - 100, 50),
-            FONT_HERSHEY_SIMPLEX,
-            0.8,
-            Scalar::all(255.0),
-            1,
-            imgproc::LineTypes::LINE_8 as i32,
-            false,
-        )
-        .expect("put_text failed");
-    }
-
-    // Show images
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Setup windows
     highgui::named_window("Original", WindowFlags::WINDOW_NORMAL as i32).expect("imshow failed");
-    highgui::imshow("Original", &img).expect("imshow failed");
-
     highgui::named_window("Masked", WindowFlags::WINDOW_NORMAL as i32).expect("imshow failed");
     highgui::move_window("Masked", WIDTH as i32, 0).expect("imshow failed");
-    highgui::imshow("Masked", &result).expect("imshow failed");
 
-    // Must be called to show images
-    highgui::wait_key(0).expect("wait_key failed");
+    // Pixels to angles conversion example
+    let cam = Camera::new(
+        WIDTH as i32,
+        HEIGHT as i32,
+        f32::to_radians(70.0),
+        f32::to_radians(40.0),
+    );
+
+    loop {
+        let img = make_test_img();
+
+        // Search for the object
+        // Convert to HSV
+        let mut hsv = Mat::default();
+        imgproc::cvt_color(
+            &img,
+            &mut hsv,
+            imgproc::COLOR_BGR2HLS,
+            0,
+            AlgorithmHint::ALGO_HINT_DEFAULT,
+        )
+        .expect("cvt_color failed");
+
+        // Define lower and upper bounds for yellow color
+        let lower_yellow = Scalar::new(28.0, 100.0, 200.0, 0.0);
+        let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
+
+        // Create a mask
+        let mut mask =
+            Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC1, Scalar::all(0.0))
+                .expect("Mat failed");
+        opencv::core::in_range(&hsv, &lower_yellow, &upper_yellow, &mut mask)
+            .expect("in_range failed");
+
+        // Extract yellow ball using bitwise operation
+        let mut result =
+            Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC3, Scalar::all(0.0))
+                .expect("Mat failed");
+        opencv::core::bitwise_and(&img, &img, &mut result, &mask).expect("bitwise_and failed");
+
+        // Find contours
+        let mut contours = Vector::<Vector<Point2i>>::new();
+        imgproc::find_contours(
+            &mask,
+            &mut contours,
+            imgproc::RETR_EXTERNAL,
+            imgproc::CHAIN_APPROX_SIMPLE,
+            opencv::core::Point::new(0, 0),
+        )
+        .expect("find_contours failed");
+
+        // Draw bounding circle if any contours found
+        if !contours.is_empty() {
+            // Find the largest
+            // TODO: Maybe use most yellow contour? Or combination of size and color?
+            let largest_contour = contours
+                .iter()
+                .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
+                .unwrap();
+
+            let mut center = opencv::core::Point2f::new(0.0, 0.0);
+            let mut radius = 0.0;
+            imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
+                .expect("min_enclosing_circle failed");
+            let center = opencv::core::Point::new(center.x as i32, center.y as i32);
+
+            imgproc::circle(
+                &mut result,
+                center,
+                radius as i32 + 5,
+                Scalar::new(255.0, 0.0, 0.0, 0.0),
+                2,
+                imgproc::LINE_AA,
+                0,
+            )
+            .expect("circle failed");
+
+            imgproc::put_text(
+                &mut result,
+                &format!("Ball center: ({},{})", center.x, center.y),
+                Point2i::new(20, 50),
+                FONT_HERSHEY_SIMPLEX,
+                0.8,
+                Scalar::all(255.0),
+                1,
+                imgproc::LineTypes::LINE_8 as i32,
+                false,
+            )
+            .expect("put_text failed");
+            let angles = cam.get_angles(center.x, center.y);
+            imgproc::put_text(
+                &mut result,
+                &format!(
+                    "Ball angle: ({},{})",
+                    f32::to_degrees(angles.0),
+                    f32::to_degrees(angles.1)
+                ),
+                Point2i::new(20, 100),
+                FONT_HERSHEY_SIMPLEX,
+                0.8,
+                Scalar::all(255.0),
+                1,
+                imgproc::LineTypes::LINE_8 as i32,
+                false,
+            )
+            .expect("put_text failed");
+        }
+        // Show images
+        highgui::imshow("Original", &img).expect("imshow failed");
+        highgui::imshow("Masked", &result).expect("imshow failed");
+
+        // Must be called to show images
+        if highgui::wait_key(0).expect("wait_key failed") == ('q' as i32) {
+            break;
+        }
+    }
+    Ok(())
 }
 
 /// Create a random image with a search object
@@ -170,12 +174,15 @@ fn make_test_img() -> Mat {
         )
         .expect("circle failed");
     }
+    let width = rng.sample(width_range);
+    let height = rng.sample(height_range);
+    let radius = rng.sample(radius_range);
 
     // Create the search object
     imgproc::circle(
         &mut img,
-        Point2i::new(250, 250),
-        10,
+        Point2i::new(width as i32, height as i32),
+        radius,
         Scalar::from_array([0.0, 255.0, 255.0, 255.0]), // Yellow
         -1,
         imgproc::LineTypes::LINE_8 as i32,
