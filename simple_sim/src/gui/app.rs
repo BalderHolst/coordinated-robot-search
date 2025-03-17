@@ -534,8 +534,8 @@ impl eframe::App for App {
                         self.actual_sps = *actual_sps;
                     }
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                        ui.label(format!("FPS: {:.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
-                        ui.label(format!("SPS: {:.0}", self.actual_sps));
+                        ui.label(format!("FPS: {:>03.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
+                        ui.label(format!("SPS: {:>03.0}", self.actual_sps));
 
                         ui.add(Separator::default().vertical());
 

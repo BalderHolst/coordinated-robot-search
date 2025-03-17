@@ -31,19 +31,19 @@ impl Camera {
     }
 
     /// Return the horizontal angle in radians
-    pub fn get_angle_h(&self, pixels_h: i32) -> f32 {
-        let pixels_to_h_center = pixels_h - (self.pixels_h / 2);
+    pub fn get_angle_h(&self, pixel_h: i32) -> f32 {
+        let pixels_to_h_center = pixel_h - (self.pixels_h / 2);
         f32::atan(pixels_to_h_center as f32 / self.b_h)
     }
 
     /// Return the vertical angle in radians
-    pub fn get_angle_v(&self, pixels_v: i32) -> f32 {
-        let pixels_to_v_center = pixels_v - (self.pixels_v / 2);
+    pub fn get_angle_v(&self, pixel_v: i32) -> f32 {
+        let pixels_to_v_center = pixel_v - (self.pixels_v / 2);
         f32::atan(pixels_to_v_center as f32 / self.b_v)
     }
 
     /// Return the angles in radians (horizontal, vertical)
-    pub fn get_angles(&self, pixels_h: i32, pixels_v: i32) -> (f32, f32) {
-        (self.get_angle_h(pixels_h), self.get_angle_v(pixels_v))
+    pub fn get_angles(&self, pixel_h: i32, pixel_v: i32) -> (f32, f32) {
+        (self.get_angle_h(pixel_h), self.get_angle_v(pixel_v))
     }
 }
