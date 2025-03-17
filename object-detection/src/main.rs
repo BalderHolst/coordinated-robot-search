@@ -1,9 +1,12 @@
+use camera::Camera;
 use opencv::{
     core::{AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3d, Vector},
     highgui::{self, WindowFlags},
     imgproc::{self, FONT_HERSHEY_SIMPLEX},
 };
 use rand::{Rng, distr::Uniform};
+
+mod camera;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
@@ -12,10 +15,34 @@ const HEIGHT: usize = 600;
 // sensor_msgs/msg/Image
 // sensor_msgs/msg/CameraInfo - This is more relevant for non-simulation cameras
 
-// TODO: Extract angle to update map
-// TODO: Use camera FOV for accurate angles
-
 fn main() {
+    // Pixels to angles conversion example
+    let cam = Camera::new(1920, 1080, f32::to_radians(69.39), f32::to_radians(40.82));
+    println!(
+        "H=0: {} rad or {} degree",
+        cam.get_angle_h(0),
+        f32::to_degrees(cam.get_angle_h(0))
+    );
+    println!(
+        "H=1920: {} rad or {} degree",
+        cam.get_angle_h(1920),
+        f32::to_degrees(cam.get_angle_h(1920))
+    );
+
+    println!(
+        "V=0: {} rad or {} degree",
+        cam.get_angle_v(0),
+        f32::to_degrees(cam.get_angle_h(0))
+    );
+    println!(
+        "V=1080: {} rad or {} degree",
+        cam.get_angle_v(1080),
+        f32::to_degrees(cam.get_angle_h(1080))
+    );
+
+    println!("H=720, V=480 : {:?}", cam.get_angles(720, 480));
+
+    ///////////////////// Opencv stuff ////////////////////
     let img = make_test_img();
 
     // Search for the object
