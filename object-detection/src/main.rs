@@ -1,10 +1,7 @@
 use opencv::{
-    core::{
-        AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Point3i, Scalar, Vec3d,
-        Vector,
-    },
+    core::{AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3d, Vector},
     highgui::{self, WindowFlags},
-    imgproc,
+    imgproc::{self, FONT_HERSHEY_SIMPLEX},
 };
 use rand::{Rng, distr::Uniform};
 
@@ -15,7 +12,8 @@ const HEIGHT: usize = 600;
 // sensor_msgs/msg/Image
 // sensor_msgs/msg/CameraInfo - This is more relevant for non-simulation cameras
 
-// TODO: Simple detection of e.g. tennis ball (yellow circle)
+// TODO: Extract angle to update map
+// TODO: Use camera FOV for accurate angles
 
 fn main() {
     let img = make_test_img();
@@ -49,7 +47,7 @@ fn main() {
     opencv::core::bitwise_and(&img, &img, &mut result, &mask).expect("bitwise_and failed");
 
     // Find contours
-    let mut contours = Vector::<Vector<Point3i>>::new();
+    let mut contours = Vector::<Vector<Point2i>>::new();
     imgproc::find_contours(
         &mask,
         &mut contours,
@@ -58,6 +56,47 @@ fn main() {
         opencv::core::Point::new(0, 0),
     )
     .expect("find_contours failed");
+
+    // Draw bounding circle if any contours found
+    if !contours.is_empty() {
+        // Find the largest
+        // TODO: Maybe use most yellow contour? Or combination of size and color?
+        let largest_contour = contours
+            .iter()
+            .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
+            .unwrap();
+
+        let mut center = opencv::core::Point2f::new(0.0, 0.0);
+        let mut radius = 0.0;
+        imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
+            .expect("min_enclosing_circle failed");
+        let center = opencv::core::Point::new(center.x as i32, center.y as i32);
+
+        imgproc::circle(
+            &mut result,
+            center,
+            radius as i32 + 5,
+            Scalar::new(255.0, 0.0, 0.0, 0.0),
+            2,
+            imgproc::LINE_AA,
+            0,
+        )
+        .expect("circle failed");
+
+        imgproc::put_text(
+            &mut result,
+            &format!("Ball center: ({},{})", center.x, center.y),
+            Point2i::new((WIDTH / 2) as i32 - 100, 50),
+            FONT_HERSHEY_SIMPLEX,
+            0.8,
+            Scalar::all(255.0),
+            1,
+            imgproc::LineTypes::LINE_8 as i32,
+            false,
+        )
+        .expect("put_text failed");
+    }
+
     // Show images
     highgui::named_window("Original", WindowFlags::WINDOW_NORMAL as i32).expect("imshow failed");
     highgui::imshow("Original", &img).expect("imshow failed");
