@@ -1,6 +1,7 @@
 use camera::Camera;
 use opencv::{
     core::{AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3d, Vector},
+    gapi::Circle,
     highgui::{self, WindowFlags},
     imgproc::{self, FONT_HERSHEY_SIMPLEX},
 };
@@ -10,6 +11,11 @@ mod camera;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
+
+/// How much the object color should be weighted
+const OBJECT_COLOR_WEIGHT: f32 = 0.8;
+/// How much the object size should be weighted
+const OBJECT_SIZE_WEIGHT: f32 = 0.2;
 
 // TODO: Make conversion function from ros2 to opencv (use impl ToInputArray from opencv)
 // sensor_msgs/msg/Image
@@ -33,29 +39,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let img = make_test_img();
 
         // Search for the object
-        // Convert to HSV
-        let mut hsv = Mat::default();
-        imgproc::cvt_color(
-            &img,
-            &mut hsv,
-            imgproc::COLOR_BGR2HLS,
-            0,
-            AlgorithmHint::ALGO_HINT_DEFAULT,
-        )
-        .expect("cvt_color failed");
+        let mask = make_yellow_mask(&img);
 
-        // Define lower and upper bounds for yellow color
-        let lower_yellow = Scalar::new(28.0, 100.0, 200.0, 0.0);
-        let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
-
-        // Create a mask
-        let mut mask =
-            Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC1, Scalar::all(0.0))
-                .expect("Mat failed");
-        opencv::core::in_range(&hsv, &lower_yellow, &upper_yellow, &mut mask)
-            .expect("in_range failed");
-
-        // Extract yellow ball using bitwise operation
+        // Extract yellow balls using bitwise operation
         let mut result =
             Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC3, Scalar::all(0.0))
                 .expect("Mat failed");
@@ -71,26 +57,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             opencv::core::Point::new(0, 0),
         )
         .expect("find_contours failed");
-
         // Draw bounding circle if any contours found
-        if !contours.is_empty() {
-            // Find the largest
-            // TODO: Maybe use most yellow contour? Or combination of size and color?
-            let largest_contour = contours
-                .iter()
-                .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
-                .unwrap();
-
-            let mut center = opencv::core::Point2f::new(0.0, 0.0);
-            let mut radius = 0.0;
-            imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
-                .expect("min_enclosing_circle failed");
-            let center = opencv::core::Point::new(center.x as i32, center.y as i32);
-
+        if let Ok(circle) = find_most_likely_object(contours) {
             imgproc::circle(
                 &mut result,
-                center,
-                radius as i32 + 5,
+                circle.center,
+                circle.radius + 5,
                 Scalar::new(255.0, 0.0, 0.0, 0.0),
                 2,
                 imgproc::LINE_AA,
@@ -100,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             imgproc::put_text(
                 &mut result,
-                &format!("Ball center: ({},{})", center.x, center.y),
+                &format!("Ball center: ({},{})", circle.center.x, circle.center.y),
                 Point2i::new(20, 50),
                 FONT_HERSHEY_SIMPLEX,
                 0.8,
@@ -110,7 +82,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 false,
             )
             .expect("put_text failed");
-            let angles = cam.get_angles(center.x, center.y);
+            let angles = cam.get_angles(circle.center.x, circle.center.y);
             imgproc::put_text(
                 &mut result,
                 &format!(
@@ -127,10 +99,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 false,
             )
             .expect("put_text failed");
+
+            // Show images
+            highgui::imshow("Masked", &result).expect("imshow failed");
         }
-        // Show images
         highgui::imshow("Original", &img).expect("imshow failed");
-        highgui::imshow("Masked", &result).expect("imshow failed");
 
         // Must be called to show images
         if highgui::wait_key(0).expect("wait_key failed") == ('q' as i32) {
@@ -138,6 +111,56 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
     Ok(())
+}
+
+fn find_most_likely_object(
+    contours: Vector<Vector<Point2i>>,
+) -> Result<opencv::gapi::Circle, String> {
+    if contours.is_empty() {
+        return Err("No contours found".to_string());
+    }
+    // Find the largest
+    // TODO: Maybe use most yellow contour? Or combination of size and color?
+    let largest_contour = contours
+        .iter()
+        .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
+        .unwrap();
+
+    let mut center = opencv::core::Point2f::new(0.0, 0.0);
+    let mut radius = 0.0;
+    imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
+        .expect("min_enclosing_circle failed");
+    let circle = Circle::new_def(
+        Point2i::new(center.x as i32, center.y as i32),
+        radius as i32,
+        Scalar::all(255.0),
+    )
+    .expect("Circle failed");
+    Ok(circle)
+}
+
+fn make_yellow_mask(img: &Mat) -> Mat {
+    // Convert to HSV
+    let mut hsv = Mat::default();
+    imgproc::cvt_color(
+        &img,
+        &mut hsv,
+        imgproc::COLOR_BGR2HSV,
+        0,
+        AlgorithmHint::ALGO_HINT_DEFAULT,
+    )
+    .expect("cvt_color failed");
+
+    // Define lower and upper bounds for yellow color
+    let lower_yellow = Scalar::new(28.0, 180.0, 200.0, 0.0);
+    let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
+
+    // Create a mask
+    let mut mask =
+        Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC1, Scalar::all(0.0))
+            .expect("Mat failed");
+    opencv::core::in_range(&hsv, &lower_yellow, &upper_yellow, &mut mask).expect("in_range failed");
+    mask
 }
 
 /// Create a random image with a search object
