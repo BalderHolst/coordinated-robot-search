@@ -1,0 +1,8 @@
+Scenario(
+    world: "../objectmap/medium_empty.ron",
+    behavior: "search",
+    duration: 600.0,
+    robots: [
+        RobotPose(pos: (x: 0, y: 0), angle: 1.25),
+    ]
+)

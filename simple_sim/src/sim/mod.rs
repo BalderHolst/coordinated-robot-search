@@ -4,7 +4,7 @@ use std::{
     f32::consts::PI,
     mem,
     sync::{mpsc, Arc},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use botbrain::{
@@ -15,7 +15,7 @@ use botbrain::{
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
 
-use crate::world::{Cell, World};
+use crate::{scenario::Scenario, world::{Cell, World}};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -24,6 +24,29 @@ const LIDAR_RAYS: usize = 40;
 const CAMERA_RAYS: usize = 20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
+
+pub fn run_headless(scenario: Scenario, world: World, threads: usize, print_interval: f64) {
+    let mut sim = Simulator::new(SimArgs {
+        world,
+        behavior: scenario.behavior.clone(),
+        threads,
+    });
+
+    let start_time = Instant::now();
+    let mut last_print = start_time;
+
+    while sim.state.time.as_secs_f64() < scenario.duration {
+
+        if (Instant::now() - last_print).as_secs_f64() > print_interval {
+            last_print = Instant::now();
+            println!("Time: {:.1}", sim.state.time.as_secs_f64());
+        }
+
+        sim.step();
+    }
+
+    println!("Simulation finished after {:.2} seconds", sim.state.time.as_secs_f32());
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct AgentState {

@@ -1,13 +1,13 @@
 use app::{App, AppArgs};
 use eframe::egui;
 
-use crate::{cli::RunArgs, sim::{SimArgs, Simulator}, world::world_from_path};
+use crate::{cli::{RunArgs, ScenarioArgs}, scenario::Scenario, sim::{SimArgs, Simulator}, world::{world_from_path, World}};
 
 mod app;
 mod bind_key;
 mod camera;
 
-pub fn run_normally(args: RunArgs) -> Result<(), String> {
+pub fn run_interactive(args: RunArgs) -> Result<(), String> {
     let sim_args = SimArgs {
         world: world_from_path(&args.world)?,
         behavior: args.behavior.clone(),
@@ -17,7 +17,23 @@ pub fn run_normally(args: RunArgs) -> Result<(), String> {
     run(sim_args, app_args)
 }
 
-pub fn run(sim_args: SimArgs, app_args: AppArgs) -> Result<(), String> {
+pub fn run_scenario(args: ScenarioArgs, world: World, scenario: Scenario) -> Result<(), String> {
+    let sim_args = SimArgs {
+        world,
+        behavior: scenario.behavior,
+        threads: args.threads,
+    };
+
+    let app_args = AppArgs {
+        paused: false,
+        target_fps: args.target_fps,
+        target_sps: args.target_sps,
+    };
+
+    run(sim_args, app_args)
+}
+
+fn run(sim_args: SimArgs, app_args: AppArgs) -> Result<(), String> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()

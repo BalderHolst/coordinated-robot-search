@@ -61,29 +61,33 @@ pub struct RunArgs {
 pub struct ScenarioArgs {
 
     /// The scenario file to load
-    #[arg(short, long)]
-    scenario: PathBuf,
+    #[arg(index = 1)]
+    pub scenario: PathBuf,
 
     /// The output file to write the results to
     #[arg(short, long)]
-    output: Option<PathBuf>,
+    pub output: Option<PathBuf>,
+
+    /// Run the scenario headless
+    #[arg(short, long)]
+    pub headless: bool,
+
+    /// How often to print the simulation time (in seconds)
+    #[arg(short('p'), long, default_value = "0.1")]
+    pub print_interval: f64,
+
+    // TODO: This does not work for some reason
+    /// Target frames per second
+    #[arg(long("fps"), default_value = "60")]
+    pub target_fps: f32,
+
+    /// Target simulation steps per second
+    #[arg(long("sps"), default_value = "60")]
+    pub target_sps: f32,
+
+    /// Number of threads to use for simulation
+    #[arg(short('j'), long, default_value_t = default_threads())]
+    pub threads: usize,
+
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(transparent)]
-struct Robot(RobotPose);
-
-#[derive(Serialize, Deserialize)]
-struct Scenario {
-    /// The world file to load
-    world: PathBuf,
-
-    /// What behavior to run on the robots
-    behavior: Behavior,
-
-    /// The duration of the scenario in seconds
-    duration: f64,
-
-    /// The robots to use in the scenario
-    robots: Vec<Robot>,
-}

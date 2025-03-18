@@ -110,9 +110,9 @@ fn grid_to_image<C: Clone + Default>(
 }
 
 pub struct AppArgs {
-    target_sps: f32,
-    target_fps: f32,
-    paused: bool,
+    pub target_sps: f32,
+    pub target_fps: f32,
+    pub paused: bool,
 }
 
 impl From<RunArgs> for AppArgs {
