@@ -178,8 +178,7 @@ impl RosAgent {
                 // Set the robot pose
                 if let Some(pose) = self.pose.lock().unwrap().take() {
                     let (pos, angle) = cov_pose_to_pose2d(&pose);
-                    self.robot.input_pos(pos);
-                    self.robot.input_angle(angle);
+                    self.robot.input_pose(RobotPose { pos, angle });
                 }
 
                 // Set incomming messages

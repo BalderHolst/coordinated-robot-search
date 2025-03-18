@@ -12,7 +12,7 @@ use crate::{
 use super::{
     cast_robot, debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, BehaviorFn,
     CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId,
-    RobotParameters,
+    RobotParameters, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("search", search)];
@@ -125,12 +125,9 @@ impl Robot for SearchRobot {
         &mut self.debug_soup
     }
 
-    fn input_pos(&mut self, pos: Pos2) {
-        self.pos = pos;
-    }
-
-    fn input_angle(&mut self, angle: f32) {
-        self.angle = angle;
+    fn input_pose(&mut self, pose: RobotPose) {
+        self.pos = pose.pos;
+        self.angle = pose.angle;
     }
 
     fn input_cam(&mut self, cam: CamData) {

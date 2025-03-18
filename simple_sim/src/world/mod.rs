@@ -32,53 +32,39 @@ impl Cell {
     }
 }
 
-pub fn world_from_path(path: &PathBuf) -> World {
+pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
     println!("Loading world from {:?}", path);
 
     let desc = match path.extension().and_then(|ext| ext.to_str()) {
         Some("ron") => {
-            let Ok(contents) = std::fs::read_to_string(path) else {
-                eprintln!("Failed to read file {}", path.display());
-                exit(1);
-            };
-            match ron::from_str::<ObjectDescription>(&contents) {
-                Ok(obj_desc) => WorldDescription::Objs(obj_desc),
-                Err(e) => {
-                    eprintln!("Failed to parse RON file {}: {}", path.display(), e);
-                    exit(1);
-                }
-            }
+            let contents = std::fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
+
+            let obj_desc = ron::from_str::<ObjectDescription>(&contents)
+                .map_err(|e| format!("Failed to parse RON file {}: {}", path.display(), e))?;
+
+            WorldDescription::Objs(obj_desc)
         }
         Some("yaml") => {
-            let Ok(contents) = std::fs::read_to_string(path) else {
-                eprintln!("Failed to read file {}", path.display());
-                exit(1);
-            };
+            let contents = std::fs::read_to_string(path)
+                .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
 
-            let mut bitmap_desc = match serde_yml::from_str::<BitmapDescription>(&contents) {
-                Ok(bitmap_desc) => bitmap_desc,
-                Err(e) => {
-                    eprintln!("Failed to parse YAML file {}: {}", path.display(), e);
-                    exit(1);
-                }
-            };
+            let mut bitmap_desc = serde_yml::from_str::<BitmapDescription>(&contents)
+                .map_err(|e| format!("Failed to parse YAML file {}: {}", path.display(), e))?;
 
             let image_path = path.with_file_name(&bitmap_desc.image);
 
-            let Ok(image_bytes) = std::fs::read(&image_path) else {
-                eprintln!("Failed to read image file {}", image_path.display());
-                exit(1);
-            };
+            let image_bytes = std::fs::read(&image_path)
+                .map_err(|e| format!("Failed to read image file {}: {}", image_path.display(), e))?;
 
             bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
 
             WorldDescription::Bitmap(bitmap_desc)
         }
         _ => {
-            eprintln!("Unknown file type for {:?}", path);
-            exit(1);
+            Err(format!("Unknown file type for {:?}", path))?
         }
     };
 
-    desc.create()
+    Ok(desc.create())
 }

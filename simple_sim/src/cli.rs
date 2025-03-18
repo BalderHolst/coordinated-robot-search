@@ -1,8 +1,9 @@
 use std::path::PathBuf;
 
-use botbrain::behaviors::Behavior;
+use botbrain::{behaviors::Behavior, RobotPose};
 
-use clap::{self, Parser};
+use clap::{self, Args, Parser, Subcommand};
+use serde::{Deserialize, Serialize};
 
 fn default_threads() -> usize {
     match std::thread::available_parallelism() {
@@ -15,7 +16,22 @@ fn default_threads() -> usize {
 }
 
 #[derive(Parser)]
-pub struct Args {
+pub struct Cli {
+    #[command(subcommand)]
+    pub command: Command,
+
+}
+
+#[derive(Subcommand)]
+pub enum Command {
+    Run(RunArgs),
+    Scenario(ScenarioArgs),
+}
+
+#[derive(Args, Clone)]
+pub struct RunArgs {
+
+    /// The world file to load
     #[arg(index = 1)]
     pub world: PathBuf,
 
@@ -39,4 +55,35 @@ pub struct Args {
     /// Target simulation steps per second
     #[arg(long("sps"), default_value = "60")]
     pub target_sps: f32,
+}
+
+#[derive(Args)]
+pub struct ScenarioArgs {
+
+    /// The scenario file to load
+    #[arg(short, long)]
+    scenario: PathBuf,
+
+    /// The output file to write the results to
+    #[arg(short, long)]
+    output: Option<PathBuf>,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(transparent)]
+struct Robot(RobotPose);
+
+#[derive(Serialize, Deserialize)]
+struct Scenario {
+    /// The world file to load
+    world: PathBuf,
+
+    /// What behavior to run on the robots
+    behavior: Behavior,
+
+    /// The duration of the scenario in seconds
+    duration: f64,
+
+    /// The robots to use in the scenario
+    robots: Vec<Robot>,
 }

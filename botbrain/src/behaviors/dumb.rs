@@ -3,7 +3,7 @@
 use {
     super::{
         BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
-        RobotParameters,
+        RobotParameters, RobotPose,
     },
     emath::{Pos2, Vec2},
 };
@@ -56,8 +56,7 @@ impl Robot for DumbRobot {
         &mut self.debug_soup
     }
 
-    fn input_pos(&mut self, _pos: Pos2) {}
-    fn input_angle(&mut self, _angle: f32) {}
+    fn input_pose(&mut self, _pos: RobotPose) {}
     fn input_cam(&mut self, _cam: CamData) {}
     fn input_lidar(&mut self, _lidar: LidarData) {}
 

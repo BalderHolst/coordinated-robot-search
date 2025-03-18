@@ -4,10 +4,11 @@ mod avoid_obstacles;
 mod dumb;
 mod search;
 
-use std::time::Duration;
+use std::{fmt::{self, Display}, time::Duration};
 
 #[cfg(feature = "cli")]
 use clap::ValueEnum;
+use serde::Deserializer;
 
 use super::*;
 
@@ -30,6 +31,13 @@ impl RobotKind {
             RobotKind::AvoidObstacles => avoid_obstacles::MENU,
             RobotKind::Search => search::MENU,
         }
+    }
+}
+
+#[cfg(feature = "cli")]
+impl Display for RobotKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.to_possible_value().unwrap().get_name())
     }
 }
 
@@ -116,5 +124,24 @@ impl clap::builder::ValueParserFactory for Behavior {
     type Parser = clap::builder::ValueParser;
     fn value_parser() -> Self::Parser {
         clap::builder::ValueParser::new(Behavior::parse)
+    }
+}
+
+impl<'de> Deserialize<'de> for Behavior {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Behavior::parse(&s).map_err(serde::de::Error::custom)
+    }
+}
+
+impl Serialize for Behavior {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        format!("{}:{}", self.robot_kind, self.behavior_name).serialize(serializer)
     }
 }

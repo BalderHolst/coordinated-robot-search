@@ -10,7 +10,7 @@ use std::{
 
 use crate::{
     bind_down, bind_pressed,
-    cli::Args,
+    cli::RunArgs,
     sim::{Simulator, SimulatorState},
     world::Cell,
 };
@@ -109,8 +109,24 @@ fn grid_to_image<C: Clone + Default>(
     image
 }
 
+pub struct AppArgs {
+    target_sps: f32,
+    target_fps: f32,
+    paused: bool,
+}
+
+impl From<RunArgs> for AppArgs {
+    fn from(args: RunArgs) -> Self {
+        Self {
+            target_sps: args.target_sps,
+            target_fps: args.target_fps,
+            paused: args.paused,
+        }
+    }
+}
+
 impl App {
-    pub fn new(mut sim: Simulator, args: Args, cc: &CreationContext) -> Self {
+    pub fn new(mut sim: Simulator, args: AppArgs, cc: &CreationContext) -> Self {
         // Step once to get the initial state
         sim.step();
 

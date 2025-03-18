@@ -10,7 +10,7 @@ use std::{
 use botbrain::{
     self,
     behaviors::{Behavior, BehaviorFn},
-    CamData, CamPoint, Control, RobotId, RobotParameters,
+    CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose,
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
@@ -56,6 +56,12 @@ pub struct SimulatorState {
     pub time: Duration,
 }
 
+pub struct SimArgs {
+    pub world: World,
+    pub behavior: Behavior,
+    pub threads: usize,
+}
+
 pub struct Simulator {
     pub state: SimulatorState,
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
@@ -65,7 +71,13 @@ pub struct Simulator {
 }
 
 impl Simulator {
-    pub fn new(world: World, behavior: Behavior, threads: usize) -> Self {
+    pub fn new(args: SimArgs) -> Self {
+        let SimArgs {
+            world,
+            behavior,
+            threads,
+        } = args;
+
         let state = SimulatorState {
             world,
             agents: vec![],
@@ -94,8 +106,9 @@ impl Simulator {
             robot: self.behavior.create_robot(),
         };
 
-        agent.robot.input_pos(pos);
-        agent.robot.input_angle(angle);
+        let pose = RobotPose { pos, angle };
+
+        agent.robot.input_pose(pose);
 
         let id = self.state.agents.len() as u32;
         agent.robot.set_id(RobotId::new(id));
@@ -175,8 +188,10 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
         agent.state.angle += agent.state.avel * dt;
 
         // Set the new state of the robot
-        agent.robot.input_pos(agent.state.pos);
-        agent.robot.input_angle(agent.state.angle);
+        agent.robot.input_pose(RobotPose {
+            pos: agent.state.pos,
+            angle: agent.state.angle,
+        });
     }
 
     // Update postboxes

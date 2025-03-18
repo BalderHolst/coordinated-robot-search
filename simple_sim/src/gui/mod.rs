@@ -1,44 +1,46 @@
-use app::App;
+use app::{App, AppArgs};
 use eframe::egui;
 
-use crate::{cli::Args, sim::Simulator, world::world_from_path};
+use crate::{cli::RunArgs, sim::{SimArgs, Simulator}, world::world_from_path};
 
 mod app;
 mod bind_key;
 mod camera;
 
-pub fn run(args: Args) {
+pub fn run_normally(args: RunArgs) -> Result<(), String> {
+    let sim_args = SimArgs {
+        world: world_from_path(&args.world)?,
+        behavior: args.behavior.clone(),
+        threads: args.threads,
+    };
+    let app_args = args.into();
+    run(sim_args, app_args)
+}
+
+pub fn run(sim_args: SimArgs, app_args: AppArgs) -> Result<(), String> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
     };
 
-    if let Err(e) = eframe::run_native(
+    eframe::run_native(
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
-            // Create world
-            let world = world_from_path(&args.world);
 
             // Create simulator
-            let sim = Simulator::new(world, args.behavior.clone(), args.threads);
+            let sim = Simulator::new(sim_args);
 
             // Create app
-            let app = App::new(sim, args, cc);
+            let app = App::new(sim, app_args, cc);
 
             Ok(Box::new(app))
         }),
-    ) {
-        let m = match e {
-            eframe::Error::AppCreation(_) => todo!(),
-            eframe::Error::Winit(_) => todo!(),
-            eframe::Error::WinitEventLoop(e) => todo!("{e:?}"),
-            eframe::Error::Glutin(_) => todo!(),
-            eframe::Error::NoGlutinConfigs(_, _) => {
-                format!("{e}.\n\nIs the system library in sync with the dynamically linked one?")
-            }
-            other => format!("{}", other),
-        };
-        eprintln!("Error running GUI: {m}");
-    }
+    )
+    .map_err(|e| match e {
+        eframe::Error::NoGlutinConfigs(_, _) => {
+            format!("{e}.\n\nIs the system library in sync with the dynamically linked one?")
+        }
+        _ => format!("{}", e),
+    })
 }

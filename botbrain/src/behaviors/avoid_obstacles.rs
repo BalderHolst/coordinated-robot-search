@@ -5,7 +5,7 @@ use emath::{Pos2, Vec2};
 use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
-    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters,
+    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
@@ -54,8 +54,7 @@ impl Robot for AvoidObstaclesRobot {
         &mut self.debug_soup
     }
 
-    fn input_pos(&mut self, _pos: Pos2) {}
-    fn input_angle(&mut self, _angle: f32) {}
+    fn input_pose(&mut self, _poss: RobotPose) {}
     fn input_cam(&mut self, _cam: CamData) {}
 
     fn input_lidar(&mut self, lidar: LidarData) {

@@ -289,6 +289,13 @@ impl Postbox {
     }
 }
 
+/// The pose of a robot
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RobotPose {
+    pub pos: Pos2,
+    pub angle: f32,
+}
+
 /// A trait representing a robot. This is the interface that all robots must implement.
 ///
 /// Methods starting with `set_` should be called after creating the robot to set the
@@ -349,11 +356,8 @@ pub trait Robot: Send + Sync {
         self.get_debug_soup().is_active()
     }
 
-    /// Input the position of the robot
-    fn input_pos(&mut self, pos: Pos2);
-
     /// Input the angle of the robot
-    fn input_angle(&mut self, angle: f32);
+    fn input_pose(&mut self, pose: RobotPose);
 
     /// Input data from the camera
     fn input_cam(&mut self, cam: CamData);
