@@ -64,9 +64,10 @@ pub struct ScenarioArgs {
     #[arg(index = 1)]
     pub scenario: PathBuf,
 
-    /// The output file to write the results to
+    /// The output file to write the results to. Specify multiple paths by separating them with a ':'.
+    /// Supported formats: JSON, CSV, IPC, Parquet
     #[arg(short, long)]
-    pub output: PathBuf,
+    pub output: String,
 
     /// Run the scenario headless
     #[arg(short, long)]

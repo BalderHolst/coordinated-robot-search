@@ -42,7 +42,9 @@ fn main() -> Result<(), String> {
                 true => sim::run_scenario_headless(sim, scenario, args.print_interval),
             };
 
-            data.dump_to_file(&args.output)?;
+            for out_path in args.output.split(':') {
+                data.dump_to_file(&std::path::PathBuf::from(out_path))?;
+            }
 
             Ok(())
         }
