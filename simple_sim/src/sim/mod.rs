@@ -14,6 +14,7 @@ use botbrain::{
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
+use serde::Serialize;
 
 use crate::{scenario::Scenario, world::{Cell, World}};
 
@@ -51,16 +52,19 @@ pub fn run_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64)
 
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct AgentState {
     pub pose: RobotPose,
     pub vel: f32,
     pub avel: f32,
 }
 
+#[derive(Serialize)]
 pub struct Agent {
     pub state: AgentState,
     pub control: botbrain::Control,
+
+    #[serde(skip)]
     pub robot: Box<dyn botbrain::Robot>,
 }
 
@@ -74,10 +78,9 @@ impl Clone for Agent {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct SimulatorState {
     pub agents: Vec<Agent>,
-    pub world: World,
     pub time: Duration,
 }
 
@@ -89,6 +92,7 @@ pub struct SimArgs {
 
 pub struct Simulator {
     pub state: SimulatorState,
+    world: World,
     pool: ThreadPool<(Agent, Arc<StepArgs>), Agent>,
     pending_messages: Vec<botbrain::Message>,
     behavior: Behavior,
@@ -104,12 +108,12 @@ impl Simulator {
         } = args;
 
         let state = SimulatorState {
-            world,
             agents: vec![],
             time: Duration::default(),
         };
         Self {
             state,
+            world,
             pool: ThreadPool::new(threads, |(mut agent, args): (Agent, Arc<StepArgs>)| {
                 step_agent(&mut agent, args);
                 agent
@@ -118,6 +122,10 @@ impl Simulator {
             behavior,
             dt: SIMULATION_DT,
         }
+    }
+
+    pub fn world(&self) -> &World {
+        &self.world
     }
 
     pub fn add_robot(&mut self, robot_pose: RobotPose) {
@@ -134,7 +142,7 @@ impl Simulator {
 
         let id = self.state.agents.len() as u32;
         agent.robot.set_id(RobotId::new(id));
-        agent.robot.set_world_size(self.state.world.size());
+        agent.robot.set_world_size(self.world.size());
         agent.robot.get_debug_soup_mut().activate();
         self.state.agents.push(agent);
     }
@@ -147,7 +155,7 @@ impl Simulator {
         let args = Arc::new(StepArgs {
             agents: self.state.agents.clone(),
             behavior_fn: self.behavior.behavior_fn(),
-            world: self.state.world.clone(),
+            world: self.world.clone(),
             time: self.state.time,
             dt,
             msg_send_tx,

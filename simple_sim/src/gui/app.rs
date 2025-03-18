@@ -12,7 +12,7 @@ use crate::{
     bind_down, bind_pressed,
     cli::RunArgs,
     sim::{Simulator, SimulatorState},
-    world::Cell,
+    world::{Cell, World},
 };
 
 use super::camera::Camera;
@@ -88,6 +88,7 @@ pub struct App {
     target_sps: usize,
     target_fps: f32,
     actual_sps: f32,
+    world: World,
     pub cam: Camera,
     pub sim_state: SimulatorState,
     global_opts: GlobalOptions,
@@ -137,6 +138,8 @@ impl App {
     pub fn new(mut sim: Simulator, args: AppArgs, cc: &CreationContext) -> Self {
         // Step once to get the initial state
         sim.step();
+
+        let world = sim.world().clone();
 
         let sim_bg = Arc::new(Mutex::new(sim));
         let sim_state = sim_bg.lock().unwrap().state.clone();
@@ -195,7 +198,7 @@ impl App {
             });
         }
 
-        let world_image = grid_to_image(sim_state.world.grid(), |c| c.color());
+        let world_image = grid_to_image(world.grid(), |c| c.color());
         let world_image = ImageData::from(world_image);
 
         let texture_manager = &cc.egui_ctx.tex_manager();
@@ -221,6 +224,7 @@ impl App {
             cam: Camera::new(Pos2::ZERO, 100.0),
             sim_state,
             sim_bg,
+            world,
             target_sps: args.target_sps as usize,
             actual_sps_bg,
             target_sps_bg,
@@ -433,7 +437,7 @@ impl App {
                     DebugType::RobotRays(rays) => {
                         for (angle, distance) in rays {
                             let color = Hsva::new(
-                                distance / self.sim_state.world.width() * 2.0,
+                                distance / self.world.width() * 2.0,
                                 0.8,
                                 0.8,
                                 0.5,
@@ -459,7 +463,7 @@ impl App {
                         painter.line(points, PathStroke::new(self.cam.scaled(0.01), color));
                     }
                     DebugType::Grid(grid) => {
-                        let (min, max) = self.sim_state.world.bounds();
+                        let (min, max) = self.world.bounds();
                         let min = self.cam.world_to_viewport(min);
                         let max = self.cam.world_to_viewport(max);
                         let canvas = Rect::from_min_max(min, max);
@@ -724,7 +728,7 @@ impl eframe::App for App {
                 self.cam.set_viewport(viewport);
 
                 // Draw world area
-                let (min, max) = &self.sim_state.world.bounds();
+                let (min, max) = &self.world.bounds();
                 let world_rect = Rect::from_points(&[
                     self.cam.world_to_viewport(*min),
                     self.cam.world_to_viewport(*max),

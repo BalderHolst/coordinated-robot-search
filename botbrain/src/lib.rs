@@ -191,7 +191,7 @@ fn test_lidar_interpolate() {
 }
 
 /// Control signal to be sent to the robot
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Control {
     pub speed: f32,
     pub steer: f32,

@@ -1,7 +1,7 @@
 Scenario(
     world: "../objectmap/small_empty.ron",
     behavior: "search",
-    duration: 60.0,
+    duration: 300.0,
     robots: [
         RobotPose(pos: (x: 0, y: 0), angle: 1.25),
         RobotPose(pos: (x: 3, y: -3), angle: -1.25),
