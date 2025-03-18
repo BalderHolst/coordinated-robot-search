@@ -1,7 +1,7 @@
 use app::{App, AppArgs};
 use eframe::egui;
 
-use crate::{cli::{RunArgs, ScenarioArgs}, scenario::Scenario, sim::{SimArgs, Simulator}, world::{world_from_path, World}};
+use crate::{cli::{RunArgs, ScenarioArgs}, scenario::{Scenario, TrialData}, sim::{SimArgs, Simulator}, world::{world_from_path, World}};
 
 mod app;
 mod bind_key;
@@ -18,7 +18,7 @@ pub fn run_interactive(args: RunArgs) -> Result<(), String> {
     run(sim, app_args)
 }
 
-pub fn run_scenario(sim: Simulator, scenario: Scenario, args: ScenarioArgs) -> Result<(), String> {
+pub fn run_scenario(sim: Simulator, scenario: Scenario, args: ScenarioArgs) -> Result<TrialData, String> {
     let app_args = AppArgs {
         paused: false,
         target_fps: args.target_fps,
@@ -26,7 +26,10 @@ pub fn run_scenario(sim: Simulator, scenario: Scenario, args: ScenarioArgs) -> R
         pause_at: Some(scenario.duration),
     };
 
-    run(sim, app_args)
+    run(sim, app_args)?;
+
+    // TODO: Actually collect data
+    Ok(TrialData::new())
 }
 
 fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {

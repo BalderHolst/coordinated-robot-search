@@ -16,7 +16,7 @@ use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
 use serde::Serialize;
 
-use crate::{scenario::Scenario, world::{Cell, World}};
+use crate::{scenario::{Scenario, TrialData}, world::{Cell, World}};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -26,7 +26,9 @@ const CAMERA_RAYS: usize = 20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
 
-pub fn run_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64) {
+pub fn run_scenario_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64) -> TrialData {
+    let mut trial_data = TrialData::new();
+
     let start_time = Instant::now();
     let mut last_print = start_time;
 
@@ -34,8 +36,13 @@ pub fn run_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64)
 
         if (Instant::now() - last_print).as_secs_f64() > print_interval {
             last_print = Instant::now();
-            println!("Time: {:.1}", sim.state.time.as_secs_f64());
+            println!("Time: {:.1}s", sim.state.time.as_secs_f64());
         }
+
+        // TODO: Calculate coverage
+        let coverage = 0.0;
+
+        trial_data.add_state(sim.state.clone(), coverage);
 
         sim.step();
     }
@@ -50,6 +57,7 @@ pub fn run_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64)
         println!("  pos: {:?}, angle: {:.2}", pos, angle);
     }
 
+    trial_data
 }
 
 #[derive(Debug, Clone, Default, Serialize)]

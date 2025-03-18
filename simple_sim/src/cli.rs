@@ -57,7 +57,7 @@ pub struct RunArgs {
     pub target_sps: f32,
 }
 
-#[derive(Args)]
+#[derive(Args, Clone)]
 pub struct ScenarioArgs {
 
     /// The scenario file to load
@@ -66,7 +66,7 @@ pub struct ScenarioArgs {
 
     /// The output file to write the results to
     #[arg(short, long)]
-    pub output: Option<PathBuf>,
+    pub output: PathBuf,
 
     /// Run the scenario headless
     #[arg(short, long)]

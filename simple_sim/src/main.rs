@@ -37,10 +37,12 @@ fn main() -> Result<(), String> {
                 sim.add_robot(robot.clone());
             }
 
-            match args.headless {
-                false => gui::run_scenario(sim, scenario, args)?,
-                true => sim::run_headless(sim, scenario, args.print_interval),
-            }
+            let data = match args.headless {
+                false => gui::run_scenario(sim, scenario, args.clone())?,
+                true => sim::run_scenario_headless(sim, scenario, args.print_interval),
+            };
+
+            data.dump_to_file(&args.output)?;
 
             Ok(())
         }

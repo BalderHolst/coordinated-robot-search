@@ -40,6 +40,11 @@ impl<C: Clone + Default> Grid<C> {
         self.height
     }
 
+    /// Size of the grid (width, height)
+    pub fn size(&self) -> (usize, usize) {
+        (self.width, self.height)
+    }
+
     pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut C> {
         if x >= self.width || y >= self.height {
             return None;
