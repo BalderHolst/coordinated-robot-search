@@ -1,9 +1,12 @@
 use camera::Camera;
 use opencv::{
-    core::{AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3d, Vector},
+    core::{
+        AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3b, Vec3d, Vec3f,
+        Vec3i, Vec4f, VecN, Vector,
+    },
     gapi::Circle,
     highgui::{self, WindowFlags},
-    imgproc::{self, FONT_HERSHEY_SIMPLEX},
+    imgproc::{self, FONT_HERSHEY_SIMPLEX, LineTypes},
 };
 use rand::{Rng, distr::Uniform};
 
@@ -11,11 +14,6 @@ mod camera;
 
 const WIDTH: usize = 800;
 const HEIGHT: usize = 600;
-
-/// How much the object color should be weighted
-const OBJECT_COLOR_WEIGHT: f32 = 0.8;
-/// How much the object size should be weighted
-const OBJECT_SIZE_WEIGHT: f32 = 0.2;
 
 // TODO: Make conversion function from ros2 to opencv (use impl ToInputArray from opencv)
 // sensor_msgs/msg/Image
@@ -58,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .expect("find_contours failed");
         // Draw bounding circle if any contours found
-        if let Ok(circle) = find_most_likely_object(contours) {
+        if let Ok(circle) = find_most_likely_object(contours, &result) {
             imgproc::circle(
                 &mut result,
                 circle.center,
@@ -115,28 +113,93 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn find_most_likely_object(
     contours: Vector<Vector<Point2i>>,
+    img: &Mat,
 ) -> Result<opencv::gapi::Circle, String> {
     if contours.is_empty() {
         return Err("No contours found".to_string());
     }
     // Find the largest
-    // TODO: Maybe use most yellow contour? Or combination of size and color?
-    let largest_contour = contours
+    let best_circle = contours
         .iter()
-        .max_by_key(|c| imgproc::contour_area(c, false).expect("Failed area") as i32)
-        .unwrap();
+        .map(|c| {
+            let mut center = opencv::core::Point2f::new(0.0, 0.0);
+            let mut radius = 0.0;
+            imgproc::min_enclosing_circle(&c, &mut center, &mut radius)
+                .expect("min_enclosing_circle failed");
+            (center, radius)
+        })
+        .map(|(center, radius)| {
+            // Make a mask
+            let mut mask = opencv::core::Mat::new_rows_cols_with_default(
+                img.rows(),
+                img.cols(),
+                CV_8UC1,
+                Scalar::all(0.0),
+            )
+            .expect("Mat failed");
 
-    let mut center = opencv::core::Point2f::new(0.0, 0.0);
-    let mut radius = 0.0;
-    imgproc::min_enclosing_circle(&largest_contour, &mut center, &mut radius)
-        .expect("min_enclosing_circle failed");
-    let circle = Circle::new_def(
-        Point2i::new(center.x as i32, center.y as i32),
-        radius as i32,
-        Scalar::all(255.0),
-    )
-    .expect("Circle failed");
-    Ok(circle)
+            // Mask out the circle
+            imgproc::circle(
+                &mut mask,
+                Point2i::new(center.x as i32, center.y as i32),
+                radius as i32,
+                Scalar::all(255.0),
+                -1,
+                LineTypes::LINE_8 as i32,
+                0,
+            )
+            .expect("circle failed");
+
+            // Find the mean color
+            let mean_color: VecN<f64, 4> = opencv::core::mean(&img, &mask).expect("mean failed");
+            // let mean_color: VecN<u8, 4> = mean_color.to().unwrap_or_default();
+            let color = Mat::new_rows_cols_with_default(
+                1,
+                1,
+                CV_8UC3,
+                Scalar::from_array([mean_color[0], mean_color[1], mean_color[2], 255.0]),
+            )
+            .expect("Mat failed");
+
+            let mut final_color = Mat::new_rows_cols_with_default(
+                1,
+                1,
+                CV_8UC3,
+                Scalar::from_array([0.0, 0.0, 0.0, 255.0]),
+            )
+            .expect("Mat failed");
+
+            imgproc::cvt_color(
+                &color,
+                &mut final_color,
+                imgproc::COLOR_BGR2HSV,
+                0,
+                AlgorithmHint::ALGO_HINT_DEFAULT,
+            )
+            .expect("cvt_color failed");
+            let final_mean_color = final_color.at_2d::<Vec3b>(0, 0).expect("at failed");
+            (center, radius, final_mean_color.to_owned())
+        })
+        .min_by_key(|(_center, _radius, color)| {
+            let target_color = Vec3b::from_array([30, 255, 255]); // HSV color
+            target_color
+                .into_iter()
+                .zip(color.into_iter())
+                .map(|(a, b)| (a as i16 - b as i16).abs())
+                .sum::<i16>()
+        });
+
+    // Return the best circle
+    if let Some((center, radius, _color)) = best_circle {
+        Ok(Circle::new_def(
+            Point2i::new(center.x as i32, center.y as i32),
+            radius as i32,
+            Scalar::default(),
+        )
+        .expect("Circle failed"))
+    } else {
+        Err("No circle found".to_string())
+    }
 }
 
 fn make_yellow_mask(img: &Mat) -> Mat {
