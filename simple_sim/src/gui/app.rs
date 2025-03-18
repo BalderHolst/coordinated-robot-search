@@ -16,7 +16,7 @@ use crate::{
 };
 
 use super::camera::Camera;
-use botbrain::{debug::DebugType, RobotParameters};
+use botbrain::{debug::DebugType, RobotParameters, RobotPose};
 use eframe::{
     self,
     egui::{
@@ -113,14 +113,22 @@ pub struct AppArgs {
     pub target_sps: f32,
     pub target_fps: f32,
     pub paused: bool,
+    pub pause_at: Option<f32>,
 }
 
 impl From<RunArgs> for AppArgs {
     fn from(args: RunArgs) -> Self {
+        let RunArgs {
+            paused,
+            target_fps,
+            target_sps,
+            ..
+        } = args;
         Self {
-            target_sps: args.target_sps,
-            target_fps: args.target_fps,
-            paused: args.paused,
+            paused,
+            target_fps,
+            target_sps,
+            pause_at: None,
         }
     }
 }
@@ -136,24 +144,43 @@ impl App {
         let actual_sps_bg = Arc::new(Mutex::new(args.target_sps));
         let target_sps_bg = Arc::new(Mutex::new(args.target_sps));
         let paused = Arc::new(AtomicBool::new(args.paused));
+        let pause_at = Arc::new(Mutex::new(args.pause_at));
 
         {
             let sim_bg = sim_bg.clone();
             let actual_sps = actual_sps_bg.clone();
             let target_sps = target_sps_bg.clone();
             let paused = paused.clone();
+            let pause_at = pause_at.clone();
+
             thread::spawn(move || loop {
                 let target_sps = *target_sps.lock().unwrap();
-                let paused = paused.load(Ordering::Relaxed);
-                if paused || target_sps == 0.0 {
-                    thread::sleep(std::time::Duration::from_secs_f32(1.0 / args.target_fps));
-                    continue;
+
+                {
+                    let paused = paused.load(Ordering::Relaxed);
+                    if paused || target_sps == 0.0 {
+                        thread::sleep(std::time::Duration::from_secs_f32(1.0 / args.target_fps));
+                        continue;
+                    }
                 }
 
                 let frame_start = std::time::Instant::now();
-                if let Ok(mut sim) = sim_bg.lock() {
+
+                {
+                    let mut pause_at = pause_at.lock().unwrap();
+                    let mut sim = sim_bg.lock().unwrap();
+
+                    // Pause simulation if time is reached
+                    if let Some(pause_at_time) = *pause_at {
+                        if sim.state.time.as_secs_f32() >= pause_at_time {
+                            println!("[INFO] Pausing simulation at {:.1}s", pause_at_time);
+                            paused.store(true, Ordering::Relaxed);
+                            *pause_at = None;
+                            continue;
+                        }
+                    }
+
                     sim.step();
-                    // println!("p2: {:?}", sim.state.agents.iter().map(|a| a.state.pos).collect::<Vec<_>>());
                 }
 
                 let step_time = frame_start.elapsed();
@@ -218,8 +245,8 @@ impl App {
                 diameter, cam_fov, ..
             } = agent.robot.params();
 
-            let robot_pos = self.cam.world_to_viewport(agent.state.pos);
-            let robot_angle = agent.state.angle;
+            let robot_pos = self.cam.world_to_viewport(agent.state.pose.pos);
+            let robot_angle = agent.state.pose.angle;
 
             if self.global_opts.show_only.is_none_or(|f| f == n) {
                 // Draw robot (as a circle)
@@ -507,7 +534,7 @@ impl App {
     fn spawn_robot(&mut self, pos: Pos2) {
         let mut sim = self.sim_bg.lock().unwrap();
         let angle = PI / 2.0 * self.sim_state.agents.len() as f32;
-        sim.add_robot(pos, angle);
+        sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
     }
@@ -620,8 +647,8 @@ impl eframe::App for App {
 
                 ui.separator();
                 ui.label(format!("Speed: {:.3}", robot_state.vel));
-                ui.label(format!("Angle: {:.3}", robot_state.angle));
-                ui.label(format!("Position: {:?}", robot_state.pos));
+                ui.label(format!("Angle: {:.3}", robot_state.pose.angle));
+                ui.label(format!("Position: {:?}", robot_state.pose.pos));
                 ui.separator();
 
                 match self.global_opts.follow {
@@ -710,7 +737,7 @@ impl eframe::App for App {
                 }
 
                 if let Some(f) = self.global_opts.follow {
-                    let agent_pos = self.sim_state.agents[f].state.pos;
+                    let agent_pos = self.sim_state.agents[f].state.pose.pos;
                     self.cam.set_pos(agent_pos);
                 }
 
@@ -768,7 +795,7 @@ impl eframe::App for App {
                             let mut found = None;
                             for (n, agent) in self.sim_state.agents.iter().enumerate() {
                                 let robot_diameter = agent.robot.params().diameter;
-                                if (agent.state.pos - pos).length() < robot_diameter * 0.75 {
+                                if (agent.state.pose.pos - pos).length() < robot_diameter * 0.75 {
                                     self.global_opts.focused = Some(n);
                                     found = Some(n);
                                     break;

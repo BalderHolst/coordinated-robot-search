@@ -13,7 +13,7 @@ pub struct Scenario {
     pub behavior: Behavior,
 
     /// The duration of the scenario in seconds
-    pub duration: f64,
+    pub duration: f32,
 
     /// The robots to use in the scenario
     pub robots: Vec<RobotPose>,

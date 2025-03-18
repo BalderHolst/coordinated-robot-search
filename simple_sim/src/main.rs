@@ -27,9 +27,19 @@ fn main() -> Result<(), String> {
 
             let world = world_from_path(&world_path)?;
 
+            let mut sim = sim::Simulator::new(sim::SimArgs {
+                world,
+                behavior: scenario.behavior.clone(),
+                threads: args.threads,
+            });
+
+            for robot in &scenario.robots {
+                sim.add_robot(robot.clone());
+            }
+
             match args.headless {
-                true => gui::run_scenario(args, world, scenario)?,
-                false => sim::run_headless(scenario, world, args.threads, args.print_interval),
+                false => gui::run_scenario(sim, scenario, args)?,
+                true => sim::run_headless(sim, scenario, args.print_interval),
             }
 
             Ok(())

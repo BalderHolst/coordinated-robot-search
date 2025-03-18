@@ -73,7 +73,7 @@ pub struct ScenarioArgs {
     pub headless: bool,
 
     /// How often to print the simulation time (in seconds)
-    #[arg(short('p'), long, default_value = "0.1")]
+    #[arg(short('p'), long, default_value = "1.0")]
     pub print_interval: f64,
 
     // TODO: This does not work for some reason

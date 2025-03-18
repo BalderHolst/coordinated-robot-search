@@ -25,17 +25,11 @@ const CAMERA_RAYS: usize = 20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
 
-pub fn run_headless(scenario: Scenario, world: World, threads: usize, print_interval: f64) {
-    let mut sim = Simulator::new(SimArgs {
-        world,
-        behavior: scenario.behavior.clone(),
-        threads,
-    });
-
+pub fn run_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64) {
     let start_time = Instant::now();
     let mut last_print = start_time;
 
-    while sim.state.time.as_secs_f64() < scenario.duration {
+    while sim.state.time.as_secs_f32() < scenario.duration {
 
         if (Instant::now() - last_print).as_secs_f64() > print_interval {
             last_print = Instant::now();
@@ -45,13 +39,21 @@ pub fn run_headless(scenario: Scenario, world: World, threads: usize, print_inte
         sim.step();
     }
 
+
     println!("Simulation finished after {:.2} seconds", sim.state.time.as_secs_f32());
+
+    println!();
+    println!("Robot poses:");
+    for agent in sim.state.agents {
+        let RobotPose { pos, angle } = agent.state.pose;
+        println!("  pos: {:?}, angle: {:.2}", pos, angle);
+    }
+
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct AgentState {
-    pub pos: Pos2,
-    pub angle: f32,
+    pub pose: RobotPose,
     pub vel: f32,
     pub avel: f32,
 }
@@ -118,20 +120,17 @@ impl Simulator {
         }
     }
 
-    pub fn add_robot(&mut self, pos: Pos2, angle: f32) {
+    pub fn add_robot(&mut self, robot_pose: RobotPose) {
         let mut agent = Agent {
             state: AgentState {
-                pos,
-                angle,
+                pose: robot_pose.clone(),
                 ..Default::default()
             },
             control: Control::default(),
             robot: self.behavior.create_robot(),
         };
 
-        let pose = RobotPose { pos, angle };
-
-        agent.robot.input_pose(pose);
+        agent.robot.input_pose(robot_pose);
 
         let id = self.state.agents.len() as u32;
         agent.robot.set_id(RobotId::new(id));
@@ -206,14 +205,14 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
         agent.state.avel = agent.control.steer * STEER_MULTIPLIER;
 
         // Update position of the robot
-        let vel = Vec2::angled(agent.state.angle) * agent.state.vel;
-        agent.state.pos += vel * dt;
-        agent.state.angle += agent.state.avel * dt;
+        let vel = Vec2::angled(agent.state.pose.angle) * agent.state.vel;
+        agent.state.pose.pos += vel * dt;
+        agent.state.pose.angle += agent.state.avel * dt;
 
         // Set the new state of the robot
         agent.robot.input_pose(RobotPose {
-            pos: agent.state.pos,
-            angle: agent.state.angle,
+            pos: agent.state.pose.pos,
+            angle: agent.state.pose.angle,
         });
     }
 
@@ -245,8 +244,8 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 let (distance, _) = cast_ray(
                     world,
                     agents,
-                    agent.state.pos,
-                    agent.state.angle + angle,
+                    agent.state.pose.pos,
+                    agent.state.pose.angle + angle,
                     diameter / 2.0,
                     lidar_range,
                     &[Cell::SearchItem],
@@ -268,8 +267,8 @@ fn step_agent(agent: &mut Agent, args: Arc<StepArgs>) {
                 let (distance, cell) = cast_ray(
                     world,
                     agents,
-                    agent.state.pos,
-                    agent.state.angle + angle,
+                    agent.state.pose.pos,
+                    agent.state.pose.angle + angle,
                     diameter / 2.0,
                     cam_range,
                     &[],
@@ -359,7 +358,7 @@ fn cast_ray(
         // Check for collisions with other robots
         if distance > robot_radius {
             for agent in agents {
-                let d = (agent.state.pos - pos).length();
+                let d = (agent.state.pose.pos - pos).length();
                 if d < robot_radius {
                     return (distance, None);
                 }
@@ -376,11 +375,11 @@ fn resolve_robot_collisions(me: &mut Agent, agents: &[Agent]) {
             continue;
         }
         let diameter = f32::max(me.robot.params().diameter, other.robot.params().diameter);
-        if (me.state.pos - other.state.pos).length() < diameter {
-            let diff = me.state.pos - other.state.pos;
+        if (me.state.pose.pos - other.state.pose.pos).length() < diameter {
+            let diff = me.state.pose.pos - other.state.pose.pos;
             let overlap = diameter - diff.length();
             let dir = diff.normalized() * overlap / 2.0;
-            me.state.pos += dir;
+            me.state.pose.pos += dir;
         }
     }
 }
@@ -389,7 +388,7 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
     // Look in a circle around the robot
     let radius = me.robot.params().diameter / 2.0 * 1.4 / world.scale();
     let robot_diameter = me.robot.params().diameter;
-    let center = world.world_to_grid(me.state.pos);
+    let center = world.world_to_grid(me.state.pose.pos);
     let mut nudge = Vec2::ZERO;
     let mut nudgers = 0;
     let grid = world.grid();
@@ -400,7 +399,7 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
                 x: x as f32,
                 y: y as f32,
             });
-            let diff = me.state.pos - cell_center;
+            let diff = me.state.pose.pos - cell_center;
 
             let overlap = robot_diameter / 2.0 - diff.length() + 0.5 * world.scale();
             if overlap < 0.0 {
@@ -420,13 +419,13 @@ fn resolve_world_collisions(me: &mut Agent, world: &World) {
 
     if nudgers > 0 {
         // Only nudge in the direction with most difference
-        me.state.pos += nudge / nudgers as f32;
+        me.state.pose.pos += nudge / nudgers as f32;
     }
 }
 
 fn resolve_border_collisions(me: &mut Agent, world: &World) {
     let diameter = me.robot.params().diameter;
-    let pos = &mut me.state.pos;
+    let pos = &mut me.state.pose.pos;
     let radius = diameter / 2.0;
     if pos.x - radius < -world.width() / 2.0 {
         pos.x = -world.width() / 2.0 + radius;

@@ -14,26 +14,22 @@ pub fn run_interactive(args: RunArgs) -> Result<(), String> {
         threads: args.threads,
     };
     let app_args = args.into();
-    run(sim_args, app_args)
+    let sim = Simulator::new(sim_args);
+    run(sim, app_args)
 }
 
-pub fn run_scenario(args: ScenarioArgs, world: World, scenario: Scenario) -> Result<(), String> {
-    let sim_args = SimArgs {
-        world,
-        behavior: scenario.behavior,
-        threads: args.threads,
-    };
-
+pub fn run_scenario(sim: Simulator, scenario: Scenario, args: ScenarioArgs) -> Result<(), String> {
     let app_args = AppArgs {
         paused: false,
         target_fps: args.target_fps,
         target_sps: args.target_sps,
+        pause_at: Some(scenario.duration),
     };
 
-    run(sim_args, app_args)
+    run(sim, app_args)
 }
 
-fn run(sim_args: SimArgs, app_args: AppArgs) -> Result<(), String> {
+fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
@@ -43,9 +39,6 @@ fn run(sim_args: SimArgs, app_args: AppArgs) -> Result<(), String> {
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
-
-            // Create simulator
-            let sim = Simulator::new(sim_args);
 
             // Create app
             let app = App::new(sim, app_args, cc);
