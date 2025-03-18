@@ -12,6 +12,7 @@ use r2r::{
     self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, ros_agent_msgs,
     sensor_msgs,
 };
+
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct RosAgent {
@@ -178,7 +179,7 @@ impl RosAgent {
                 // Set the robot pose
                 if let Some(pose) = self.pose.lock().unwrap().take() {
                     let (pos, angle) = cov_pose_to_pose2d(&pose);
-                    self.robot.input_pose(RobotPose { pos, angle });
+                    self.robot.input_pose(botbrain::RobotPose { pos, angle });
                 }
 
                 // Set incomming messages
