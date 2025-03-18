@@ -163,7 +163,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
             Shape::WideLine(WideLine { start, end, width }) => {
                 self.set_line(*start, *end, *width, cell)
             }
-            Shape::Cone(_cone) => todo!(),
+            Shape::Cone(cone) => self.set_cone(cone, cell),
         }
     }
 
@@ -172,14 +172,26 @@ impl<C: Clone + Default> ScaledGrid<C> {
         let width = width / self.cell_size;
         let start = self.world_to_grid(start);
         let end = self.world_to_grid(end);
-        self.grid.line(start, end, width, cell);
+        self.grid.set_line(start, end, width, cell);
     }
 
     /// Set the cells in a circle to a value
     pub fn set_circle(&mut self, center: Pos2, radius: f32, cell: C) {
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
-        self.grid.circle(center, radius, cell);
+        self.grid.set_circle(center, radius, cell);
+    }
+
+    pub fn set_cone(&mut self, cone: &Cone, cell: C) {
+        let Cone {
+            center,
+            radius,
+            angle,
+            fov,
+        } = cone.clone();
+        let radius = radius / self.cell_size;
+        let center = self.world_to_grid(center);
+        self.grid.set_cone(center, radius, angle, fov, cell);
     }
 
     /// Iterate over cells within a [Circle]

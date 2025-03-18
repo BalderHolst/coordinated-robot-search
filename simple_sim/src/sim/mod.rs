@@ -8,15 +8,16 @@ use std::{
 };
 
 use botbrain::{
-    self,
-    behaviors::{Behavior, BehaviorFn},
-    CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose,
+    self, behaviors::{Behavior, BehaviorFn}, scaled_grid::ScaledGrid, shapes::Shape, CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose
 };
 use eframe::egui::{Pos2, Vec2};
 use pool::ThreadPool;
 use serde::Serialize;
 
-use crate::{scenario::{Scenario, TrialData}, world::{Cell, World}};
+use crate::{
+    scenario::{Scenario, TrialData},
+    world::{Cell, World},
+};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -26,29 +27,60 @@ const CAMERA_RAYS: usize = 20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
 
-pub fn run_scenario_headless(mut sim: Simulator, scenario: Scenario, print_interval: f64) -> TrialData {
+const COVERAGE_GRID_SCALE: f32 = 0.1;
+
+pub fn run_scenario_headless(
+    mut sim: Simulator,
+    scenario: Scenario,
+    print_interval: f64,
+) -> TrialData {
     let mut trial_data = TrialData::new();
 
     let start_time = Instant::now();
     let mut last_print = start_time;
 
-    while sim.state.time.as_secs_f32() < scenario.duration {
+    let width = sim.world().width();
+    let height = sim.world().height();
+    let total_area = width * height;
+    let mut coverage_grid = ScaledGrid::<bool>::new(width, height, COVERAGE_GRID_SCALE);
 
+    while sim.state.time.as_secs_f32() < scenario.duration {
         if (Instant::now() - last_print).as_secs_f64() > print_interval {
             last_print = Instant::now();
             println!("Time: {:.1}s", sim.state.time.as_secs_f64());
         }
 
-        // TODO: Calculate coverage
-        let coverage = 0.0;
+        let covered_cells = coverage_grid
+            .iter()
+            .filter(|(_, _, &covered)| covered)
+            .count() as f32;
+        let covered_area = covered_cells * COVERAGE_GRID_SCALE;
+        let coverage = covered_area / total_area;
 
         trial_data.add_state(sim.state.clone(), coverage);
 
         sim.step();
+
+        for msg in &sim.pending_messages {
+            match &msg.kind {
+                botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
+                    coverage_grid.set_shape(shape, true)
+                }
+                botbrain::MessageKind::CamDiff {
+                    cone,
+                    lidar: _,
+                    diff: _,
+                    // TODO: use lidar data
+                } => coverage_grid.set_cone(cone, true),
+                botbrain::MessageKind::Debug(_) => {}
+            }
+        }
     }
 
-
-    println!("Simulation finished after {:.2} seconds", sim.state.time.as_secs_f32());
+    println!(
+        "Simulation finished after {:.2} seconds",
+        sim.state.time.as_secs_f32()
+    );
 
     println!();
     println!("Robot poses:");

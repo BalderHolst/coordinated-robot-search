@@ -93,21 +93,39 @@ impl<C: Clone + Default> Grid<C> {
     }
 
     /// Draw a line of cells on the grid
-    pub fn line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
+    pub fn set_line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let delta = end - start;
         let length = delta.length();
         for step in 0..=length as usize {
             let t = step as f32 / length;
             let pos = start + delta * t;
-            self.circle(pos, width, cell.clone());
+            self.set_circle(pos, width, cell.clone());
         }
     }
 
     /// Draw a circle of cells on the grid
-    pub fn circle(&mut self, center: Pos2, radius: f32, cell: C) {
+    pub fn set_circle(&mut self, center: Pos2, radius: f32, cell: C) {
         self.iter_circle(center, radius).for_each(|(x, y)| {
             self.set(x, y, cell.clone());
         });
+    }
+
+    pub fn set_cone(&mut self, center: Pos2, radius: f32, angle: f32, fov: f32, cell: C) {
+        self.iter_cone(center, radius, angle, fov).for_each(|(x, y)| {
+            self.set(x, y, cell.clone());
+        });
+    }
+
+    pub fn iter_cone(&mut self, center: Pos2, radius: f32, angle: f32, fov: f32) -> impl Iterator<Item = (usize, usize)> {
+        self.iter_circle(center, radius).filter(move |(x, y)| {
+            let pos = Pos2 {
+                x: *x as f32,
+                y: *y as f32,
+            };
+            let dir = pos - center;
+            let angle = dir.angle() - angle;
+            angle.abs() < fov / 2.0
+        })
     }
 
     /// Iterate over coordinates within a circle
