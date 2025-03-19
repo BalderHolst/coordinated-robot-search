@@ -18,7 +18,6 @@ fn default_threads() -> usize {
 pub struct Cli {
     #[command(subcommand)]
     pub command: Command,
-
 }
 
 #[derive(Subcommand)]
@@ -29,7 +28,6 @@ pub enum Command {
 
 #[derive(Args, Clone)]
 pub struct RunArgs {
-
     /// The world file to load
     #[arg(index = 1)]
     pub world: PathBuf,
@@ -58,7 +56,6 @@ pub struct RunArgs {
 
 #[derive(Args, Clone)]
 pub struct ScenarioArgs {
-
     /// The scenario file to load
     #[arg(index = 1)]
     pub scenario: clap_stdin::FileOrStdin,
@@ -88,6 +85,4 @@ pub struct ScenarioArgs {
     /// Number of threads to use for simulation
     #[arg(short('j'), long, default_value_t = default_threads())]
     pub threads: usize,
-
 }
-

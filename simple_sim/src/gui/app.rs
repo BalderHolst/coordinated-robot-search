@@ -436,12 +436,8 @@ impl App {
                     }
                     DebugType::RobotRays(rays) => {
                         for (angle, distance) in rays {
-                            let color = Hsva::new(
-                                distance / self.world.width() * 2.0,
-                                0.8,
-                                0.8,
-                                0.5,
-                            );
+                            let color =
+                                Hsva::new(distance / self.world.width() * 2.0, 0.8, 0.8, 0.5);
                             let dir = Vec2::angled(robot_angle + *angle);
                             let start = robot_pos + dir * self.cam.scaled(*diameter / 2.0);
                             let end = robot_pos + dir * self.cam.scaled(*distance);

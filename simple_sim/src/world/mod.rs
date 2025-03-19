@@ -54,16 +54,15 @@ pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
 
             let image_path = path.with_file_name(&bitmap_desc.image);
 
-            let image_bytes = std::fs::read(&image_path)
-                .map_err(|e| format!("Failed to read image file {}: {}", image_path.display(), e))?;
+            let image_bytes = std::fs::read(&image_path).map_err(|e| {
+                format!("Failed to read image file {}: {}", image_path.display(), e)
+            })?;
 
             bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
 
             WorldDescription::Bitmap(bitmap_desc)
         }
-        _ => {
-            Err(format!("Unknown file type for {:?}", path))?
-        }
+        _ => Err(format!("Unknown file type for {:?}", path))?,
     };
 
     Ok(desc.create())

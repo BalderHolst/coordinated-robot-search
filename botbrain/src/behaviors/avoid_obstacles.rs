@@ -5,7 +5,8 @@ use emath::Vec2;
 use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
-    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters, RobotPose,
+    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters,
+    RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];

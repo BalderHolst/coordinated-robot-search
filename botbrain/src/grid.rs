@@ -111,12 +111,19 @@ impl<C: Clone + Default> Grid<C> {
     }
 
     pub fn set_cone(&mut self, center: Pos2, radius: f32, angle: f32, fov: f32, cell: C) {
-        self.iter_cone(center, radius, angle, fov).for_each(|(x, y)| {
-            self.set(x, y, cell.clone());
-        });
+        self.iter_cone(center, radius, angle, fov)
+            .for_each(|(x, y)| {
+                self.set(x, y, cell.clone());
+            });
     }
 
-    pub fn iter_cone(&mut self, center: Pos2, radius: f32, angle: f32, fov: f32) -> impl Iterator<Item = (usize, usize)> {
+    pub fn iter_cone(
+        &mut self,
+        center: Pos2,
+        radius: f32,
+        angle: f32,
+        fov: f32,
+    ) -> impl Iterator<Item = (usize, usize)> {
         self.iter_circle(center, radius).filter(move |(x, y)| {
             let pos = Pos2 {
                 x: *x as f32,

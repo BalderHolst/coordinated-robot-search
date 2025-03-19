@@ -4,7 +4,10 @@ mod avoid_obstacles;
 mod dumb;
 mod search;
 
-use std::{fmt::{self, Display}, time::Duration};
+use std::{
+    fmt::{self, Display},
+    time::Duration,
+};
 
 #[cfg(feature = "cli")]
 use clap::ValueEnum;

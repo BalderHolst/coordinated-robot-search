@@ -306,7 +306,6 @@ impl SearchRobot {
 }
 
 impl SearchRobot {
-
     fn search_gradient(&mut self) -> Vec2 {
         let g = gradient(
             self.pos,
