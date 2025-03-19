@@ -61,7 +61,7 @@ pub struct ScenarioArgs {
 
     /// The scenario file to load
     #[arg(index = 1)]
-    pub scenario: PathBuf,
+    pub scenario: clap_stdin::FileOrStdin,
 
     /// The output file to write the results to. Specify multiple paths by separating them with a ':'.
     /// Supported formats: JSON, CSV, IPC, Parquet

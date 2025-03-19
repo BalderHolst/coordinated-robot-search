@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use clap::Parser;
 use scenario::Scenario;
 use world::world_from_path;
@@ -13,17 +15,21 @@ fn main() -> Result<(), String> {
     match args.command {
         cli::Command::Run(args) => gui::run_interactive(args),
         cli::Command::Scenario(args) => {
-            let scenario = match std::fs::read_to_string(&args.scenario) {
+            let scenario = match args.scenario.clone().contents() {
                 Ok(s) => ron::de::from_str::<Scenario>(&s)
                     .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
                 Err(e) => Err(e.to_string())?,
             };
 
-            let world_path = args
-                .scenario
-                .parent()
-                .ok_or("Scenario file has no parent directory")?
-                .join(&scenario.world);
+            let root = match args.scenario.is_file() {
+                true => PathBuf::from(args.scenario.filename())
+                    .parent()
+                    .ok_or("Scenario file has no parent directory".to_string())?
+                    .to_path_buf(),
+                false => PathBuf::from(std::env::current_dir().map_err(|e| e.to_string())?),
+            };
+
+            let world_path = root.join(&scenario.world);
 
             let world = world_from_path(&world_path)?;
 
