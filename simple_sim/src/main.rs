@@ -48,10 +48,12 @@ fn main() -> Result<(), String> {
                 true => sim::run_scenario_headless(sim, scenario, args.print_interval),
             };
 
-            for out_path in args.output.split(':') {
-                let out_path = std::path::PathBuf::from(out_path);
-                if let Err(e) = utils::save_df(&mut data, &out_path) {
-                    eprintln!("Failed to save data to '{}': {}", out_path.display(), e);
+            if let Some(out_path) = args.output {
+                for out_path in out_path.split(':') {
+                    let out_path = PathBuf::from(out_path);
+                    if let Err(e) = utils::save_df(&mut data, &out_path) {
+                        eprintln!("Failed to save data to '{}': {}", out_path.display(), e);
+                    }
                 }
             }
 

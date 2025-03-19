@@ -63,7 +63,7 @@ pub struct ScenarioArgs {
     /// The output file to write the results to. Specify multiple paths by separating them with a ':'.
     /// Supported formats: JSON, CSV, IPC, Parquet
     #[arg(short, long)]
-    pub output: String,
+    pub output: Option<String>,
 
     /// Run the scenario headless
     #[arg(short, long)]
