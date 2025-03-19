@@ -1,6 +1,6 @@
 //! This module contains robot `search` behavior.
 
-use std::{collections::HashMap, f32::consts::PI, iter, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
 use emath::{Pos2, Vec2};
 

@@ -5,7 +5,7 @@ use {
         BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
         RobotParameters, RobotPose,
     },
-    emath::{Pos2, Vec2},
+    emath::Vec2,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[

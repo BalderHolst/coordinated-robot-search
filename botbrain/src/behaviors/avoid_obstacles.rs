@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, time::Duration};
 
-use emath::{Pos2, Vec2};
+use emath::Vec2;
 
 use crate::{cast_robot, LidarPoint, MessageKind};
 
