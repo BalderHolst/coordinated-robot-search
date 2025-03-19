@@ -10,7 +10,10 @@
         devShells.default = pkgs.mkShell {
             packages = with pkgs; [
                 git
-                docker
+                (python3.withPackages (ps: with ps; [
+                    polars
+                    matplotlib
+                ]))
             ];
 
             LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
