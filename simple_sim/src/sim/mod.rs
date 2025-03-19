@@ -8,14 +8,18 @@ use std::{
 };
 
 use botbrain::{
-    self, behaviors::{Behavior, BehaviorFn}, scaled_grid::ScaledGrid, shapes::Shape, CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose
+    self,
+    behaviors::{Behavior, BehaviorFn},
+    scaled_grid::ScaledGrid,
+    CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose,
 };
 use eframe::egui::{Pos2, Vec2};
+use polars::prelude::*;
 use pool::ThreadPool;
 use serde::Serialize;
 
 use crate::{
-    scenario::{Scenario, TrialData},
+    scenario::Scenario,
     world::{Cell, World},
 };
 
@@ -29,35 +33,97 @@ const SIMULATION_DT: f32 = 1.0 / 60.0;
 
 const COVERAGE_GRID_SCALE: f32 = 0.1;
 
+#[derive(Clone, Default)]
+struct RobotData {
+    x: Vec<f32>,
+    y: Vec<f32>,
+    angle: Vec<f32>,
+    vel: Vec<f32>,
+    avel: Vec<f32>,
+    steer: Vec<f32>,
+    speed: Vec<f32>,
+}
+
+impl RobotData {
+    fn with_capacity(capacity: usize) -> Self {
+        Self {
+            x: Vec::with_capacity(capacity),
+            y: Vec::with_capacity(capacity),
+            angle: Vec::with_capacity(capacity),
+            vel: Vec::with_capacity(capacity),
+            avel: Vec::with_capacity(capacity),
+            steer: Vec::with_capacity(capacity),
+            speed: Vec::with_capacity(capacity),
+        }
+    }
+
+    fn push_state(&mut self, state: &AgentState, control: &Control) {
+        self.x.push(state.pose.pos.x);
+        self.y.push(state.pose.pos.y);
+        self.angle.push(state.pose.angle);
+        self.vel.push(state.vel);
+        self.avel.push(state.avel);
+        self.steer.push(control.steer);
+        self.speed.push(control.speed);
+    }
+
+    fn into_cols(self, prefix: &str) -> Vec<Column> {
+        vec![
+            Column::new(format!("{}x", prefix).into(), self.x),
+            Column::new(format!("{}y", prefix).into(), self.y),
+            Column::new(format!("{}angle", prefix).into(), self.angle),
+            Column::new(format!("{}vel", prefix).into(), self.vel),
+            Column::new(format!("{}avel", prefix).into(), self.avel),
+            Column::new(format!("{}steer", prefix).into(), self.steer),
+            Column::new(format!("{}speed", prefix).into(), self.speed),
+        ]
+    }
+}
+
 pub fn run_scenario_headless(
     mut sim: Simulator,
     scenario: Scenario,
     print_interval: f64,
-) -> TrialData {
-    let mut trial_data = TrialData::new();
+) -> DataFrame {
+    let steps = (scenario.duration / SIMULATION_DT).ceil() as usize;
+
+    let mut time_data = Vec::with_capacity(steps);
+    let mut robot_data = vec![RobotData::with_capacity(steps); scenario.robots.len()];
+    let mut coverage_data = Vec::with_capacity(steps);
 
     let start_time = Instant::now();
     let mut last_print = start_time;
 
     let width = sim.world().width();
     let height = sim.world().height();
-    let total_area = width * height;
     let mut coverage_grid = ScaledGrid::<bool>::new(width, height, COVERAGE_GRID_SCALE);
+    let total_area = width * height;
 
-    while sim.state.time.as_secs_f32() < scenario.duration {
+    loop {
         if (Instant::now() - last_print).as_secs_f64() > print_interval {
             last_print = Instant::now();
             println!("Time: {:.1}s", sim.state.time.as_secs_f64());
         }
 
+        time_data.push(sim.state.time.as_secs_f64());
+
+        // Calculate and store coverage
         let covered_cells = coverage_grid
             .iter()
             .filter(|(_, _, &covered)| covered)
             .count() as f32;
         let covered_area = covered_cells * COVERAGE_GRID_SCALE;
         let coverage = covered_area / total_area;
+        coverage_data.push(coverage);
 
-        trial_data.add_state(sim.state.clone(), coverage);
+        // Store robot data
+        for (n, agent) in sim.state.agents.iter().enumerate() {
+            robot_data[n].push_state(&agent.state, &agent.control);
+        }
+
+        if sim.state.time.as_secs_f32() >= scenario.duration {
+            break;
+        }
 
         sim.step();
 
@@ -89,7 +155,21 @@ pub fn run_scenario_headless(
         println!("  pos: {:?}, angle: {:.2}", pos, angle);
     }
 
-    trial_data
+    let robot_cols = robot_data
+        .into_iter()
+        .enumerate()
+        .flat_map(|(n, data)| data.into_cols(&format!("robot_{}/", n)))
+        .collect::<Vec<_>>();
+
+    let cols = vec![
+        Column::new("time".into(), time_data),
+        Column::new("coverage".into(), coverage_data),
+    ]
+    .into_iter()
+    .chain(robot_cols.into_iter())
+    .collect::<Vec<_>>();
+
+    DataFrame::new(cols).unwrap()
 }
 
 #[derive(Debug, Clone, Default, Serialize)]

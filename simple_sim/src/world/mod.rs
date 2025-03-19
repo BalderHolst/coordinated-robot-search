@@ -1,7 +1,7 @@
 mod description;
 mod pgm;
 
-use std::{path::PathBuf, process::exit};
+use std::path::PathBuf;
 
 use description::{BitmapDescription, ObjectDescription, WorldDescription};
 use eframe::{egui::Color32, epaint::Hsva};

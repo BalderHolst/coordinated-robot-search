@@ -1,9 +1,8 @@
 use std::path::PathBuf;
 
-use botbrain::{behaviors::Behavior, RobotPose};
+use botbrain::behaviors::Behavior;
 
 use clap::{self, Args, Parser, Subcommand};
-use serde::{Deserialize, Serialize};
 
 fn default_threads() -> usize {
     match std::thread::available_parallelism() {
