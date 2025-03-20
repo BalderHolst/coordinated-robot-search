@@ -18,6 +18,7 @@ pub fn run_interactive(args: RunArgs) -> Result<(), String> {
         world: world_from_path(&args.world)?,
         behavior: args.behavior.clone(),
         threads: args.threads,
+        diagnostics: args.diagnostics,
     };
     let app_args = args.into();
     let sim = Simulator::new(sim_args);

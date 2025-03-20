@@ -11,7 +11,7 @@ use std::{
 use crate::{
     bind_down, bind_pressed,
     cli::RunArgs,
-    sim::{Simulator, SimulatorState},
+    sim::{SimState, Simulator},
     world::{Cell, World},
 };
 
@@ -49,6 +49,7 @@ pub struct GlobalOptions {
     focused: Option<usize>,
     follow: Option<usize>,
     show_only: Option<usize>,
+    show_coverage_grid: bool,
 }
 
 impl Default for GlobalOptions {
@@ -58,6 +59,7 @@ impl Default for GlobalOptions {
             focused: None,
             follow: None,
             show_only: None,
+            show_coverage_grid: false,
         }
     }
 }
@@ -93,7 +95,7 @@ pub struct App {
     actual_sps: f32,
     world: World,
     pub cam: Camera,
-    pub sim_state: SimulatorState,
+    pub sim_state: SimState,
     global_opts: GlobalOptions,
     robot_opts: Vec<RobotOptions>,
     textures: AppTextures,
@@ -253,6 +255,25 @@ impl App {
         }
     }
 
+    fn draw_diagnostics(&mut self, painter: &Painter) {
+        if let Some(diagnostics) = &self.sim_state.diagnostics {
+            if self.global_opts.show_coverage_grid {
+                // Draw coverage grid
+                let (min, max) = self.world.bounds();
+                let min = self.cam.world_to_viewport(min);
+                let max = self.cam.world_to_viewport(max);
+                let canvas = Rect::from_min_max(min, max);
+
+                let image = grid_to_image(diagnostics.coverage_grid.grid(), |c| match c {
+                    true => Color32::LIGHT_GREEN.gamma_multiply(0.2),
+                    false => Color32::TRANSPARENT,
+                });
+
+                Self::draw_grid_image(&mut self.textures, "coverage-grid", painter, canvas, image);
+            }
+        }
+    }
+
     fn draw_robots(&mut self, painter: &Painter) {
         for (n, robot_state) in self.sim_state.robot_states.iter().enumerate() {
             let robot_opts = &self.robot_opts[n];
@@ -327,6 +348,7 @@ impl App {
                 );
             }
 
+            // Draw debug items from debug soup
             let mut numbers = 0;
             for (n, (category, name, data)) in self.robot_soups[n].iter().enumerate() {
                 if !robot_opts.debug_items.contains(&(category, name)) {
@@ -511,39 +533,49 @@ impl App {
                             .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
                         });
 
-                        let texture_manager = &painter.ctx().tex_manager();
-                        let mut texture_manager = texture_manager.write();
-
-                        let texture_options = TextureOptions {
-                            magnification: TextureFilter::Nearest,
-                            ..Default::default()
-                        };
-
-                        let maybe_id = self.textures.others.get(name).cloned();
-                        let id = match maybe_id {
-                            Some(id) => {
-                                texture_manager.set(id, ImageDelta::full(image, texture_options));
-                                id
-                            }
-                            None => {
-                                let id = texture_manager.alloc(
-                                    format!("{}-grid-image", name),
-                                    ImageData::from(image),
-                                    texture_options,
-                                );
-                                // Add to cache
-                                println!("[INFO] Allocated new texture for {} (id={:?})", name, id);
-                                self.textures.others.insert(name.to_string(), id);
-                                id
-                            }
-                        };
-
-                        let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
-                        painter.image(id, canvas, uv, Color32::from_white_alpha(128));
+                        Self::draw_grid_image(&mut self.textures, name, painter, canvas, image);
                     }
                 }
             }
         }
+    }
+
+    fn draw_grid_image(
+        textures: &mut AppTextures,
+        name: &'static str,
+        painter: &Painter,
+        canvas: Rect,
+        image: ColorImage,
+    ) {
+        let texture_manager = &painter.ctx().tex_manager();
+        let mut texture_manager = texture_manager.write();
+
+        let texture_options = TextureOptions {
+            magnification: TextureFilter::Nearest,
+            ..Default::default()
+        };
+
+        let maybe_id = textures.others.get(name).cloned();
+        let id = match maybe_id {
+            Some(id) => {
+                texture_manager.set(id, ImageDelta::full(image, texture_options));
+                id
+            }
+            None => {
+                let id = texture_manager.alloc(
+                    format!("{}-grid-image", name),
+                    ImageData::from(image),
+                    texture_options,
+                );
+                // Add to cache
+                println!("[INFO] Allocated new texture for {} (id={:?})", name, id);
+                textures.others.insert(name.to_string(), id);
+                id
+            }
+        };
+
+        let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
+        painter.image(id, canvas, uv, Color32::from_white_alpha(128));
     }
 
     fn spawn_robot(&mut self, pos: Pos2) {
@@ -635,7 +667,7 @@ impl eframe::App for App {
                             self.global_opts.paused.store(!paused, Ordering::Relaxed);
                         });
 
-                    //Spawn Robot Button
+                    // Spawn Robot Button
                     ui.selectable_label(
                         matches!(self.cursor_state, CursorState::SpawnManyRobots),
                         "Spawn Robots",
@@ -645,6 +677,15 @@ impl eframe::App for App {
                         CursorState::SpawnManyRobots => self.cursor_state = CursorState::default(),
                         _ => self.cursor_state = CursorState::SpawnManyRobots,
                     });
+
+                    if let Some(diagnostics) = &self.sim_state.diagnostics {
+                        ui.separator();
+                        let coverage = diagnostics.coverage();
+                        ui.toggle_value(
+                            &mut self.global_opts.show_coverage_grid,
+                            format!("Coverage: {:.2}%", coverage * 100.0),
+                        );
+                    }
                 });
             });
 
@@ -833,6 +874,7 @@ impl eframe::App for App {
                     }
                 });
 
+                self.draw_diagnostics(&painter);
                 self.draw_robots(&painter);
 
                 // Update simulation state

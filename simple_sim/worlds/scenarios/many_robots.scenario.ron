@@ -1,0 +1,17 @@
+Scenario(
+    world: "../objectmap/medium_empty.ron",
+    behavior: "search",
+    duration: 600.0,
+    robots: [
+        RobotPose(pos: (x: 0, y: 0), angle: 0),
+        RobotPose(pos: (x: 1, y: 1), angle: 1),
+        RobotPose(pos: (x: 2, y: 2), angle: 2),
+        RobotPose(pos: (x: 3, y: 3), angle: 3),
+        RobotPose(pos: (x: 4, y: 4), angle: 4),
+        RobotPose(pos: (x: 5, y: 5), angle: 5),
+        RobotPose(pos: (x: 6, y: 6), angle: 6),
+        RobotPose(pos: (x: 7, y: 7), angle: 7),
+        RobotPose(pos: (x: 8, y: 8), angle: 8),
+        RobotPose(pos: (x: 9, y: 9), angle: 9),
+    ]
+)

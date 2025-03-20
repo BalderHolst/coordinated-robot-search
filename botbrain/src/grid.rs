@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use emath::Pos2;
+use emath::{normalized_angle, Pos2};
 
 /// A 2D grid of cells
 #[derive(Clone)]
@@ -124,6 +124,7 @@ impl<C: Clone + Default> Grid<C> {
         angle: f32,
         fov: f32,
     ) -> impl Iterator<Item = (usize, usize)> {
+        let angle = normalized_angle(angle);
         self.iter_circle(center, radius).filter(move |(x, y)| {
             let pos = Pos2 {
                 x: *x as f32,
@@ -131,6 +132,7 @@ impl<C: Clone + Default> Grid<C> {
             };
             let dir = pos - center;
             let angle = dir.angle() - angle;
+            let angle = normalized_angle(angle);
             angle.abs() < fov / 2.0
         })
     }

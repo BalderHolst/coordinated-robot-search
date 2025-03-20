@@ -52,6 +52,10 @@ pub struct RunArgs {
     /// Target simulation steps per second
     #[arg(long("sps"), default_value = "60")]
     pub target_sps: f32,
+
+    /// Enable extra simulation diagnostics
+    #[arg(short, long)]
+    pub diagnostics: bool,
 }
 
 #[derive(Args, Clone)]

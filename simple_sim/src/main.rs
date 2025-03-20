@@ -37,6 +37,7 @@ fn main() -> Result<(), String> {
                 world,
                 behavior: scenario.behavior.clone(),
                 threads: args.threads,
+                diagnostics: true,
             });
 
             for robot in &scenario.robots {
