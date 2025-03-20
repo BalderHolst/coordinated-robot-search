@@ -1,4 +1,4 @@
-mod description;
+pub mod description;
 mod pgm;
 
 use std::path::PathBuf;

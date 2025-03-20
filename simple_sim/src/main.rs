@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use scenario::Scenario;
-use world::world_from_path;
+use world::{description::WorldDescription, world_from_path};
 
 mod cli;
 mod gui;
@@ -29,9 +29,15 @@ fn main() -> Result<(), String> {
                 false => std::env::current_dir().map_err(|e| e.to_string())?,
             };
 
-            let world_path = root.join(&scenario.world);
-
-            let world = world_from_path(&world_path)?;
+            let world = match &scenario.world {
+                scenario::ScenarioWorld::Path(path) => {
+                    let path = root.join(path);
+                    world_from_path(&path)?
+                }
+                scenario::ScenarioWorld::ObjDesc(desc) => {
+                    WorldDescription::Objs(desc.clone()).create()
+                }
+            };
 
             let mut sim = sim::Simulator::new(sim::SimArgs {
                 world,
