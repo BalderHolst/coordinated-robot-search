@@ -40,10 +40,7 @@ impl DebugSoup {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, &DebugType)> {
-        let unnamed_iter = self
-            .0
-            .iter()
-            .flat_map(|inner| inner.unnamed.iter().map(|(key, value)| (key, value)));
+        let unnamed_iter = self.0.iter().flat_map(|inner| inner.unnamed.iter());
         let named_iter = self
             .0
             .iter()

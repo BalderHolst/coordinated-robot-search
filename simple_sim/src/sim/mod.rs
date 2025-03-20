@@ -108,7 +108,7 @@ pub fn run_scenario_headless(
 
         // Store robot data
         for (n, robot_state) in sim.state.robot_states.iter().enumerate() {
-            robot_data[n].push_state(&robot_state, &robot_state.control);
+            robot_data[n].push_state(robot_state, &robot_state.control);
         }
 
         if sim.state.time.as_secs_f32() >= scenario.duration {
@@ -141,7 +141,7 @@ pub fn run_scenario_headless(
         Column::new("coverage".into(), coverage_data),
     ]
     .into_iter()
-    .chain(robot_cols.into_iter())
+    .chain(robot_cols)
     .collect::<Vec<_>>();
 
     DataFrame::new(cols).unwrap()
@@ -188,6 +188,7 @@ pub struct SimArgs {
     pub diagnostics: bool,
 }
 
+#[allow(clippy::type_complexity)]
 pub struct Simulator {
     pub state: SimState,
     robots: Vec<Box<dyn botbrain::Robot + 'static>>,
@@ -243,20 +244,6 @@ impl Simulator {
         }
     }
 
-    pub fn enable_diagnotics(&mut self) {
-        self.state.diagnostics = Some(SimDiagnostics {
-            coverage_grid: ScaledGrid::new(
-                self.world.width(),
-                self.world.height(),
-                COVERAGE_GRID_SCALE,
-            ),
-        });
-    }
-
-    pub fn disable_diagnostics(&mut self) {
-        self.state.diagnostics = None;
-    }
-
     pub fn world(&self) -> &World {
         &self.world
     }
@@ -309,7 +296,7 @@ impl Simulator {
         // Construct the input for the thread pool function
         let input = agents
             .into_iter()
-            .zip(robots.into_iter())
+            .zip(robots)
             .map(|(a, r)| (a, r, args.clone()))
             .collect::<Vec<_>>();
 

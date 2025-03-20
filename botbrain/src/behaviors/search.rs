@@ -288,7 +288,7 @@ impl SearchRobot {
             match &msg.kind {
                 MessageKind::ShapeDiff { shape, diff } => match shape {
                     Shape::Cone(_cone) => todo!(),
-                    Shape::Line(line) => self.update_search_line(&line, *diff),
+                    Shape::Line(line) => self.update_search_line(line, *diff),
                     _ => {}
                 },
                 MessageKind::CamDiff { cone, lidar, diff } => {
@@ -296,7 +296,7 @@ impl SearchRobot {
                     self.others.insert(msg.sender_id, (cone.center, cone.angle));
 
                     // Update the search grid based on the camera data
-                    self.update_search_cone(&cone, &lidar, *diff);
+                    self.update_search_cone(cone, lidar, *diff);
                 }
                 MessageKind::Debug(_) => {}
             }

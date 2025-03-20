@@ -4,14 +4,14 @@ mod avoid_obstacles;
 mod dumb;
 mod search;
 
-use std::{
-    fmt::{self, Display},
-    time::Duration,
-};
+use std::time::Duration;
 
 #[cfg(feature = "cli")]
-use clap::ValueEnum;
-use serde::Deserializer;
+use {
+    clap::ValueEnum,
+    serde::Deserializer,
+    std::fmt::{self, Display},
+};
 
 use super::*;
 
@@ -130,6 +130,7 @@ impl clap::builder::ValueParserFactory for Behavior {
     }
 }
 
+#[cfg(feature = "cli")]
 impl<'de> Deserialize<'de> for Behavior {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -140,6 +141,7 @@ impl<'de> Deserialize<'de> for Behavior {
     }
 }
 
+#[cfg(feature = "cli")]
 impl Serialize for Behavior {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

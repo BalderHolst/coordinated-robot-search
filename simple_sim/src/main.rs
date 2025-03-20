@@ -26,7 +26,7 @@ fn main() -> Result<(), String> {
                     .parent()
                     .ok_or("Scenario file has no parent directory".to_string())?
                     .to_path_buf(),
-                false => PathBuf::from(std::env::current_dir().map_err(|e| e.to_string())?),
+                false => std::env::current_dir().map_err(|e| e.to_string())?,
             };
 
             let world_path = root.join(&scenario.world);
@@ -73,7 +73,7 @@ mod utils {
                 .map_err(|e| format!("Failed to create file '{}': {}", path.display(), e))
         };
 
-        match path.extension().map(|ext| ext.to_str()).flatten() {
+        match path.extension().and_then(|ext| ext.to_str()) {
             Some("json") => JsonWriter::new(file()?)
                 .finish(df)
                 .map_err(|e| format!("Failed to serialize data to JSON: {}", e)),

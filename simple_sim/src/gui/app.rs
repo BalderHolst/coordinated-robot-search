@@ -242,7 +242,7 @@ impl App {
             actual_sps_bg,
             target_sps_bg,
             target_fps: args.target_fps,
-            actual_sps: args.target_sps as f32,
+            actual_sps: args.target_sps,
             global_opts,
             robot_opts,
             textures: AppTextures {
