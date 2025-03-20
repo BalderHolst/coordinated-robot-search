@@ -16,6 +16,8 @@ fn main() -> Result<(), String> {
         cli::Command::Run(args) => gui::run_interactive(args),
         cli::Command::Scenario(args) => {
             let scenario = match args.scenario.clone().contents() {
+                Ok(s) if args.json => serde_json::from_str(&s)
+                    .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
                 Ok(s) => ron::de::from_str::<Scenario>(&s)
                     .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
                 Err(e) => Err(e.to_string())?,
@@ -27,19 +29,8 @@ fn main() -> Result<(), String> {
                     .map_err(|e| format!("Could not write description file: {e}"))?;
             }
 
-            let root = match args.scenario.is_file() {
-                true => PathBuf::from(args.scenario.filename())
-                    .parent()
-                    .ok_or("Scenario file has no parent directory".to_string())?
-                    .to_path_buf(),
-                false => std::env::current_dir().map_err(|e| e.to_string())?,
-            };
-
             let world = match &scenario.world {
-                scenario::ScenarioWorld::Path(path) => {
-                    let path = root.join(path);
-                    world_from_path(&path)?
-                }
+                scenario::ScenarioWorld::Path(path) => world_from_path(path)?,
                 scenario::ScenarioWorld::ObjDesc(desc) => {
                     WorldDescription::Objs(desc.clone()).create()
                 }

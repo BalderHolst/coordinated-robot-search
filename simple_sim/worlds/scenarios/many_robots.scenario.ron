@@ -1,5 +1,6 @@
 Scenario(
-    world: "../objectmap/medium_empty.ron",
+    title: "Many robots",
+    world: "worlds/objectmap/medium_empty.ron",
     behavior: "search",
     duration: 600.0,
     robots: [

@@ -1,14 +1,8 @@
-import os
 import matplotlib.pyplot as plt
 import polars as pl
-
 import botplot as bp
-
-DATA_DIR = "data"
-PLOT_DIR = "plots"
-
-if not os.path.exists(DATA_DIR): os.makedirs(DATA_DIR)
-if not os.path.exists(PLOT_DIR): os.makedirs(PLOT_DIR)
+from math import ceil, pi
+import random
 
 def plot(data_file: str, output_file: str):
 
@@ -22,18 +16,28 @@ def plot(data_file: str, output_file: str):
 
     print(f"Plot saved to {output_file}")
 
-
 if __name__ == "__main__":
-    data_file = f"{DATA_DIR}/simple.parquet"
+    random.seed(42)
 
-    scenario = bp.Scenario(
-        world="../simple_sim/worlds/objectmap/small_empty.ron",
-        behavior="search",
-        duration=800,
-        robots=[bp.Robot(), bp.Robot(x=1.0, angle=3)]
-    )
+    results: list[bp.Result] = []
 
-    bp.run_sim(scenario, data_file)
+    for n in range(1, 11):
+        print(f"Running simulation with {n} robots")
+        robots = [
+                bp.Robot(
+                    x = i %  int(ceil(n)),
+                    y = i // int(ceil(n)),
+                    angle=random.random() * 2 * pi - pi
+                ) for i in range(n)
+        ]
+        scenario = bp.Scenario(
+            title=f"{n} robots",
+            world="simple_sim/worlds/objectmap/small_empty.ron",
+            behavior="search",
+            duration=400,
+            robots=robots,
+        )
 
-    plot(data_file, f"{PLOT_DIR}/simple.png")
+        results.append(bp.run_sim(f"test/{n}", scenario))
 
+    bp.plot_coverage(results, "coverage.png")

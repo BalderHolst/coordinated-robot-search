@@ -1,5 +1,6 @@
 Scenario(
-    world: "../objectmap/small_empty.ron",
+    title: "Simple scenario",
+    world: "worlds/objectmap/small_empty.ron",
     behavior: "search",
     duration: 600.0,
     robots: [

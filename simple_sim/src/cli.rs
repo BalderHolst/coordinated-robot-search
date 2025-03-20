@@ -64,6 +64,10 @@ pub struct ScenarioArgs {
     #[arg(index = 1)]
     pub scenario: clap_stdin::FileOrStdin,
 
+    /// Parse the scenario as json
+    #[arg(long)]
+    pub json: bool,
+
     /// Generate a json file describing the scenario
     #[arg(short, long)]
     pub description: Option<PathBuf>,

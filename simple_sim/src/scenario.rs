@@ -14,6 +14,9 @@ pub enum ScenarioWorld {
 
 #[derive(Serialize, Deserialize)]
 pub struct Scenario {
+    /// The title of the scenario
+    pub title: String,
+
     /// The world to load. Either path to world, or a description of the world
     pub world: ScenarioWorld,
 
