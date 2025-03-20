@@ -332,7 +332,7 @@ impl SearchRobot {
         self.debug(
             "Gradient",
             "Proximity Gradient Range",
-            DebugType::Grid(self.proximity_grid.clone()),
+            DebugType::Radius(PROXIMITY_GRADIENT_RANGE),
         );
         self.debug(
             "",
