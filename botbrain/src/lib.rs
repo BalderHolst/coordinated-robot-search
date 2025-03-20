@@ -16,7 +16,7 @@ pub mod shapes;
 mod utils;
 
 /// A unique identifier for a robot
-#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RobotId(u32);
 
 impl Copy for RobotId {}
@@ -295,6 +295,8 @@ pub struct RobotPose {
     pub pos: Pos2,
     pub angle: f32,
 }
+
+pub type RobotRef = Box<dyn Robot>;
 
 /// A trait representing a robot. This is the interface that all robots must implement.
 ///

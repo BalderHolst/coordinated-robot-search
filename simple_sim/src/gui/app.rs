@@ -16,7 +16,10 @@ use crate::{
 };
 
 use super::camera::Camera;
-use botbrain::{debug::DebugType, RobotParameters, RobotPose};
+use botbrain::{
+    debug::{DebugSoup, DebugType},
+    RobotParameters, RobotPose,
+};
 use eframe::{
     self,
     egui::{
@@ -95,6 +98,8 @@ pub struct App {
     robot_opts: Vec<RobotOptions>,
     textures: AppTextures,
     cursor_state: CursorState,
+    robot_params: Vec<RobotParameters>,
+    robot_soups: Vec<DebugSoup>,
 }
 
 fn grid_to_image<C: Clone + Default>(
@@ -140,6 +145,12 @@ impl App {
         sim.step();
 
         let world = sim.world().clone();
+        let robot_params = sim.robots().iter().map(|r| r.params().clone()).collect();
+        let robot_soups = sim
+            .robots()
+            .iter()
+            .map(|r| r.get_debug_soup().clone())
+            .collect();
 
         let sim_bg = Arc::new(Mutex::new(sim));
         let sim_state = sim_bg.lock().unwrap().state.clone();
@@ -218,7 +229,7 @@ impl App {
             ..Default::default()
         };
 
-        let robot_opts = vec![RobotOptions::default(); sim_state.agents.len()];
+        let robot_opts = vec![RobotOptions::default(); sim_state.robot_states.len()];
 
         Self {
             cam: Camera::new(Pos2::ZERO, 100.0),
@@ -237,20 +248,24 @@ impl App {
                 others: Default::default(),
             },
             cursor_state: CursorState::default(),
+            robot_params,
+            robot_soups,
         }
     }
 
     fn draw_robots(&mut self, painter: &Painter) {
-        for (n, agent) in self.sim_state.agents.iter().enumerate() {
-            let robot_state = &agent.state;
+        for (n, robot_state) in self.sim_state.robot_states.iter().enumerate() {
             let robot_opts = &self.robot_opts[n];
 
-            let RobotParameters {
+            let Some(RobotParameters {
                 diameter, cam_fov, ..
-            } = agent.robot.params();
+            }) = self.robot_params.get(n)
+            else {
+                continue;
+            };
 
-            let robot_pos = self.cam.world_to_viewport(agent.state.pose.pos);
-            let robot_angle = agent.state.pose.angle;
+            let robot_pos = self.cam.world_to_viewport(robot_state.pose.pos);
+            let robot_angle = robot_state.pose.angle;
 
             if self.global_opts.show_only.is_none_or(|f| f == n) {
                 // Draw robot (as a circle)
@@ -306,14 +321,14 @@ impl App {
                 painter.text(
                     robot_pos,
                     Align2::CENTER_CENTER,
-                    agent.robot.id().as_u32().to_string(),
+                    robot_state.id.as_u32().to_string(),
                     font_id,
                     Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
                 );
             }
 
             let mut numbers = 0;
-            for (n, (category, name, data)) in agent.robot.get_debug_soup().iter().enumerate() {
+            for (n, (category, name, data)) in self.robot_soups[n].iter().enumerate() {
                 if !robot_opts.debug_items.contains(&(category, name)) {
                     continue;
                 }
@@ -340,7 +355,7 @@ impl App {
                     DebugType::WeightedVectors(vecs) => {
                         let max_weight = vecs.iter().map(|(_, w)| w.abs()).sum::<f32>();
                         for (vec, weight) in vecs {
-                            let alpha = *weight / max_weight;
+                            let alpha = weight / max_weight;
                             let color = color.gamma_multiply(1.0 - alpha);
                             let end = robot_pos + self.cam.scaled(*vec);
                             painter.arrow(
@@ -395,7 +410,7 @@ impl App {
                                 });
                         for (p, w) in ps {
                             let p = self.cam.world_to_viewport(*p);
-                            let alpha = (*w - min_weight) / (max_weight - min_weight);
+                            let alpha = (w - min_weight) / (max_weight - min_weight);
                             let color = color.gamma_multiply(alpha);
                             painter.circle_filled(p, self.cam.scaled(0.03), color);
                         }
@@ -438,8 +453,8 @@ impl App {
                         for (angle, distance) in rays {
                             let color =
                                 Hsva::new(distance / self.world.width() * 2.0, 0.8, 0.8, 0.5);
-                            let dir = Vec2::angled(robot_angle + *angle);
-                            let start = robot_pos + dir * self.cam.scaled(*diameter / 2.0);
+                            let dir = Vec2::angled(robot_angle + angle);
+                            let start = robot_pos + dir * self.cam.scaled(diameter / 2.0);
                             let end = robot_pos + dir * self.cam.scaled(*distance);
                             painter.line(
                                 vec![start, end],
@@ -532,10 +547,14 @@ impl App {
     }
 
     fn spawn_robot(&mut self, pos: Pos2) {
+        println!("[INFO] Spawning robot at {:?}", pos);
         let mut sim = self.sim_bg.lock().unwrap();
-        let angle = PI / 2.0 * self.sim_state.agents.len() as f32;
+        let angle = PI / 2.0 * self.sim_state.robot_states.len() as f32;
         sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
+        let robot = sim.robots().last().unwrap();
+        self.robot_params.push(robot.params().clone());
+        self.robot_soups.push(robot.get_debug_soup().clone());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
     }
 }
@@ -565,7 +584,7 @@ impl eframe::App for App {
                         self.global_opts.focused = None;
                     });
 
-                    for (n, _) in self.sim_state.agents.iter().enumerate() {
+                    for (n, _) in self.sim_state.robot_states.iter().enumerate() {
                         ui.button(format!("Robot [{n}]")).clicked().then(|| {
                             self.global_opts.focused = Some(n);
                         });
@@ -634,11 +653,10 @@ impl eframe::App for App {
             .show_animated(ctx, self.global_opts.focused.is_some(), |ui| {
                 let n = self.global_opts.focused.unwrap_or(0);
 
-                let Some(agent) = &self.sim_state.agents.get(n) else {
+                let Some(robot_state) = &self.sim_state.robot_states.get(n) else {
                     return;
                 };
 
-                let robot_state = &agent.state;
                 let robot_opts = &mut self.robot_opts[n];
 
                 ui.horizontal(|ui| {
@@ -674,8 +692,7 @@ impl eframe::App for App {
                 ui.heading("Debug Items");
 
                 let mut current_category = "";
-                for (n, (category, name, _items)) in agent.robot.get_debug_soup().iter().enumerate()
-                {
+                for (n, (category, name, _items)) in self.robot_soups[n].iter().enumerate() {
                     if category != current_category {
                         ui.label(category);
                         current_category = category;
@@ -737,7 +754,7 @@ impl eframe::App for App {
                 }
 
                 if let Some(f) = self.global_opts.follow {
-                    let agent_pos = self.sim_state.agents[f].state.pose.pos;
+                    let agent_pos = self.sim_state.robot_states[f].pose.pos;
                     self.cam.set_pos(agent_pos);
                 }
 
@@ -748,6 +765,11 @@ impl eframe::App for App {
                 // Get simulation
                 if let Ok(sim) = self.sim_bg.lock() {
                     self.sim_state = sim.state.clone();
+                    self.robot_soups = sim
+                        .robots()
+                        .iter()
+                        .map(|r| r.get_debug_soup().clone())
+                        .collect();
                 }
 
                 // Handle Keys
@@ -793,9 +815,15 @@ impl eframe::App for App {
                         CursorState::Picking => {
                             // Check if we clicked on a robot
                             let mut found = None;
-                            for (n, agent) in self.sim_state.agents.iter().enumerate() {
-                                let robot_diameter = agent.robot.params().diameter;
-                                if (agent.state.pose.pos - pos).length() < robot_diameter * 0.75 {
+                            for (n, (robot_state, robot_params)) in self
+                                .sim_state
+                                .robot_states
+                                .iter()
+                                .zip(self.robot_params.iter())
+                                .enumerate()
+                            {
+                                let robot_diameter = robot_params.diameter;
+                                if (robot_state.pose.pos - pos).length() < robot_diameter * 0.75 {
                                     self.global_opts.focused = Some(n);
                                     found = Some(n);
                                     break;
