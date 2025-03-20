@@ -732,7 +732,9 @@ impl eframe::App for App {
                 ..Default::default()
             })
             .show(ctx, |ui| {
-                ui.ctx().request_repaint_after_secs(1.0 / self.target_fps);
+                let frame_time = 1.0 / self.target_fps;
+                let frame_start = std::time::Instant::now();
+                ui.ctx().request_repaint_after_secs(frame_time);
 
                 let size = ui.available_size_before_wrap();
                 let (resp, painter) = ui.allocate_painter(size, Sense::click_and_drag());
@@ -761,16 +763,6 @@ impl eframe::App for App {
                 painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                 painter.image(self.textures.world, world_rect, uv, Color32::WHITE);
-
-                // Get simulation
-                if let Ok(sim) = self.sim_bg.lock() {
-                    self.sim_state = sim.state.clone();
-                    self.robot_soups = sim
-                        .robots()
-                        .iter()
-                        .map(|r| r.get_debug_soup().clone())
-                        .collect();
-                }
 
                 // Handle Keys
                 ui.input(|i| {
@@ -842,6 +834,22 @@ impl eframe::App for App {
                 });
 
                 self.draw_robots(&painter);
+
+                // Update simulation state
+                let remaining_time = (frame_time - frame_start.elapsed().as_secs_f32()).max(0.0);
+                let timeout = std::time::Duration::from_secs_f32(remaining_time);
+                let get_sim_start = std::time::Instant::now();
+                while get_sim_start.elapsed() < timeout {
+                    if let Ok(sim) = self.sim_bg.try_lock() {
+                        self.sim_state = sim.state.clone();
+                        self.robot_soups = sim
+                            .robots()
+                            .iter()
+                            .map(|r| r.get_debug_soup().clone())
+                            .collect();
+                        break;
+                    }
+                }
             });
     }
 }
