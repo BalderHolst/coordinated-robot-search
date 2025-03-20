@@ -1,0 +1,53 @@
+\documentclass[a4paper]{article}
+
+\usepackage[margin=25mm]{geometry}
+\usepackage{mathtools} % Math 
+\usepackage{amsmath} 
+\usepackage{amssymb}
+\usepackage{bm} % bold
+\usepackage{caption} 
+\usepackage{subcaption} % sub figures 
+\usepackage[utf8]{inputenc}
+\usepackage{subfiles} % subfiles
+\usepackage[newfloat]{minted} %code snippets
+\usepackage[dvipsnames]{xcolor}
+\usepackage{float}
+\usepackage{footmisc} % Footnote package
+\usepackage[toc,page]{appendix} % create table of contents
+\usepackage{fancyhdr} % Header
+\usepackage[hidelinks]{hyperref} % Titles and other references are hyperlinks
+\usepackage{cleveref}  % cref package for various references, very useful.
+\usepackage{xcolor} % colored text
+\usepackage{setspace} % For setting line spacing
+\usepackage{wrapfig} % Wraps text around figures
+\usepackage{tcolorbox}
+\usepackage{pdfpages}
+
+\setstretch{1.25}
+\setlength{\parindent}{0pt} % No indent on new paragraphs
+
+\usepackage[sorting=none]{biblatex}
+\addbibresource{sources.bib}
+
+\fancyhead{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\rightmark}
+
+\setcounter{tocdepth}{2} % Table of contents depth
+
+\begin{document}
+
+
+\subfile{sections/frontpage}
+\newpage
+\pagestyle{plain}
+\tableofcontents
+\newpage
+\pagestyle{fancy}
+\subfile{sections/introduction} \newpage
+\subfile{sections/conclusion}   \newpage
+
+\printbibliography[heading=bibnumbered]
+
+\end{document}
+

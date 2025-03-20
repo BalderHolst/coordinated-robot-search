@@ -1,0 +1,6 @@
+# This is your local configuration for this document.
+# Options here will override global ones.
+
+main_file = "main.tex"
+compile_cmd = "latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode <main-file>"
+clean_cmd = "latexmk -c <main-file>"
