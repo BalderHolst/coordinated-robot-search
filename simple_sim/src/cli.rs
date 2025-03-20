@@ -64,6 +64,10 @@ pub struct ScenarioArgs {
     #[arg(index = 1)]
     pub scenario: clap_stdin::FileOrStdin,
 
+    /// Generate a json file describing the scenario
+    #[arg(short, long)]
+    pub description: Option<PathBuf>,
+
     /// The output file to write the results to. Specify multiple paths by separating them with a ':'.
     /// Supported formats: JSON, CSV, IPC, Parquet
     #[arg(short, long)]

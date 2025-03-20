@@ -21,6 +21,12 @@ fn main() -> Result<(), String> {
                 Err(e) => Err(e.to_string())?,
             };
 
+            if let Some(desc_path) = &args.description {
+                let json = serde_json::to_string_pretty(&scenario).unwrap();
+                std::fs::write(desc_path, json)
+                    .map_err(|e| format!("Could not write description file: {e}"))?;
+            }
+
             let root = match args.scenario.is_file() {
                 true => PathBuf::from(args.scenario.filename())
                     .parent()
