@@ -1,9 +1,9 @@
+import matplotlib.pyplot as plt
 import os
 import subprocess
 from dataclasses import dataclass
 import polars as pl
 import json
-import matplotlib.pyplot as plt
 
 @dataclass
 class Robot:
@@ -115,5 +115,33 @@ def plot_coverage(results: list[Result], output_file: str, title=None):
     output_file = os.path.join(plot_dir(), output_file)
 
     plt.savefig(output_file)
+    plt.close()
+
+    print(f"Plot saved to '{output_file}'")
+
+def plot_paths(result: Result, output_file: str, title=None):
+    df = result.df()
+    desc = result.desc()
+
+    for i, _ in enumerate(desc["robots"]):
+        x = df[f"robot_{i}/x"]
+        y = df[f"robot_{i}/y"]
+        plt.plot(x, y, label=f"Robot {i}")
+
+    if title is None: title = "Robot paths"
+
+
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.title(title)
+    plt.legend()
+
+
+    output_file = os.path.join(plot_dir(), output_file)
+
+    print(output_file)
+
+    plt.savefig(output_file)
+    plt.close()
 
     print(f"Plot saved to '{output_file}'")
