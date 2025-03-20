@@ -28,6 +28,8 @@
                 git config core.hooksPath .hooks
 
                 export SIMULATOR="$(pwd)/simple_sim/target/release/simple_sim"
+
+                export PYTHONPATH="$PYTHONPATH:$(pwd)/botplot/src/"
             '';
 
         };
