@@ -11,7 +11,6 @@ install(
   DIRECTORY config launch
   DESTINATION share/${PROJECT_NAME}
 )
-
 include(./.r2r/r2r_cargo.cmake)
 
 
@@ -19,6 +18,7 @@ include(./.r2r/r2r_cargo.cmake)
 # put ros package dependencies here.
 r2r_cargo(rcl                    # we need the c ros2 api
           rcl_action             # as of r2r 0.1.0, we also need the action api
+          OpenCV
           geometry_msgs
           sensor_msgs
           tf2_msgs
@@ -36,11 +36,7 @@ endif()
 # Define the list of programs to install
 # From [[bin]] name in cargo.toml
 set(PROGRAMS_LIST
-  tf_topic_combiner
-  ros_agent
-  ros_agent_msg_printer
-  ros2time
-  map_overlay_testing
+  vision
 )
 
 # use a loop to install each program
