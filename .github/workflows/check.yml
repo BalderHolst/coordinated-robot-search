@@ -1,0 +1,53 @@
+name: Check
+on:
+  push:
+    branches: ["**"]
+jobs:
+  fmt:
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [botbrain, simple_sim]
+    runs-on: ubuntu-latest
+    name: ${{ matrix.crate }} / fmt
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: cargo fmt --check
+        run: cargo fmt --check --manifest-path ${{ matrix.crate }}/Cargo.toml
+  clippy:
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [botbrain, simple_sim]
+    runs-on: ubuntu-latest
+    name: ${{ matrix.crate }} / clippy
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          components: clippy
+      - name: cargo clippy
+        run: cargo clippy --manifest-path ${{ matrix.crate }}/Cargo.toml
+  hack:
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [botbrain, simple_sim]
+    runs-on: ubuntu-latest
+    name: ${{ matrix.crate }} / build (feature-powerset)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: cargo install cargo-hack
+        uses: taiki-e/install-action@cargo-hack
+      - name: cargo hack
+        run: cargo hack --feature-powerset check --manifest-path ${{ matrix.crate }}/Cargo.toml
