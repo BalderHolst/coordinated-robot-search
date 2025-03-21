@@ -36,3 +36,5 @@ pub fn agent_msg_to_ros2_msg(msg: botbrain::Message) -> Option<ros_agent_msgs::m
         data: msg.kind.try_into().ok()?,
     })
 }
+
+// pub fn agent_world_to_map
