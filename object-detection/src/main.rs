@@ -1,9 +1,6 @@
 use camera::Camera;
 use opencv::{
-    core::{
-        AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3b, Vec3d, VecN,
-        Vector,
-    },
+    core::{CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3b, Vec3d, VecN, Vector},
     highgui::{self, WindowFlags},
     imgproc::{self, FONT_HERSHEY_SIMPLEX, LineTypes},
 };
@@ -170,14 +167,8 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
             )
             .expect("Mat failed");
 
-            imgproc::cvt_color(
-                &color,
-                &mut final_color,
-                imgproc::COLOR_BGR2HSV,
-                0,
-                AlgorithmHint::ALGO_HINT_DEFAULT,
-            )
-            .expect("cvt_color failed");
+            imgproc::cvt_color(&color, &mut final_color, imgproc::COLOR_BGR2HSV, 0)
+                .expect("cvt_color failed");
             let final_mean_color = final_color.at_2d::<Vec3b>(0, 0).expect("at failed");
             (center, radius, final_mean_color.to_owned())
         })
@@ -204,14 +195,7 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
 fn make_yellow_mask(img: &Mat) -> Mat {
     // Convert to HSV
     let mut hsv = Mat::default();
-    imgproc::cvt_color(
-        &img,
-        &mut hsv,
-        imgproc::COLOR_BGR2HSV,
-        0,
-        AlgorithmHint::ALGO_HINT_DEFAULT,
-    )
-    .expect("cvt_color failed");
+    imgproc::cvt_color(&img, &mut hsv, imgproc::COLOR_BGR2HSV, 0).expect("cvt_color failed");
 
     // Define lower and upper bounds for yellow color
     let lower_yellow = Scalar::new(28.0, 180.0, 200.0, 0.0);
