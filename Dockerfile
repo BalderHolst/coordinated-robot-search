@@ -19,6 +19,7 @@ RUN apt install -y gz-harmonic
 
 RUN apt install -y ros-jazzy-nav2*
 RUN apt install -y ros-jazzy-turtlesim
+RUN apt install -y libopencv-dev clang libclang-dev # For opencv-rust
 
 # Install libc
 RUN apt-get update && apt-get install -y curl build-essential gcc libc6-dev
