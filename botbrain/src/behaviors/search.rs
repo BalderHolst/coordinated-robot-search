@@ -12,10 +12,13 @@ use crate::{
 use super::{
     cast_robot, debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, BehaviorFn,
     CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId,
-    RobotParameters, RobotPose,
+    RobotParameters, RobotPose, RobotRef,
 };
 
-pub const MENU: &[(&str, BehaviorFn)] = &[("search", search)];
+pub const MENU: &[(&str, BehaviorFn)] = &[
+    ("full", behaviors::full),
+    ("no-proximity", behaviors::no_proximity),
+];
 
 /// The range of the lidar sensor at which the robot moves away from an object
 const LIDAR_OBSTACLE_RANGE: f32 = 1.0;
@@ -378,6 +381,39 @@ impl SearchRobot {
 
         Control { speed, steer }
     }
+
+    fn visualize(&mut self) {
+        let soup = &mut self.debug_soup;
+
+        let lidar = &self.lidar;
+        debug::common_routines::show_lidar(soup, lidar);
+
+        let params = &self.params;
+        debug::common_routines::show_cam_range(soup, lidar, params);
+
+        soup.add(
+            "",
+            "Other Positions",
+            DebugType::VectorField(
+                self.others
+                    .values()
+                    .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * self.params.diameter / 2.0))
+                    .collect(),
+            ),
+        );
+
+        soup.add(
+            "Grids",
+            "Search Grid",
+            DebugType::Grid(self.search_grid.clone()),
+        );
+
+        soup.add(
+            "Grids",
+            "Proximity Grid",
+            DebugType::Grid(self.proximity_grid.clone()),
+        );
+    }
 }
 
 /// Calculate the gradient of the heat map around the robot
@@ -458,44 +494,15 @@ fn gradient(
     gradient
 }
 
-/// Search for the object using a gradient on the heat map
-pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
+fn search(
+    robot: &mut RobotRef,
+    time: Duration,
+    contributions: fn(&mut SearchRobot, &mut Vec2),
+) -> Control {
     let robot = cast_robot::<SearchRobot>(robot);
 
     // Debug visualization
-    {
-        let soup = &mut robot.debug_soup;
-
-        let lidar = &robot.lidar;
-        debug::common_routines::show_lidar(soup, lidar);
-
-        let params = &robot.params;
-        debug::common_routines::show_cam_range(soup, lidar, params);
-
-        soup.add(
-            "",
-            "Other Positions",
-            DebugType::VectorField(
-                robot
-                    .others
-                    .values()
-                    .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * robot.params.diameter / 2.0))
-                    .collect(),
-            ),
-        );
-
-        soup.add(
-            "Grids",
-            "Search Grid",
-            DebugType::Grid(robot.search_grid.clone()),
-        );
-
-        soup.add(
-            "Grids",
-            "Proximity Grid",
-            DebugType::Grid(robot.proximity_grid.clone()),
-        );
-    }
+    robot.visualize();
 
     robot.update_search_grid(time);
     robot.update_proximity_grid(time);
@@ -507,13 +514,28 @@ pub fn search(robot: &mut Box<dyn Robot>, time: Duration) -> Control {
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
-    target += robot.search_gradient();
-    target += robot.proximity_gradient();
-    target += robot.lidar();
+    contributions(robot, &mut target);
 
     robot.debug("", "Target", DebugType::Vector(target));
 
     robot.postbox.clean();
 
     robot.control_towards(target)
+}
+
+mod behaviors {
+    use super::*;
+
+    pub fn full(robot: &mut RobotRef, time: Duration) -> Control {
+        search(robot, time, |robot, target| {
+            *target += robot.search_gradient();
+            *target += robot.proximity_gradient();
+        })
+    }
+
+    pub fn no_proximity(robot: &mut RobotRef, time: Duration) -> Control {
+        search(robot, time, |robot, target| {
+            *target += robot.search_gradient();
+        })
+    }
 }
