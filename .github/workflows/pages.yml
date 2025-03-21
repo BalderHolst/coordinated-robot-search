@@ -2,11 +2,12 @@ name: Pages
 
 on:
   push:
-    branches: [ "actions" ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ "actions" ]
+    branches: [ "main" ]
 
 jobs:
+  # Build job
   build:
     runs-on: ubuntu-latest
     steps:
