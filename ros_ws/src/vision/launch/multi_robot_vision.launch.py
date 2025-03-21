@@ -259,6 +259,14 @@ def spawn_robots(context, *args, **kwargs):
                 parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
             )
         )
+        # vision = Node(
+        #     package="vision",
+        #     executable="vision",
+        #     name="vision",
+        #     output="screen",
+        #     namespace=namespace,
+        # )
+        # robot_launch.append(vision)
 
     map_yaml = LaunchConfiguration("map")
     map_server = Node(
