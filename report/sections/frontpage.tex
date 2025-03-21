@@ -1,5 +1,60 @@
 \begin{titlepage}
 
+    \begin{tikzpicture}[remember picture, overlay]
+        \def\radius{8mm}      % Circle radius
+        \def\rayLength{600mm} % Length of rays
+        \def\angleOffset{130} % Offset of rays
+        \def\FOVAngle{120}     % Field of View angle (in degrees)
+        \def\FOVRange{60mm}   % Field of View range (distance from the center)
+
+        \newcommand{\drawRay}[2]{
+            \draw[line width=0.8pt, dotted, black] (center)++(#2+\angleOffset:\radius) --++ (#2+\angleOffset:#1);
+        }
+
+        % Define center of the circle
+        \coordinate (center) at ([xshift=45mm, yshift=-62mm]current page.center);
+
+        % Draw the circle
+        \draw[line width=1.5pt, black] (center) circle [radius=\radius];
+
+        \def\long{600mm}
+
+        \drawRay{120mm}{0}
+        \drawRay{\long}{18}
+        \drawRay{\long}{36}
+        \drawRay{\long}{54}
+        \drawRay{\long}{72}
+        \drawRay{079mm}{90}
+        \drawRay{\long}{108}
+        \drawRay{\long}{126}
+        \drawRay{\long}{144}
+        \drawRay{\long}{162}
+        \drawRay{\long}{180}
+        \drawRay{\long}{198}
+        \drawRay{\long}{216}
+        \drawRay{\long}{234}
+        \drawRay{\long}{252}
+        \drawRay{\long}{270}
+        \drawRay{\long}{288}
+        \drawRay{118mm}{306}
+        \drawRay{115mm}{324}
+        \drawRay{123mm}{342}
+
+
+        % Draw the field of view (FOV)
+        % Angle offset to define where the FOV lines should start
+        \def\FOVStartAngle{\angleOffset+\FOVAngle/2}  % Start of FOV angle
+        \def\FOVEndAngle{\angleOffset-\FOVAngle/2}    % End of FOV angle
+
+        % Draw the two lines defining the FOV
+        \draw[thick, black, line width=1.5pt] (center)++(\FOVStartAngle:\radius) -- ++(\FOVStartAngle:\FOVRange);
+        \draw[thick, black, line width=1.5pt] (center)++(\FOVEndAngle:\radius) -- ++(\FOVEndAngle:\FOVRange);
+
+        % Draw the arc connecting the two lines
+        \draw[thick, black, line width=1.5pt] (center)++(\FOVStartAngle:\FOVRange+\radius) arc (\FOVStartAngle:\FOVEndAngle:\FOVRange+\radius);
+
+    \end{tikzpicture}
+
     \includegraphics[width=0.3\textwidth]{figures/sdu_logo.png} \\[1cm]
 
     {\Huge \textbf{Coordinated Robot Search}} \\[0.5cm]
