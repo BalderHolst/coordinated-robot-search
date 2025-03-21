@@ -1,14 +1,18 @@
 use camera::Camera;
 use opencv::{
     core::{
-        AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3b, Vec3d, Vec3f,
-        Vec3i, Vec4f, VecN, Vector,
+        AlgorithmHint, CV_8UC1, CV_8UC3, Mat, MatTraitConst, Point2i, Scalar, Vec3b, Vec3d, VecN,
+        Vector,
     },
-    gapi::Circle,
     highgui::{self, WindowFlags},
     imgproc::{self, FONT_HERSHEY_SIMPLEX, LineTypes},
 };
 use rand::{Rng, distr::Uniform};
+
+struct Circle {
+    radius: i32,
+    center: Point2i,
+}
 
 mod camera;
 
@@ -111,10 +115,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn find_most_likely_object(
-    contours: Vector<Vector<Point2i>>,
-    img: &Mat,
-) -> Result<opencv::gapi::Circle, String> {
+fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Result<Circle, String> {
     if contours.is_empty() {
         return Err("No contours found".to_string());
     }
@@ -183,20 +184,18 @@ fn find_most_likely_object(
         .min_by_key(|(_center, _radius, color)| {
             let target_color = Vec3b::from_array([30, 255, 255]); // HSV color
             target_color
-                .into_iter()
-                .zip(color.into_iter())
-                .map(|(a, b)| (a as i16 - b as i16).abs())
+                .iter()
+                .zip(color.iter())
+                .map(|(&a, &b)| (a as i16 - b as i16).abs())
                 .sum::<i16>()
         });
 
     // Return the best circle
     if let Some((center, radius, _color)) = best_circle {
-        Ok(Circle::new_def(
-            Point2i::new(center.x as i32, center.y as i32),
-            radius as i32,
-            Scalar::default(),
-        )
-        .expect("Circle failed"))
+        Ok(Circle {
+            center: Point2i::new(center.x as i32, center.y as i32),
+            radius: radius as i32,
+        })
     } else {
         Err("No circle found".to_string())
     }
