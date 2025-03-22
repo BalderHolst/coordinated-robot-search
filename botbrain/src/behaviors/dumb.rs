@@ -2,8 +2,7 @@
 
 use {
     super::{
-        BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
-        RobotParameters, RobotPose,
+        BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotPose,
     },
     emath::Vec2,
 };
@@ -16,7 +15,6 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
 #[derive(Clone, Default)]
 pub struct DumbRobot {
     id: RobotId,
-    params: RobotParameters,
     postbox: Postbox,
     debug_soup: DebugSoup,
 }
@@ -28,14 +26,6 @@ impl Robot for DumbRobot {
 
     fn set_id(&mut self, id: RobotId) {
         self.id = id;
-    }
-
-    fn get_params(&self) -> &RobotParameters {
-        &self.params
-    }
-
-    fn set_params(&mut self, params: RobotParameters) {
-        self.params = params;
     }
 
     fn set_world_size(&mut self, _size: Vec2) {}

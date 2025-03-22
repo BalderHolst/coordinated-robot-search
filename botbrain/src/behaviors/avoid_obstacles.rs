@@ -6,7 +6,7 @@ use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
     BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
-    RobotParameters, RobotPose,
+    RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
@@ -14,7 +14,6 @@ pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
 #[derive(Clone, Default)]
 pub struct AvoidObstaclesRobot {
     id: RobotId,
-    params: RobotParameters,
     postbox: Postbox,
     debug_soup: DebugSoup,
     lidar: LidarData,
@@ -27,14 +26,6 @@ impl Robot for AvoidObstaclesRobot {
 
     fn set_id(&mut self, id: RobotId) {
         self.id = id;
-    }
-
-    fn get_params(&self) -> &RobotParameters {
-        &self.params
-    }
-
-    fn set_params(&mut self, params: RobotParameters) {
-        self.params = params;
     }
 
     fn set_world_size(&mut self, _size: Vec2) {}

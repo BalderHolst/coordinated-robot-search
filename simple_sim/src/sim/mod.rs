@@ -10,8 +10,9 @@ use std::{
 use botbrain::{
     self,
     behaviors::{Behavior, BehaviorFn},
+    params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE, RADIUS},
     scaled_grid::ScaledGrid,
-    CamData, CamPoint, Control, RobotId, RobotParameters, RobotPose, RobotRef,
+    CamData, CamPoint, Control, RobotId, RobotPose,
 };
 use eframe::egui::{Pos2, Vec2};
 use polars::prelude::*;
@@ -359,14 +360,6 @@ fn step_agent(
 
     let dt = *dt;
 
-    let RobotParameters {
-        cam_fov,
-        cam_range,
-        diameter,
-        lidar_range,
-        ..
-    } = *robot.get_params();
-
     // Call the behavior function
     let (control, msgs) = behavior_fn(robot, *time);
 
@@ -408,8 +401,8 @@ fn step_agent(
                     agents,
                     agent_state.pose.pos,
                     agent_state.pose.angle + angle,
-                    diameter / 2.0,
-                    lidar_range,
+                    DIAMETER / 2.0,
+                    LIDAR_RANGE,
                     &[Cell::SearchItem],
                 );
                 botbrain::LidarPoint { angle, distance }
@@ -421,22 +414,22 @@ fn step_agent(
 
     // Update robot camera
     {
-        let angle_step = cam_fov / (CAMERA_RAYS - 1) as f32;
+        let angle_step = CAM_FOV / (CAMERA_RAYS - 1) as f32;
         let points = (0..CAMERA_RAYS)
             .filter_map(|n| {
-                let angle = n as f32 * angle_step - cam_fov / 2.0;
+                let angle = n as f32 * angle_step - CAM_FOV / 2.0;
                 let (distance, cell) = cast_ray(
                     world,
                     agents,
                     agent_state.pose.pos,
                     agent_state.pose.angle + angle,
-                    diameter / 2.0,
-                    cam_range,
+                    DIAMETER / 2.0,
+                    CAM_RANGE,
                     &[],
                 );
                 match cell {
                     Some(Cell::SearchItem) => {
-                        let propability = (cam_range - distance) / cam_range;
+                        let propability = (CAM_RANGE - distance) / CAM_RANGE;
                         Some((n, botbrain::CamPoint { angle, propability }))
                     }
                     _ => None,
@@ -483,9 +476,9 @@ fn step_agent(
     }
 
     // Resolve collisions
-    resolve_robot_collisions(agent_state, robot, agents);
-    resolve_border_collisions(agent_state, robot, world);
-    resolve_world_collisions(agent_state, robot, world);
+    resolve_robot_collisions(agent_state, agents);
+    resolve_border_collisions(agent_state, world);
+    resolve_world_collisions(agent_state, world);
 }
 
 fn cast_ray(
@@ -530,25 +523,23 @@ fn cast_ray(
     (distance - step_size / 2.0, None)
 }
 
-fn resolve_robot_collisions(me: &mut RobotState, robot: &RobotRef, all: &[RobotState]) {
+fn resolve_robot_collisions(me: &mut RobotState, all: &[RobotState]) {
     for other in all {
         if me.id == other.id {
             continue;
         }
-        let diameter = robot.get_params().diameter;
-        if (me.pose.pos - other.pose.pos).length() < diameter {
+        if (me.pose.pos - other.pose.pos).length() < DIAMETER {
             let diff = me.pose.pos - other.pose.pos;
-            let overlap = diameter - diff.length();
+            let overlap = DIAMETER - diff.length();
             let dir = diff.normalized() * overlap / 2.0;
             me.pose.pos += dir;
         }
     }
 }
 
-fn resolve_world_collisions(robot_state: &mut RobotState, robot: &RobotRef, world: &World) {
+fn resolve_world_collisions(robot_state: &mut RobotState, world: &World) {
     // Look in a circle around the robot
-    let robot_diameter = robot.get_params().diameter;
-    let radius = robot_diameter / 2.0 * 1.4 / world.scale();
+    let radius = DIAMETER / 2.0 * 1.4 / world.scale();
     let center = world.world_to_grid(robot_state.pose.pos);
     let mut nudge = Vec2::ZERO;
     let mut nudgers = 0;
@@ -562,7 +553,7 @@ fn resolve_world_collisions(robot_state: &mut RobotState, robot: &RobotRef, worl
             });
             let diff = robot_state.pose.pos - cell_center;
 
-            let overlap = robot_diameter / 2.0 - diff.length() + 0.5 * world.scale();
+            let overlap = DIAMETER / 2.0 - diff.length() + 0.5 * world.scale();
             if overlap < 0.0 {
                 continue;
             }
@@ -584,20 +575,18 @@ fn resolve_world_collisions(robot_state: &mut RobotState, robot: &RobotRef, worl
     }
 }
 
-fn resolve_border_collisions(robot_state: &mut RobotState, robot: &RobotRef, world: &World) {
-    let diameter = robot.get_params().diameter;
+fn resolve_border_collisions(robot_state: &mut RobotState, world: &World) {
     let pos = &mut robot_state.pose.pos;
-    let radius = diameter / 2.0;
-    if pos.x - radius < -world.width() / 2.0 {
-        pos.x = -world.width() / 2.0 + radius;
+    if pos.x - RADIUS < -world.width() / 2.0 {
+        pos.x = -world.width() / 2.0 + RADIUS;
     }
-    if pos.x + radius > world.width() / 2.0 {
-        pos.x = world.width() / 2.0 - radius;
+    if pos.x + RADIUS > world.width() / 2.0 {
+        pos.x = world.width() / 2.0 - RADIUS;
     }
-    if pos.y - radius < -world.height() / 2.0 {
-        pos.y = -world.height() / 2.0 + radius;
+    if pos.y - RADIUS < -world.height() / 2.0 {
+        pos.y = -world.height() / 2.0 + RADIUS;
     }
-    if pos.y + radius > world.height() / 2.0 {
-        pos.y = world.height() / 2.0 - radius;
+    if pos.y + RADIUS > world.height() / 2.0 {
+        pos.y = world.height() / 2.0 - RADIUS;
     }
 }

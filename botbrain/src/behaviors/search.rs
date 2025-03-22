@@ -10,9 +10,9 @@ use crate::{
 };
 
 use super::{
-    cast_robot, debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, BehaviorFn,
-    BehaviorOutput, CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox,
-    Robot, RobotId, RobotParameters, RobotPose, RobotRef,
+    cast_robot, debug, params, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle,
+    BehaviorFn, BehaviorOutput, CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind,
+    Postbox, Robot, RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -45,9 +45,6 @@ const ROBOT_SPACING: f32 = 3.0;
 pub struct SearchRobot {
     /// The id of the robot
     pub id: RobotId,
-
-    /// Parameters of the robot
-    pub params: RobotParameters,
 
     /// The position of the robot
     pub pos: Pos2,
@@ -102,14 +99,6 @@ impl Robot for SearchRobot {
     fn set_world_size(&mut self, size: Vec2) {
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
-    }
-
-    fn get_params(&self) -> &RobotParameters {
-        &self.params
-    }
-
-    fn set_params(&mut self, params: RobotParameters) {
-        self.params = params;
     }
 
     fn get_postbox(&self) -> &super::Postbox {
@@ -176,11 +165,11 @@ impl SearchRobot {
         let step_size = self.search_grid.scale();
         let radius = step_size * 2.0;
         let mut distance = 0.0;
-        while distance < self.params.cam_range - radius / 2.0 {
+        while distance < params::CAM_RANGE - radius / 2.0 {
             let pos = line.start + dir * distance;
 
             // Nearness is in range [0, 1]
-            let nearness = distance / self.params.cam_range;
+            let nearness = distance / params::CAM_RANGE;
 
             for (point, mut cell) in self
                 .search_grid
@@ -215,11 +204,11 @@ impl SearchRobot {
         {
             let cone = Cone {
                 center: self.pos,
-                radius: self.params.cam_range,
+                radius: params::CAM_RANGE,
                 angle: self.angle,
-                fov: self.params.cam_fov,
+                fov: params::CAM_FOV,
             };
-            let lidar = self.lidar.within_fov(self.params.cam_fov);
+            let lidar = self.lidar.within_fov(params::CAM_FOV);
             let diff = -1.0 * SEARCH_GRID_UPDATE_INTERVAL;
             self.update_search_cone(&cone, &lidar, diff);
             self.postbox.post(Message {
@@ -236,7 +225,7 @@ impl SearchRobot {
                 let angle = self.angle + cam_point.angle;
                 let dir = Vec2::angled(angle);
                 let start = self.pos;
-                let end = start + dir * self.params.cam_range;
+                let end = start + dir * params::CAM_RANGE;
                 let line = Line { start, end };
 
                 let diff = CAM_MULTPLIER * cam_point.propability * SEARCH_GRID_UPDATE_INTERVAL;
@@ -259,12 +248,10 @@ impl SearchRobot {
 
         self.proximity_grid.fill(0.0);
 
-        let r = self.params.communication_range;
-
         for (pos, _angle) in self.others.values() {
             let circle = Circle {
                 center: *pos,
-                radius: r,
+                radius: params::COMMUNICATION_RANGE,
             };
 
             for point in self.proximity_grid.iter_circle(&circle).collect::<Vec<_>>() {
@@ -313,8 +300,8 @@ impl SearchRobot {
         let g = gradient(
             self.pos,
             self.angle,
-            self.params.lidar_range,
-            self.params.diameter * 2.0,
+            params::LIDAR_RANGE,
+            params::DIAMETER * 2.0,
             self.lidar.clone(),
             &self.search_grid,
         );
@@ -327,7 +314,7 @@ impl SearchRobot {
             self.pos,
             self.angle,
             PROXIMITY_GRADIENT_RANGE,
-            self.params.diameter * 2.0,
+            params::DIAMETER * 2.0,
             self.lidar.clone(),
             &self.proximity_grid,
         );
@@ -340,14 +327,13 @@ impl SearchRobot {
         self.debug(
             "",
             "Communication Range",
-            DebugType::Radius(self.params.communication_range),
+            DebugType::Radius(params::COMMUNICATION_RANGE),
         );
         g
     }
 
     /// Calculate the lidar contribution to the control
     fn lidar(&mut self) -> Vec2 {
-        assert!(self.params.lidar_range >= LIDAR_OBSTACLE_RANGE);
         let mut lidar_contribution = Vec2::ZERO;
         {
             let mut total_weight: f32 = 0.0;
@@ -388,8 +374,7 @@ impl SearchRobot {
         let lidar = &self.lidar;
         debug::common_routines::show_lidar(soup, lidar);
 
-        let params = &self.params;
-        debug::common_routines::show_cam_range(soup, lidar, params);
+        debug::common_routines::show_cam_range(soup, lidar);
 
         soup.add(
             "",
@@ -397,7 +382,7 @@ impl SearchRobot {
             DebugType::VectorField(
                 self.others
                     .values()
-                    .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * self.params.diameter / 2.0))
+                    .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * params::DIAMETER / 2.0))
                     .collect(),
             ),
         );

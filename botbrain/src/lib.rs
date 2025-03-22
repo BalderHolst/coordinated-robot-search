@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{any::Any, collections::HashSet, f32::consts::PI};
+use std::{any::Any, collections::HashSet};
 
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
@@ -11,6 +11,7 @@ use utils::normalize_angle;
 pub mod behaviors;
 pub mod debug;
 pub mod grid;
+pub mod params;
 pub mod scaled_grid;
 pub mod shapes;
 mod utils;
@@ -169,6 +170,8 @@ impl LidarData {
 
 #[test]
 fn test_lidar_interpolate() {
+    use std::f32::consts::PI;
+
     let points = vec![
         LidarPoint {
             angle: -PI / 2.0,
@@ -195,43 +198,6 @@ fn test_lidar_interpolate() {
 pub struct Control {
     pub speed: f32,
     pub steer: f32,
-}
-
-/// Parameters which are constant for a type of robot
-#[derive(Clone)]
-pub struct RobotParameters {
-    /// Size of the robot
-    pub diameter: f32,
-
-    /// Range (min and max distance) of camera object detection (in meters)
-    pub cam_range: f32,
-
-    /// Field of view of the camera
-    pub cam_fov: f32,
-
-    /// Range of the lidar sensor (in meters)
-    pub lidar_range: f32,
-
-    /// Range of communication (in meters)
-    communication_range: f32,
-}
-
-impl RobotParameters {
-    fn turtlebot4() -> Self {
-        Self {
-            diameter: 0.5,
-            cam_range: 3.0,
-            cam_fov: PI / 2.0,
-            lidar_range: 5.0,
-            communication_range: 30.0,
-        }
-    }
-}
-
-impl Default for RobotParameters {
-    fn default() -> Self {
-        Self::turtlebot4()
-    }
 }
 
 /// Manages incoming and outgoing messages
@@ -314,12 +280,6 @@ pub trait Robot: Send + Sync {
 
     /// Set the size of the world
     fn set_world_size(&mut self, size: Vec2);
-
-    /// Get the parameters of the robot
-    fn get_params(&self) -> &RobotParameters;
-
-    /// Set the parameters of the robot
-    fn set_params(&mut self, params: RobotParameters);
 
     /// Get the robot postbox
     fn get_postbox(&self) -> &Postbox;

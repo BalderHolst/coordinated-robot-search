@@ -8,6 +8,8 @@ use std::{
     thread,
 };
 
+use botbrain::params::{CAM_FOV, DIAMETER, RADIUS};
+
 use crate::{
     bind_down, bind_pressed,
     cli::RunArgs,
@@ -18,7 +20,7 @@ use crate::{
 use super::camera::Camera;
 use botbrain::{
     debug::{DebugSoup, DebugType},
-    RobotParameters, RobotPose,
+    RobotPose,
 };
 use eframe::{
     self,
@@ -100,7 +102,6 @@ pub struct App {
     robot_opts: Vec<RobotOptions>,
     textures: AppTextures,
     cursor_state: CursorState,
-    robot_params: Vec<RobotParameters>,
     robot_soups: Vec<DebugSoup>,
 }
 
@@ -147,11 +148,6 @@ impl App {
         sim.step();
 
         let world = sim.world().clone();
-        let robot_params = sim
-            .robots()
-            .iter()
-            .map(|r| r.get_params().clone())
-            .collect();
         let robot_soups = sim
             .robots()
             .iter()
@@ -254,7 +250,6 @@ impl App {
                 others: Default::default(),
             },
             cursor_state: CursorState::default(),
-            robot_params,
             robot_soups,
         }
     }
@@ -282,13 +277,6 @@ impl App {
         for (n, robot_state) in self.sim_state.robot_states.iter().enumerate() {
             let robot_opts = &self.robot_opts[n];
 
-            let Some(RobotParameters {
-                diameter, cam_fov, ..
-            }) = self.robot_params.get(n)
-            else {
-                continue;
-            };
-
             let robot_pos = self.cam.world_to_viewport(robot_state.pose.pos);
             let robot_angle = robot_state.pose.angle;
 
@@ -301,7 +289,7 @@ impl App {
                     };
                     painter.circle(
                         robot_pos,
-                        self.cam.scaled(diameter / 2.0),
+                        self.cam.scaled(DIAMETER / 2.0),
                         ROBOT_COLOR,
                         stroke,
                     );
@@ -311,27 +299,27 @@ impl App {
                 const FOV_INIDICATOR_LEN: f32 = 0.1;
                 const FOV_INIDICATOR_WIDTH: f32 = 0.02;
                 {
-                    let left = Vec2::angled(robot_angle - cam_fov / 2.0);
+                    let left = Vec2::angled(robot_angle - CAM_FOV / 2.0);
                     painter.line_segment(
                         [
                             robot_pos,
-                            robot_pos + left * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
+                            robot_pos + left * self.cam.scaled(DIAMETER / 2.0 + FOV_INIDICATOR_LEN),
                         ],
                         PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                     );
-                    let right = Vec2::angled(robot_angle + cam_fov / 2.0);
+                    let right = Vec2::angled(robot_angle + CAM_FOV / 2.0);
                     painter.line_segment(
                         [
                             robot_pos,
                             robot_pos
-                                + right * self.cam.scaled(diameter / 2.0 + FOV_INIDICATOR_LEN),
+                                + right * self.cam.scaled(DIAMETER / 2.0 + FOV_INIDICATOR_LEN),
                         ],
                         PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
                     );
                 }
 
                 // Draw velocity vector (arrow)
-                let vel = Vec2::angled(robot_angle) * (robot_state.vel + diameter * 0.5);
+                let vel = Vec2::angled(robot_angle) * (robot_state.vel + DIAMETER * 0.5);
                 let end = robot_pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
                 let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
@@ -480,7 +468,7 @@ impl App {
                             let color =
                                 Hsva::new(distance / self.world.width() * 2.0, 0.8, 0.8, 0.5);
                             let dir = Vec2::angled(robot_angle + angle);
-                            let start = robot_pos + dir * self.cam.scaled(diameter / 2.0);
+                            let start = robot_pos + dir * self.cam.scaled(RADIUS);
                             let end = robot_pos + dir * self.cam.scaled(*distance);
                             painter.line(
                                 vec![start, end],
@@ -589,7 +577,6 @@ impl App {
         sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
         let robot = sim.robots().last().unwrap();
-        self.robot_params.push(robot.get_params().clone());
         self.robot_soups.push(robot.get_debug_soup().clone());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
     }
@@ -852,15 +839,8 @@ impl eframe::App for App {
                         CursorState::Picking => {
                             // Check if we clicked on a robot
                             let mut found = None;
-                            for (n, (robot_state, robot_params)) in self
-                                .sim_state
-                                .robot_states
-                                .iter()
-                                .zip(self.robot_params.iter())
-                                .enumerate()
-                            {
-                                let robot_diameter = robot_params.diameter;
-                                if (robot_state.pose.pos - pos).length() < robot_diameter * 0.75 {
+                            for (n, robot_state) in self.sim_state.robot_states.iter().enumerate() {
+                                if (robot_state.pose.pos - pos).length() < DIAMETER * 0.75 {
                                     self.global_opts.focused = Some(n);
                                     found = Some(n);
                                     break;

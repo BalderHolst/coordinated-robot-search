@@ -140,7 +140,7 @@ pub enum DebugType {
 pub mod common_routines {
     use emath::Vec2;
 
-    use crate::{DebugSoup, LidarData, RobotParameters};
+    use crate::{params, DebugSoup, LidarData};
 
     use super::DebugType;
 
@@ -152,21 +152,17 @@ pub mod common_routines {
         soup.add("Sensors", "Lidar", DebugType::RobotRays(rays));
     }
 
-    pub(crate) fn show_cam_range(
-        soup: &mut DebugSoup,
-        lidar: &LidarData,
-        params: &RobotParameters,
-    ) {
+    pub(crate) fn show_cam_range(soup: &mut DebugSoup, lidar: &LidarData) {
         if !soup.is_active() {
             return;
         }
 
         const CAM_RANGE_STEPS: usize = 20;
-        let step_size = params.cam_fov / CAM_RANGE_STEPS as f32;
+        let step_size = params::CAM_FOV / CAM_RANGE_STEPS as f32;
         let points = (0..CAM_RANGE_STEPS)
             .map(|i| {
-                let angle = i as f32 * step_size - params.cam_fov / 2.0;
-                let dist = lidar.interpolate(angle).min(params.cam_range);
+                let angle = i as f32 * step_size - params::CAM_FOV / 2.0;
+                let dist = lidar.interpolate(angle).min(params::CAM_RANGE);
                 Vec2::angled(angle) * dist
             })
             .collect();
