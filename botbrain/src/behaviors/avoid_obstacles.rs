@@ -5,8 +5,8 @@ use emath::Vec2;
 use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
-    BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotParameters,
-    RobotPose,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
+    RobotParameters, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
@@ -72,7 +72,7 @@ impl Robot for AvoidObstaclesRobot {
 }
 
 /// Avoid obstacles by steering away from the closest point in front of the robot.
-pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
+pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
     let robot = cast_robot::<AvoidObstaclesRobot>(robot);
 
     const MIN_DISTANCE: f32 = 3.0;
@@ -111,5 +111,7 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
     }
 
     robot.postbox.clean();
-    Control { speed, steer }
+    let msgs = robot.postbox.empty();
+
+    (Control { speed, steer }, msgs)
 }

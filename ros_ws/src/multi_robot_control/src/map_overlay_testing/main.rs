@@ -265,7 +265,7 @@ impl RosAgent {
                 continue;
             }
 
-            let control = (self.behavior.behavior_fn())(&mut self.robot, time);
+            let (control, _) = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();

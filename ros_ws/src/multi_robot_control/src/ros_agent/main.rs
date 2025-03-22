@@ -168,6 +168,16 @@ impl RosAgent {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
 
+            let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
+            if time.is_zero() {
+                // Simulated time is not available yet
+                log_warn!(&self.nl, "Time not ready yet: {:?}", time);
+                std::thread::sleep(std::time::Duration::from_secs(1));
+                continue;
+            }
+
+            let (control, outgoing_msgs) = (self.behavior.behavior_fn())(&mut self.robot, time);
+
             // Set inputs for robot
             {
                 // Set the robot lidar input
@@ -196,13 +206,11 @@ impl RosAgent {
                         }
                     });
 
-                    let postbox = self.robot.get_postbox_mut();
-
                     // Deposit incoming msgs in the robot postbox
-                    postbox.deposit(msgs);
+                    self.robot.input_msgs(msgs.collect());
 
                     // Empty the outgoing messages from the robot postbox and send them to via ROS2
-                    postbox.empty().into_iter().for_each(|msg| {
+                    outgoing_msgs.into_iter().for_each(|msg| {
                         if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
                             self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
                         } else {
@@ -211,16 +219,6 @@ impl RosAgent {
                     });
                 }
             }
-
-            let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
-            if time.is_zero() {
-                // Simulated time is not available yet
-                log_warn!(&self.nl, "Time not ready yet: {:?}", time);
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                continue;
-            }
-
-            let control = (self.behavior.behavior_fn())(&mut self.robot, time);
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();

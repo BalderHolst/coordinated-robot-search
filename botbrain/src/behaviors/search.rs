@@ -11,8 +11,8 @@ use crate::{
 
 use super::{
     cast_robot, debug, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle, BehaviorFn,
-    CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox, Robot, RobotId,
-    RobotParameters, RobotPose, RobotRef,
+    BehaviorOutput, CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind, Postbox,
+    Robot, RobotId, RobotParameters, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -498,7 +498,7 @@ fn search(
     robot: &mut RobotRef,
     time: Duration,
     contributions: fn(&mut SearchRobot, &mut Vec2),
-) -> Control {
+) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
 
     // Debug visualization
@@ -520,20 +520,21 @@ fn search(
 
     robot.postbox.clean();
 
-    robot.control_towards(target)
+    let msgs = robot.postbox.empty();
+    (robot.control_towards(target), msgs)
 }
 
 mod behaviors {
     use super::*;
 
-    pub fn full(robot: &mut RobotRef, time: Duration) -> Control {
+    pub fn full(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(robot, time, |robot, target| {
             *target += robot.search_gradient();
             *target += robot.proximity_gradient();
         })
     }
 
-    pub fn no_proximity(robot: &mut RobotRef, time: Duration) -> Control {
+    pub fn no_proximity(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(robot, time, |robot, target| {
             *target += robot.search_gradient();
         })

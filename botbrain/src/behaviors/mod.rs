@@ -15,7 +15,8 @@ use {
 
 use super::*;
 
-pub type BehaviorFn = fn(&mut Box<dyn Robot>, Duration) -> Control;
+pub type BehaviorOutput = (Control, Vec<Message>);
+pub type BehaviorFn = fn(&mut Box<dyn Robot>, Duration) -> BehaviorOutput;
 
 /// The kind of robot. Behaviors can only be run the robot kind they were designed for.
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]

@@ -72,16 +72,21 @@ impl Robot for DumbRobot {
 pub mod behaviors {
     use std::time::Duration;
 
+    use crate::behaviors::BehaviorOutput;
+
     use super::*;
 
-    pub fn nothing(_robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
-        Control::default()
+    pub fn nothing(_robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
+        (Control::default(), vec![])
     }
 
-    pub fn circle(_robot: &mut Box<dyn Robot>, _time: Duration) -> Control {
-        Control {
-            speed: 1.0,
-            steer: 0.5,
-        }
+    pub fn circle(_robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
+        (
+            Control {
+                speed: 1.0,
+                steer: 0.5,
+            },
+            vec![],
+        )
     }
 }

@@ -367,9 +367,11 @@ fn step_agent(
         ..
     } = *robot.get_params();
 
+    // Call the behavior function
+    let (control, msgs) = behavior_fn(robot, *time);
+
     {
-        // Call the behavior function
-        agent_state.control = behavior_fn(robot, *time);
+        agent_state.control = control;
         agent_state.vel = agent_state.control.speed * SPEED_MULTIPLIER;
         agent_state.avel = agent_state.control.steer * STEER_MULTIPLIER;
 
@@ -388,7 +390,7 @@ fn step_agent(
     // Update postboxes
     {
         // Send messages
-        for msg in robot.get_postbox_mut().empty() {
+        for msg in msgs {
             msg_send_tx.send(msg).unwrap();
         }
 
