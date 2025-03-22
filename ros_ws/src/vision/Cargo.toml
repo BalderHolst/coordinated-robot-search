@@ -20,3 +20,4 @@ opencv = { version = "0.94", features = ["clang-runtime"] }
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
 rand = "0.9"
+botbrain = { path = "../../../botbrain/" }

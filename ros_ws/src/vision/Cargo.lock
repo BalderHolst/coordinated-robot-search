@@ -91,6 +91,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "botbrain"
+version = "0.1.0"
+dependencies = [
+ "emath",
+ "serde",
+]
+
+[[package]]
 name = "bytes"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -208,6 +216,15 @@ name = "either"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48c757948c5ede0e46177b7add2e67155f70e33c07fea8284df6576da70b3719"
+
+[[package]]
+name = "emath"
+version = "0.30.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c4fe73c1207b864ee40aa0b0c038d6092af1030744678c60188a05c28553515d"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "equivalent"
@@ -489,6 +506,7 @@ dependencies = [
 name = "multi_robot_control"
 version = "0.1.0"
 dependencies = [
+ "botbrain",
  "futures",
  "opencv",
  "r2r",
