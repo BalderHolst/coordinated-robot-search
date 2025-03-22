@@ -22,7 +22,7 @@ pub struct DumbRobot {
 }
 
 impl Robot for DumbRobot {
-    fn id(&self) -> &RobotId {
+    fn get_id(&self) -> &RobotId {
         &self.id
     }
 

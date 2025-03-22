@@ -91,7 +91,7 @@ pub struct SearchRobot {
 }
 
 impl Robot for SearchRobot {
-    fn id(&self) -> &RobotId {
+    fn get_id(&self) -> &RobotId {
         &self.id
     }
 

@@ -21,7 +21,7 @@ pub struct AvoidObstaclesRobot {
 }
 
 impl Robot for AvoidObstaclesRobot {
-    fn id(&self) -> &RobotId {
+    fn get_id(&self) -> &RobotId {
         &self.id
     }
 

@@ -307,7 +307,7 @@ pub type RobotRef = Box<dyn Robot>;
 /// called before calling a behavior function on the robot.
 pub trait Robot: Send + Sync {
     /// Get the id of the robot
-    fn id(&self) -> &RobotId;
+    fn get_id(&self) -> &RobotId;
 
     /// Set the id of the robot
     fn set_id(&mut self, id: RobotId);
@@ -329,13 +329,13 @@ pub trait Robot: Send + Sync {
 
     /// Post a message to the other robots
     fn post(&mut self, kind: MessageKind) {
-        let sender_id = *self.id();
+        let sender_id = *self.get_id();
         self.get_postbox_mut().post(Message { sender_id, kind });
     }
 
     /// Receive messages from the other robots
     fn recv(&mut self) -> Vec<(usize, &Message)> {
-        let id = *self.id();
+        let id = *self.get_id();
         self.get_postbox_mut()
             .recv()
             .filter(move |(_, msg)| msg.sender_id != id)

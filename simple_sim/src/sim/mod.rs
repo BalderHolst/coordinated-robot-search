@@ -387,7 +387,7 @@ fn step_agent(
 
     // Update postboxes
     {
-        let robot_id = *robot.id();
+        let robot_id = *robot.get_id();
         let postbox = robot.get_postbox_mut();
 
         // Send messages
