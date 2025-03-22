@@ -104,7 +104,7 @@ impl Robot for SearchRobot {
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
     }
 
-    fn params(&self) -> &RobotParameters {
+    fn get_params(&self) -> &RobotParameters {
         &self.params
     }
 

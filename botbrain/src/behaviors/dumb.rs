@@ -30,7 +30,7 @@ impl Robot for DumbRobot {
         self.id = id;
     }
 
-    fn params(&self) -> &RobotParameters {
+    fn get_params(&self) -> &RobotParameters {
         &self.params
     }
 

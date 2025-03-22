@@ -147,7 +147,11 @@ impl App {
         sim.step();
 
         let world = sim.world().clone();
-        let robot_params = sim.robots().iter().map(|r| r.params().clone()).collect();
+        let robot_params = sim
+            .robots()
+            .iter()
+            .map(|r| r.get_params().clone())
+            .collect();
         let robot_soups = sim
             .robots()
             .iter()
@@ -585,7 +589,7 @@ impl App {
         sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
         let robot = sim.robots().last().unwrap();
-        self.robot_params.push(robot.params().clone());
+        self.robot_params.push(robot.get_params().clone());
         self.robot_soups.push(robot.get_debug_soup().clone());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
     }

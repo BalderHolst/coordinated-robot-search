@@ -365,7 +365,7 @@ fn step_agent(
         diameter,
         lidar_range,
         ..
-    } = *robot.params();
+    } = *robot.get_params();
 
     {
         // Call the behavior function
@@ -541,7 +541,7 @@ fn resolve_robot_collisions(me: &mut RobotState, robot: &RobotRef, all: &[RobotS
         if me.id == other.id {
             continue;
         }
-        let diameter = robot.params().diameter;
+        let diameter = robot.get_params().diameter;
         if (me.pose.pos - other.pose.pos).length() < diameter {
             let diff = me.pose.pos - other.pose.pos;
             let overlap = diameter - diff.length();
@@ -553,7 +553,7 @@ fn resolve_robot_collisions(me: &mut RobotState, robot: &RobotRef, all: &[RobotS
 
 fn resolve_world_collisions(robot_state: &mut RobotState, robot: &RobotRef, world: &World) {
     // Look in a circle around the robot
-    let robot_diameter = robot.params().diameter;
+    let robot_diameter = robot.get_params().diameter;
     let radius = robot_diameter / 2.0 * 1.4 / world.scale();
     let center = world.world_to_grid(robot_state.pose.pos);
     let mut nudge = Vec2::ZERO;
@@ -591,7 +591,7 @@ fn resolve_world_collisions(robot_state: &mut RobotState, robot: &RobotRef, worl
 }
 
 fn resolve_border_collisions(robot_state: &mut RobotState, robot: &RobotRef, world: &World) {
-    let diameter = robot.params().diameter;
+    let diameter = robot.get_params().diameter;
     let pos = &mut robot_state.pose.pos;
     let radius = diameter / 2.0;
     if pos.x - radius < -world.width() / 2.0 {

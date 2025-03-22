@@ -316,7 +316,7 @@ pub trait Robot: Send + Sync {
     fn set_world_size(&mut self, size: Vec2);
 
     /// Get the parameters of the robot
-    fn params(&self) -> &RobotParameters;
+    fn get_params(&self) -> &RobotParameters;
 
     /// Set the parameters of the robot
     fn set_params(&mut self, params: RobotParameters);
