@@ -31,7 +31,10 @@ impl RosAgent {
         // Subscribe to map
         let image = Arc::new(Mutex::new(None));
         let mut sub_image = node
-            .subscribe::<sensor_msgs::msg::Image>("rgbd_camera/image", QosProfile::default())
+            .subscribe::<sensor_msgs::msg::Image>(
+                "rgbd_camera/image",
+                QosProfile::default().keep_last(1),
+            )
             .unwrap();
         {
             let nl = nl.clone();
@@ -59,13 +62,6 @@ impl RosAgent {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
             if let Some(mut image) = self.image.lock().unwrap().take() {
-                std::thread::sleep(Duration::from_secs(1));
-                println!("Image info: h={}, w={}", image.height, image.width);
-                println!(
-                    "Image info: step={}, encoding={}, big_image={}",
-                    image.step, image.encoding, image.is_bigendian
-                );
-                println!("Image info: data={}", image.data.len());
                 if let Ok(img) = sensor_image_to_opencv_image(&mut image) {
                     highgui::imshow("robot_0", &img).unwrap();
                     highgui::wait_key(1).unwrap();
