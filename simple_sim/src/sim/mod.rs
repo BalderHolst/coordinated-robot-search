@@ -387,21 +387,13 @@ fn step_agent(
 
     // Update postboxes
     {
-        let robot_id = *robot.get_id();
-        let postbox = robot.get_postbox_mut();
-
         // Send messages
-        for msg in postbox.empty() {
+        for msg in robot.get_postbox_mut().empty() {
             msg_send_tx.send(msg).unwrap();
         }
 
         // Receive messages
-        postbox.deposit(
-            pending_messages
-                .iter()
-                .filter(|m| m.sender_id != robot_id)
-                .cloned(),
-        );
+        robot.input_msgs(pending_messages.clone());
     }
 
     // Update lidar data

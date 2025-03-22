@@ -367,6 +367,13 @@ pub trait Robot: Send + Sync {
     /// Input data from the lidar
     fn input_lidar(&mut self, lidar: LidarData);
 
+    /// Input a messages from other robots
+    fn input_msgs(&mut self, msgs: Vec<Message>) {
+        let id = *self.get_id();
+        self.get_postbox_mut()
+            .deposit(msgs.into_iter().filter(|msg| msg.sender_id != id));
+    }
+
     /// Clone a dynamic instance of the [Robot] trait
     fn clone_box(&self) -> Box<dyn Robot>;
 
