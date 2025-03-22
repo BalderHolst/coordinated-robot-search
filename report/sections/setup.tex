@@ -2,15 +2,60 @@
 \label{sec:setup}
 
 \subsection{Hardware}
-% Describe the robot we are designing for
-% Describe the sensors available
-% Describe that we assume the robot to have some sort of communication method
+% TODO: Describe the robot we are designing for
+% TODO: Describe the sensors available
+% TODO: Describe that we assume the robot to have some sort of communication method
 
 \subsection{Software Structure}
-% Create a nice diagram
-    % Clearly show where ROS is used (and not used)
+% TODO: Create a nice diagram
+    % TODO: Clearly show where ROS is used (and not used)
+
+\section{Software Structure}
+The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
+simulator, and a ROS2 environment.
+
+\subsection{Robot Behavior}
+The robot behaviors are implemented in the botbrain rust crate. This crate defines the Robot interface
+which is the only way for outside crates to interact with a robot’s internal state (see \cref{fig:robot-interface}).
+
+\begin{figure}[H]
+    \begin{center}
+        \begin{minted}[autogobble]{rust}
+            pub trait Robot {
+                fn set_id(&mut self, id: RobotId);                 // Set the id of the robot
+                fn set_params(&mut self, params: RobotParameters); // Set the parameters of the robot
+                fn set_world_size(&mut self, size: Vec2);          // Set the size of the world
+
+                fn input_pose(&mut self, pose: RobotPose);         // Input the angle of the robot
+                fn input_cam(&mut self, cam: CamData);             // Input data from the camera
+                fn input_lidar(&mut self, lidar: LidarData);       // Input data from the lidar
+                fn input_msgs(&mut self, msgs: Vec<Message>);      // Input messages from other robots
+
+                fn get_id(&self) -> &RobotId;                      // Get the id of the robot
+                fn get_params(&self) -> &RobotParameters;          // Get the parameters of the robot
+                ...
+            }
+        \end{minted}
+    \end{center}
+    \caption{Methods of the \texttt{Robot} interface.}\label{fig:robot-interface}
+\end{figure}
+
+Interface methods prefixed with \texttt{set} are used to set up the internal state of the robot and should be called after creating a robot and before any other methods. The \texttt{input} prefix is used in functions which should be called as often as possible to update the world view of the robot. \texttt{get}-methods do not change the state of the robot and may be called at any time. Notice that there is no method which "runs" the robot to generate a control signal. This is because a \texttt{Robot} only represents the robot state, not the algorithm which uses that state to generate a control output. To generate a control output, the dynamic \texttt{Robot} must be passed to a behavior function as defined in \cref{fig:behavior-fn}. This function is then free to read and write to the robot state, to generate a control signal as well as a list of messages which should be sent to the other robots.
+
+\begin{figure}[H]
+    \begin{center}
+        \begin{minted}[autogobble]{rust}
+            pub type BehaviorFn = fn(&mut Box<dyn Robot>, Duration) -> (Control, Vec<Message>);
+        \end{minted}
+    \end{center}
+    \caption{Definition of a behavior function.}\label{fig:behavior-fn}
+\end{figure}
+
+Separating the robot state from its behavior allows multiple behaviors for the same internal state, which is useful for comparing different algorithms.
+
+\subsection{Using Rust}
 
 \subsection{Two Simulators}
-% Why two simulators?
-% Shared behavior
-% Performance differences
+% TODO: Why two simulators?
+% TODO: Shared behavior
+% TODO: Performance differences
