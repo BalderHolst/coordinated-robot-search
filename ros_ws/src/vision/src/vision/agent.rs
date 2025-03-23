@@ -7,7 +7,9 @@ use std::{
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use r2r::{self, QosProfile, log_info, sensor_msgs};
 
-use crate::camera::Camera;
+use camera::Camera;
+
+use crate::camera;
 
 pub struct RosAgent {
     node: r2r::Node,
@@ -64,8 +66,8 @@ impl RosAgent {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
             if let Some(mut image) = self.image.lock().unwrap().take() {
-                if let Ok(img) = crate::camera::sensor_image_to_opencv_image(&mut image) {
-                    highgui::imshow("robot_0", &img).unwrap();
+                if let Ok(img) = camera::sensor_image_to_opencv_image(&mut image) {
+                    let _ = camera::find_search_objects(&img);
                     highgui::wait_key(1).unwrap();
                 } else {
                     println!("Could not convert image to opencv image");

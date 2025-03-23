@@ -1,5 +1,6 @@
 use opencv::{
     core::{CV_8UC1, CV_8UC3, Point2i, Scalar, Vec3b, VecN, Vector},
+    highgui,
     imgproc::{self, LineTypes},
     prelude::*,
 };
@@ -72,13 +73,15 @@ pub fn sensor_image_to_opencv_image(
 pub fn find_search_objects(image: &Mat) -> Result<botbrain::CamData, String> {
     let masked_img = apply_yellow_mask(image);
     if let Ok(contours) = find_contours(&masked_img) {
-        if let Ok(seach_objects) = find_most_likely_object(contours, &masked_img) {
+        if let Ok(_seach_objects) = find_most_likely_object(contours, &masked_img) {
             // TODO: Return CamData
+            Ok(botbrain::CamData::default())
+        } else {
+            Err("No object found".to_string())
         }
     } else {
-        return Err("No contours found".to_string());
+        Err("No contours found".to_string())
     }
-    todo!();
 }
 
 fn apply_yellow_mask(img: &Mat) -> Mat {
@@ -128,6 +131,9 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
     if contours.is_empty() {
         return Err("No contours found".to_string());
     }
+    let mut masked_circles =
+        Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC3, Scalar::all(0.0))
+            .expect("Mat failed");
     // Find the largest
     let best_circle = contours
         .iter()
@@ -138,6 +144,7 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
                 .expect("min_enclosing_circle failed");
             (center, radius)
         })
+        .filter(|(_center, radius)| *radius > 10.0)
         .map(|(center, radius)| {
             // Make a mask
             let mut mask = opencv::core::Mat::new_rows_cols_with_default(
@@ -184,6 +191,18 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
             let final_mean_color = final_color.at_2d::<Vec3b>(0, 0).expect("at failed");
             (center, radius, final_mean_color.to_owned())
         })
+        .inspect(|(center, radius, _color)| {
+            imgproc::circle(
+                &mut masked_circles,
+                Point2i::new(center.x as i32, center.y as i32),
+                *radius as i32,
+                Scalar::all(255.0),
+                -1,
+                LineTypes::LINE_8 as i32,
+                0,
+            )
+            .expect("circle failed");
+        })
         .min_by_key(|(_center, _radius, color)| {
             let target_color = Vec3b::from_array([30, 255, 255]); // HSV color
             target_color
@@ -192,6 +211,7 @@ fn find_most_likely_object(contours: Vector<Vector<Point2i>>, img: &Mat) -> Resu
                 .map(|(&a, &b)| (a as i16 - b as i16).abs())
                 .sum::<i16>()
         });
+    highgui::imshow("circles", &masked_circles).unwrap();
 
     // Return the best circle
     if let Some((center, radius, _color)) = best_circle {
