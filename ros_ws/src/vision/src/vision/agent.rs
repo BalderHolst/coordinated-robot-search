@@ -73,7 +73,7 @@ impl RosAgent {
             self.pool.run_until_stalled();
             if let Some(mut image) = self.image.lock().unwrap().take() {
                 if let Ok(img) = vision::Vision::sensor_image_to_opencv_image(&mut image) {
-                    let _ = self.vision.find_search_objects_probability(&img);
+                    let cam_data = self.vision.find_search_objects_probability(&img);
                     highgui::wait_key(1).unwrap();
                 } else {
                     println!("Could not convert image to opencv image");
