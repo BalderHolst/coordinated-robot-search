@@ -7,16 +7,19 @@ use std::{
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use r2r::{self, QosProfile, log_info, sensor_msgs};
 
-use camera::Camera;
+use camera_info::CameraInfo;
 
-use crate::camera;
+use crate::{
+    camera_info,
+    vision::{self, Vision},
+};
 
 pub struct RosAgent {
     node: r2r::Node,
     nl: String,
     pool: LocalPool,
     image: Arc<Mutex<Option<sensor_msgs::msg::Image>>>,
-    camera: Camera,
+    vision: Vision,
 }
 
 impl RosAgent {
@@ -49,15 +52,18 @@ impl RosAgent {
                 })
                 .unwrap();
         }
-        let camera = Camera::new(320, 240, 1.25, 1.0); // Vertical
-        // fov not used
+
+        // Vertical fov not used
+        // CameraInfo are hard coeded for GZ sim of Turtlebot4
+        let camera = CameraInfo::new(320, 240, 1.25, 1.0);
+        let vision = Vision::new(camera);
 
         Self {
             node,
             nl,
             pool,
             image,
-            camera,
+            vision,
         }
     }
 
@@ -66,8 +72,8 @@ impl RosAgent {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
             if let Some(mut image) = self.image.lock().unwrap().take() {
-                if let Ok(img) = camera::sensor_image_to_opencv_image(&mut image) {
-                    let _ = camera::find_search_objects(&img);
+                if let Ok(img) = vision::Vision::sensor_image_to_opencv_image(&mut image) {
+                    let _ = self.vision.find_search_objects_propability(&img);
                     highgui::wait_key(1).unwrap();
                 } else {
                     println!("Could not convert image to opencv image");
