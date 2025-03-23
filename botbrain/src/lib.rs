@@ -83,7 +83,7 @@ pub struct CamPoint {
     pub angle: f32,
 
     /// The probability of the search object being at this point
-    pub propability: f32,
+    pub probability: f32,
 }
 
 /// Data from the camera

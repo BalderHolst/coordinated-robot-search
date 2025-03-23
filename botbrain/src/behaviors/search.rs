@@ -228,7 +228,7 @@ impl SearchRobot {
                 let end = start + dir * params::CAM_RANGE;
                 let line = Line { start, end };
 
-                let diff = CAM_MULTPLIER * cam_point.propability * SEARCH_GRID_UPDATE_INTERVAL;
+                let diff = CAM_MULTPLIER * cam_point.probability * SEARCH_GRID_UPDATE_INTERVAL;
 
                 self.update_search_line(&line, diff);
                 self.post(MessageKind::ShapeDiff {

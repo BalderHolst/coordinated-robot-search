@@ -429,8 +429,8 @@ fn step_agent(
                 );
                 match cell {
                     Some(Cell::SearchItem) => {
-                        let propability = (CAM_RANGE - distance) / CAM_RANGE;
-                        Some((n, botbrain::CamPoint { angle, propability }))
+                        let probability = (CAM_RANGE - distance) / CAM_RANGE;
+                        Some((n, botbrain::CamPoint { angle, probability }))
                     }
                     _ => None,
                 }
@@ -450,14 +450,14 @@ fn step_agent(
                 let mut avg_point = adjacant.iter().fold(
                     CamPoint {
                         angle: 0.0,
-                        propability: 0.0,
+                        probability: 0.0,
                     },
                     |a: CamPoint, (_, b): &(usize, CamPoint)| CamPoint {
                         angle: a.angle + b.angle,
-                        propability: a.propability + b.propability,
+                        probability: a.propability + b.propability,
                     },
                 );
-                avg_point.propability /= adjacant.len() as f32;
+                avg_point.probability /= adjacant.len() as f32;
                 avg_point.angle /= adjacant.len() as f32;
                 sparse_points.push(avg_point);
                 adjacant.clear();
