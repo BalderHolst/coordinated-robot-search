@@ -1,7 +1,7 @@
 #[allow(dead_code)]
 use crate::camera_info::CameraInfo;
 use opencv::{
-    core::{CV_8UC1, CV_8UC3, Point2i, Scalar, Vec3b, Vec4d, Vector},
+    core::{CV_8UC1, CV_8UC3, Point2f, Point2i, Scalar, Vec3b, Vec4d, Vector},
     highgui,
     imgproc::{self, LineTypes},
     prelude::*,
@@ -16,14 +16,16 @@ struct Circle {
 pub struct Vision {
     camera: CameraInfo,
 
-    // For continous (No reallocation)
+    // For continous use (No reallocation)
     mask: Mat,
+    hsv: Mat,
+    masked_circles: Mat,
 }
 
 impl Vision {
     /// Contructer that uses Camera to initialize the vision Mat's
     pub fn new(camera: CameraInfo) -> Self {
-        let mut mask = Mat::new_rows_cols_with_default(
+        let mask = Mat::new_rows_cols_with_default(
             camera.get_pixels_v(),
             camera.get_pixels_h(),
             CV_8UC1,
@@ -31,7 +33,28 @@ impl Vision {
         )
         .expect("Mat failed");
 
-        todo!()
+        let hsv = Mat::new_rows_cols_with_default(
+            camera.get_pixels_v(),
+            camera.get_pixels_h(),
+            CV_8UC3,
+            Scalar::all(0.0),
+        )
+        .expect("Mat failed");
+
+        // NOTE: Remove (only for debugging)
+        let masked_circles = Mat::new_rows_cols_with_default(
+            camera.get_pixels_v(),
+            camera.get_pixels_h(),
+            CV_8UC3,
+            Scalar::all(0.0),
+        )
+        .expect("Mat failed");
+        Self {
+            camera,
+            mask,
+            hsv,
+            masked_circles,
+        }
     }
 
     /// Util function to convert a r2r::sensor_msgs::msg::Image to an opencv::Mat
@@ -56,7 +79,7 @@ impl Vision {
     ) -> Result<botbrain::CamData, String> {
         Self::apply_yellow_mask(self, image);
         if let Ok(contours) = self.find_contours() {
-            if let Ok(_seach_objects) = self.find_most_likely_object(contours, &image) {
+            if let Ok(_seach_objects) = self.find_most_likely_object(contours) {
                 // TODO: Return CamData
                 Ok(botbrain::CamData::default())
             } else {
@@ -69,16 +92,19 @@ impl Vision {
 
     /// Stores mask result in self.mask
     fn apply_yellow_mask(&mut self, img: &Mat) {
-        // Convert to HSV
-        // TODO: Add to internal
-        let mut hsv = Mat::default();
-        imgproc::cvt_color(&img, &mut hsv, imgproc::COLOR_RGB2HSV, 0).expect("cvt_color failed");
+        // TODO: Return result?
+        // Convert image to HSV for easier color extraction
+        imgproc::cvt_color(&img, &mut self.hsv, imgproc::COLOR_RGB2HSV, 0)
+            .expect("cvt_color failed");
 
         // Define lower and upper bounds for yellow color
-        let lower_yellow = Scalar::new(28.0, 180.0, 200.0, 0.0);
+        // Hue is from 0 to 180
+        // Yellow is normally 60 degrees of 360 degrees, therefore ~30 degrees here
+        let lower_yellow = Scalar::new(28.0, 180.0, 180.0, 0.0);
         let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
 
-        opencv::core::in_range(&hsv, &lower_yellow, &upper_yellow, &mut self.mask)
+        // Extract yellow color into a mask
+        opencv::core::in_range(&self.hsv, &lower_yellow, &upper_yellow, &mut self.mask)
             .expect("in_range failed");
     }
 
@@ -90,7 +116,7 @@ impl Vision {
             &mut contours,
             imgproc::RETR_EXTERNAL,
             imgproc::CHAIN_APPROX_SIMPLE,
-            opencv::core::Point::new(0, 0),
+            Point2i::new(0, 0),
         )
         .expect("find_contours failed");
         Ok(contours)
@@ -99,21 +125,19 @@ impl Vision {
     fn find_most_likely_object(
         &mut self,
         contours: Vector<Vector<Point2i>>,
-        img: &Mat,
     ) -> Result<Circle, String> {
         // TODO: Return CamData
         if contours.is_empty() {
             return Err("No contours found".to_string());
         }
-        // TODO: Add to internal
-        let mut masked_circles =
-            Mat::new_rows_cols_with_default(img.rows(), img.cols(), CV_8UC3, Scalar::all(0.0))
-                .expect("Mat failed");
+        self.hsv
+            .copy_to(&mut self.masked_circles)
+            .expect("copy_to failed");
         // Find the largest
         let best_circle = contours
             .iter()
             .map(|c| {
-                let mut center = opencv::core::Point2f::new(0.0, 0.0);
+                let mut center = Point2f::new(0.0, 0.0);
                 let mut radius = 0.0;
                 imgproc::min_enclosing_circle(&c, &mut center, &mut radius)
                     .expect("min_enclosing_circle failed");
@@ -139,40 +163,22 @@ impl Vision {
                 .expect("circle failed");
 
                 // Find the mean color
-                let mean_color: Vec4d = opencv::core::mean(&img, &self.mask).expect("mean failed");
-                // let mean_color: VecN<u8, 4> = mean_color.to().unwrap_or_default();
-                let color = Mat::new_rows_cols_with_default(
-                    1,
-                    1,
-                    CV_8UC3,
-                    Scalar::from_array([mean_color[0], mean_color[1], mean_color[2], 255.0]),
-                )
-                .expect("Mat failed");
-
-                let mut final_color = Mat::new_rows_cols_with_default(
-                    1,
-                    1,
-                    CV_8UC3,
-                    Scalar::from_array([0.0, 0.0, 0.0, 255.0]),
-                )
-                .expect("Mat failed");
-
-                imgproc::cvt_color(&color, &mut final_color, imgproc::COLOR_BGR2HSV, 0)
-                    .expect("cvt_color failed");
-                let final_mean_color = final_color.at_2d::<Vec3b>(0, 0).expect("at failed");
-                (center, radius, final_mean_color.to_owned())
+                let mean_color: Vec4d =
+                    opencv::core::mean(&self.hsv, &self.mask).expect("mean failed");
+                (center, radius, mean_color)
             })
-            .inspect(|(center, radius, _color)| {
+            .inspect(|(center, radius, color)| {
                 imgproc::circle(
-                    &mut masked_circles,
+                    &mut self.masked_circles,
                     Point2i::new(center.x as i32, center.y as i32),
-                    *radius as i32,
-                    Scalar::all(255.0),
-                    -1,
+                    *radius as i32 + 5,
+                    Scalar::from_array([color[0], color[1], color[2], 255.0]),
+                    1,
                     LineTypes::LINE_8 as i32,
                     0,
                 )
                 .expect("circle failed");
+                println!("Color: {:?}", color);
             })
             .min_by_key(|(_center, _radius, color)| {
                 let target_color = Vec3b::from_array([30, 255, 255]); // HSV color
@@ -182,7 +188,16 @@ impl Vision {
                     .map(|(&a, &b)| (a as i16 - b as i16).abs())
                     .sum::<i16>()
             });
-        highgui::imshow("circles", &masked_circles).unwrap();
+        let mut temp_img = Mat::default();
+        imgproc::cvt_color(
+            &self.masked_circles,
+            &mut temp_img,
+            imgproc::COLOR_HSV2BGR,
+            0,
+        )
+        .expect("cvt_color failed");
+
+        highgui::imshow("circles", &temp_img).unwrap();
 
         // Return the best circle
         if let Some((center, radius, _color)) = best_circle {
