@@ -2,8 +2,9 @@ name: Check
 on:
   push:
     branches: ["**"]
-    paths-ignore:
-      - report/**
+    paths:
+      - botbrain
+      - simple_sim
 jobs:
   fmt:
     strategy:
