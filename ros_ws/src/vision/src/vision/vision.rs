@@ -227,34 +227,35 @@ impl Vision {
         self.convert_to_cam_data(circles)
     }
 
+    fn compute_probability(diff: f32, tolerance: f32, weight: f32) -> f32 {
+        if diff.abs() > tolerance {
+            0.0
+        } else {
+            weight * (1.0 - diff.abs() / tolerance)
+        }
+    }
+
     fn convert_to_cam_data(&self, circles: Vec<Circle>) -> Result<botbrain::CamData, String> {
         let cam_points: Vec<botbrain::CamPoint> = circles
             .into_iter()
             .map(|circle| {
-                // TODO: Better way to calculate probability?
-                let mut hue_probability = TARGET_COLOR[0] - circle.color[0];
-                if hue_probability.abs() > HUE_TOLERANCE {
-                    hue_probability = 0.0;
-                } else {
-                    hue_probability =
-                        TARGET_COLOR_WEIGHTS[0] * (1.0 - hue_probability.abs() / HUE_TOLERANCE)
-                }
+                let hue_probability = Self::compute_probability(
+                    circle.color[0] - TARGET_COLOR[0],
+                    HUE_TOLERANCE,
+                    TARGET_COLOR_WEIGHTS[0],
+                );
 
-                let mut saturation_probability = TARGET_COLOR[1] - circle.color[1];
-                if saturation_probability.abs() > SATURATION_TOLERANCE {
-                    saturation_probability = 0.0;
-                } else {
-                    saturation_probability = TARGET_COLOR_WEIGHTS[1]
-                        * (1.0 - saturation_probability.abs() / SATURATION_TOLERANCE)
-                }
+                let saturation_probability = Self::compute_probability(
+                    circle.color[1] - TARGET_COLOR[1],
+                    SATURATION_TOLERANCE,
+                    TARGET_COLOR_WEIGHTS[1],
+                );
 
-                let mut value_probability = TARGET_COLOR[2] - circle.color[2];
-                if value_probability.abs() > VALUE_TOLERANCE {
-                    value_probability = 0.0;
-                } else {
-                    value_probability =
-                        TARGET_COLOR_WEIGHTS[2] * (1.0 - value_probability.abs() / VALUE_TOLERANCE)
-                }
+                let value_probability = Self::compute_probability(
+                    circle.color[2] - TARGET_COLOR[2],
+                    VALUE_TOLERANCE,
+                    TARGET_COLOR_WEIGHTS[2],
+                );
 
                 let probability = hue_probability + saturation_probability + value_probability;
 
