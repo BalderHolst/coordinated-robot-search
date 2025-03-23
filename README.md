@@ -2,8 +2,11 @@
 
 Bachelor Project 2025
 
-[Commands for Ros2](./ros_ws/commands.md)
+- [Thesis Report](https://balderholst.github.io/coordinated-robot-search/report.pdf)
+- [botbrain documentation](https://balderholst.github.io/coordinated-robot-search/docs/botbrain/)
 
-Insert image of robot here
+---
+
+[Useful Ros 2 Commands](./ros_ws/commands.md)
 
 ![screenshot](./Screenshots/multi_robot.png)
