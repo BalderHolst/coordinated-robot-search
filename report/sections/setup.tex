@@ -21,11 +21,12 @@ For this project a differential drive robot with camera, lidar, odometry and com
 \section{Software Structure}
 % TODO: Find a home for this figure
 % TODO: Find a nice color scheme
+% TODO: Refer to this figure in the text
 \begin{figure}
     \begin{center}
         \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
     \end{center}
-    \caption{Software structure of the project. Black arrows indicate a library dependency and red arrows denote Ros 2 communication through topics. Square boxes are Rust crates while red circles are Ros 2 nodes. Notice that the core library \texttt{botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
+    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote Ros 2 communication through topics. Square boxes are Rust crates while green circles are Ros 2 nodes. Notice that the core library \texttt{botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
 \end{figure}
 
 
@@ -70,6 +71,11 @@ Interface methods prefixed with \texttt{set} are used to set up the internal sta
 Separating the robot state from its behavior allows multiple behaviors for the same internal state, which is useful for comparing different algorithms.
 
 \subsection{Using Rust}
+% TODO: Describe how we integrated with colcon
+The {\color{red} functionality} of this project is entirely written in rust. Although this choice was mostly due to preference, it does have a few benefits, but has also been a {\color{red} disadvantage} at times. Ros 2 {\color{red} does not officially support Rust} and it can therefore be a bit tricky to integrate with Ros 2 and \texttt{colcon}. To use Ros 2 from Rust, a library by the name \texttt{r2r} was used {\color{red}[CITE]}, which provides bindings for the Ros 2 api and generates code for Ros 2 message types. It works great although compile times are a bit long.
+
+% TODO: Take a look at this again...
+An advantage of writing everything in Rust is the robustness and correctness of the code. The rust compiler ensures that undefined behavior is impossible and enforces a very strict type system where object lifetimes are verified at compile time. We can therefore, with a say that the code will not do anything unexpected.
 
 \subsection{Two Simulators}
 % TODO: Why two simulators?
