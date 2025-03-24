@@ -29,6 +29,7 @@
                 '';
                 buildPhase = ''
                     latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex || true
+                    latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex || true
                 '';
                 installPhase = "cp main.pdf $out";
             };
