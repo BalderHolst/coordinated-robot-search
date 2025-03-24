@@ -454,7 +454,7 @@ fn step_agent(
                     },
                     |a: CamPoint, (_, b): &(usize, CamPoint)| CamPoint {
                         angle: a.angle + b.angle,
-                        probability: a.propability + b.propability,
+                        probability: a.probability + b.probability,
                     },
                 );
                 avg_point.probability /= adjacant.len() as f32;
