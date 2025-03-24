@@ -3,8 +3,8 @@ on:
   push:
     branches: ["**"]
     paths:
-      - botbrain
-      - simple_sim
+      - botbrain/**
+      - simple_sim/**
 jobs:
   fmt:
     strategy:
