@@ -30,9 +30,12 @@ name = "ros2time"
 path = "./src/ros2time/main.rs"
 
 [dependencies]
-r2r = "0.9"
 botbrain = { path = "../../../botbrain", features = ["cli", "serde-bin"] }
 clap = { version = "4.5.31", features = ["derive"] }
+serde-binary = "0.5.0"
+
+r2r = "0.9"
 futures = "0.3"
 tokio = { version = "1", features = ["full"] }
-serde-binary = "0.5.0"
+
+opencv = { version = "0.94", features = ["clang-runtime"] }

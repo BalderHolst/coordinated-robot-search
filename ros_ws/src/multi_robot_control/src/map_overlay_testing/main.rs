@@ -5,6 +5,7 @@ use std::{
 };
 mod convert_msg;
 
+use botbrain::Vec2;
 use convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
 };
@@ -78,6 +79,9 @@ impl RosAgent {
 
         log_info!(&nl, "Robot ID: {}", id);
         robot.set_id(botbrain::RobotId::new(id));
+
+        // Activate debug soup
+        robot.get_debug_soup_mut().activate();
 
         let pool = LocalPool::new();
 
@@ -174,9 +178,8 @@ impl RosAgent {
             pool.spawner()
                 .spawn_local(async move {
                     log_info!(&nl, "Map listener started");
-                    while let Some(msg) = sub_map.next().await {
+                    if let Some(msg) = sub_map.next().await {
                         map.lock().unwrap().replace(msg);
-                        log_info!(&nl, "Map received");
                     }
                 })
                 .unwrap();
@@ -209,12 +212,24 @@ impl RosAgent {
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut last_map_update = Duration::default();
         let mut map_val = 0;
+        let mut is_map_size_set = false;
         loop {
             self.node.spin_once(Duration::from_secs(1));
             self.pool.run_until_stalled();
 
             // Set inputs for robot
             {
+                // Initialize the world size if it hasn't been set yet
+                if !is_map_size_set {
+                    if let Some(map) = self.map.lock().unwrap().as_ref() {
+                        self.robot.set_world_size(Vec2::new(
+                            map.info.width as f32,
+                            map.info.height as f32,
+                        ));
+                        is_map_size_set = true;
+                    }
+                }
+
                 // Set the robot lidar input
                 if let Some(scan) = self.scan.lock().unwrap().take() {
                     let lidar = scan_to_lidar_data(&scan);
@@ -260,7 +275,7 @@ impl RosAgent {
             let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
             if time.is_zero() {
                 // Simulated time is not available yet
-                log_warn!(&self.nl, "Time not ready yet: {:?}", time);
+                log_warn!(&self.nl, "RosTime not ready yet: {:?}", time);
                 std::thread::sleep(std::time::Duration::from_secs(1));
                 continue;
             }
