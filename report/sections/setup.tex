@@ -41,15 +41,15 @@ which is the only way for outside crates to interact with a robot’s internal s
     \begin{center}
         \begin{minted}[autogobble]{rust}
             pub trait Robot {
-                fn set_id(&mut self, id: RobotId);                 // Set the id of the robot
-                fn set_world_size(&mut self, size: Vec2);          // Set the size of the world
+                fn set_id(&mut self, id: RobotId);            // Set the id of the robot
+                fn set_world_size(&mut self, size: Vec2);     // Set the size of the world
 
-                fn input_pose(&mut self, pose: RobotPose);         // Input the angle of the robot
-                fn input_cam(&mut self, cam: CamData);             // Input data from the camera
-                fn input_lidar(&mut self, lidar: LidarData);       // Input data from the lidar
-                fn input_msgs(&mut self, msgs: Vec<Message>);      // Input messages from other robots
+                fn input_pose(&mut self, pose: RobotPose);    // Input the angle of the robot
+                fn input_cam(&mut self, cam: CamData);        // Input data from the camera
+                fn input_lidar(&mut self, lidar: LidarData);  // Input data from the lidar
+                fn input_msgs(&mut self, msgs: Vec<Message>); // Input messages from other robots
 
-                fn get_id(&self) -> &RobotId;                      // Get the id of the robot
+                fn get_id(&self) -> &RobotId;                 // Get the id of the robot
                 ...
             }
         \end{minted}

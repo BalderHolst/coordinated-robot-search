@@ -1,9 +1,80 @@
 \section{Search Algorithms}
-This section describes the development of a distributed algorithm which makes it possible for a group of robots to find a search item.
+This section describes the development of a distributed algorithm which makes it possible for a group of robots to find a search item. These algorithms are implemented in the \texttt{botbrain} library.
+
+This project explores two approaches for controlling the behavior of the robot swarm: A {\color{red} manually developed} algorithm and an algorithm based on reinforcement learning. The following sections will explore the development of these.
+
+\section{{\color{red}Manually Developed Algorithm}}
 
 \subsection{Search Grid}
-Each robot has a \texttt{search\_grid} which is continuously updated by observations by the robot itself, and the observations of other robots which it receives over its communication channel.
-% TODO: Add a nice figure
+
+Each robot has a "search grid" which is continuously updated by observations by the robot itself, and the observations of other robots which it receives over the shared communication channel. The "search grid" can be thought of as a heat map, where well explored areas are "colder" and less explored areas are "hotter". If communication is loss less, the internal "search grids" of all robots should always be in sync. Each robot will then calculate their desired trajectory vector by taking a gradient over the "search grid" at their position (see \cref{fig:search-gradient}). This results in behavior where robots will seek out unexplored areas near them.
+
+\begin{figure}[h]
+    \begin{center}
+        % TODO: Actully create figure
+        \includegraphics[width=0.45\textwidth]{./figures/search-gradient.png}
+    \end{center}
+    \caption{How the search gradient is calculated}
+    \label{fig:search-gradient}
+\end{figure}
+
+
+% TODO: Can we write "we"?
+In practice, taking the gradient is not as simple as it may seem. First we must calculate the "heat" under the robot ($H$). This is accomplished with an average over the cells underneath the robot ($C_\mathrm{robot}$) as in \cref{eq:robot-heat}.
+
+\begin{equation}
+\label{eq:robot-heat}
+    H = \frac{1}{N} \sum_c^{C_\mathrm{robot}} \mathrm{heat}(c)
+\end{equation}
+
+We can now draw a vector from the robot position $P$, to all grid cells within some radius ($C_\mathrm{r}$). We call this vector $\mathbf{d}$.
+\begin{equation}
+    \mathbf{d} = \mathrm{pos}(c) - P, \quad \forall c \in C_\mathrm{r}
+\end{equation}
+
+Every cell contributes to the gradient, in the direction of $\mathbf{d}$ with the weight of the difference in heat between the cell and the robot. We also weight closer cells higher than cells further away. This smooths out the gradient changes as the robot moves around by gradually fading out the effect of a cell as it gets closer the gradient cutoff distance.
+\begin{equation}
+    \nabla = \sum_c^{C_\mathrm{r}} \;
+    \underbracket{\; \mathbf{d}/\norm{\mathbf{d}}      \;}_\text{\makebox[0pt]{Direction}} \cdot
+    \underbracket{\; \big(\mathrm{heat}(c) - H\big)    \;}_\text{Heat Diff.} \cdot
+    \underbracket{\; \big(1 - \norm{\mathbf{d}}/r\big) \;}_\text{Nearness}
+\end{equation}
+
+This gradient performs well within the map, but leads to problems near the map edges. Cells outside the map have no "temperature". {\color{red}So}, in the case that a robot is near the edge and cells within the map are colder than the cells under the robot, the resulting gradient points to the edge of the map, even though there is nothing to explore there. \Cref{fig:edge-gradient} shows this scenario.
+
+\begin{figure}[h]
+    \begin{center}
+        % TODO: Actually create figure
+        \includegraphics[width=0.45\textwidth]{./figures/edge-gradient.png}
+    \end{center}
+    \caption{Robot gradient at the edge of the map.}
+    \label{fig:edge-gradient}
+\end{figure}
+
+To mitigate this issue, the gradient equation is changed so that only positive contributions are used. In practice this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
+
+\begin{equation}
+\label{eq:robot-gradient}
+    \nabla = \sum_c^{C_\mathrm{r}}
+    \begin{cases}
+        \mathbf{d}/\norm{\mathbf{d}}      \; \cdot
+        \big(\mathrm{heat}(c) - H\big)    \; \cdot
+        \big(1 - \norm{\mathbf{d}}/r\big) \; \quad &\text{if } \mathrm{heat}(c) > H
+        \\
+        0, \quad &\text{otherwise}
+    \end{cases}
+\end{equation}
+
+With this gradient calculation, tho robots will explore the map by getting attracted to the most unexplored areas near them without lingering near the edges. \Cref{fig:search-no-proximity} shows the resulting behavior.
+
+\begin{figure}[h]
+    \begin{center}
+        % TODO: Actually create figure
+        \includegraphics[width=0.45\textwidth]{./figures/search-behavior-no-proximity.png}
+    \end{center}
+    \caption{Robot paths recorded during a search mission.}
+    \label{fig:search-no-proximity}
+\end{figure}
 
 \subsection{Proximity Grid}
 % TODO: How is this populated
