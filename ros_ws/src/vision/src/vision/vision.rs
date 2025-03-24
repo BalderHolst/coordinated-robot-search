@@ -271,6 +271,6 @@ impl Vision {
             })
             .collect();
 
-        Ok(botbrain::CamData(cam_points))
+        Ok(botbrain::CamData::Points(cam_points))
     }
 }

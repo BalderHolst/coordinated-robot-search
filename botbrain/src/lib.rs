@@ -86,9 +86,28 @@ pub struct CamPoint {
     pub probability: f32,
 }
 
+/// An object detected by the camera
+#[derive(Debug, Clone)]
+pub struct CamCone {
+    /// The cone containing the search object
+    pub cone: Cone,
+
+    /// The probability of the search object being in this cone
+    pub probability: f32,
+}
+
 /// Data from the camera
-#[derive(Debug, Clone, Default)]
-pub struct CamData(pub Vec<CamPoint>);
+#[derive(Debug, Clone)]
+pub enum CamData {
+    Cone(CamCone),
+    Points(Vec<CamPoint>),
+}
+
+impl Default for CamData {
+    fn default() -> Self {
+        Self::Points(vec![])
+    }
+}
 
 /// A point detected by the lidar
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]

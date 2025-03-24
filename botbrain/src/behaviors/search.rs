@@ -220,22 +220,39 @@ impl SearchRobot {
         // Heat up the search grid in the direction of the search items
         // detected by the camera
         {
-            // TODO: Maybe use cones as CamData when object is found.
-            let CamData(cam) = self.cam.clone();
-            for cam_point in cam {
-                let angle = self.angle + cam_point.angle;
-                let dir = Vec2::angled(angle);
-                let start = self.pos;
-                let end = start + dir * params::CAM_RANGE;
-                let line = Line { start, end };
+            let cam = self.cam.clone();
+            match cam {
+                CamData::Cone(cam_cone) => {
+                    let diff = CAM_MULTPLIER * cam_cone.probability * SEARCH_GRID_UPDATE_INTERVAL;
+                    let lidar = self.lidar.within_fov(params::CAM_FOV);
+                    self.update_search_cone(&cam_cone.cone, &lidar, diff);
+                    self.postbox.post(Message {
+                        sender_id: self.id,
+                        kind: MessageKind::CamDiff {
+                            cone: cam_cone.cone,
+                            lidar,
+                            diff,
+                        },
+                    });
+                }
+                CamData::Points(cam_points) => {
+                    for cam_point in cam_points {
+                        let angle = self.angle + cam_point.angle;
+                        let dir = Vec2::angled(angle);
+                        let start = self.pos;
+                        let end = start + dir * params::CAM_RANGE;
+                        let line = Line { start, end };
 
-                let diff = CAM_MULTPLIER * cam_point.probability * SEARCH_GRID_UPDATE_INTERVAL;
+                        let diff =
+                            CAM_MULTPLIER * cam_point.probability * SEARCH_GRID_UPDATE_INTERVAL;
 
-                self.update_search_line(&line, diff);
-                self.post(MessageKind::ShapeDiff {
-                    shape: Shape::Line(line),
-                    diff,
-                });
+                        self.update_search_line(&line, diff);
+                        self.post(MessageKind::ShapeDiff {
+                            shape: Shape::Line(line),
+                            diff,
+                        });
+                    }
+                }
             }
         }
     }

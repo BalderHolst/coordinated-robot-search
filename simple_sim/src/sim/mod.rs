@@ -471,7 +471,7 @@ fn step_agent(
                 }
             }
             consolidate_points(&mut adjacant, &mut sparse_points);
-            robot.input_cam(CamData(sparse_points));
+            robot.input_cam(CamData::Points(sparse_points));
         }
     }
 
