@@ -238,7 +238,7 @@ impl Vision {
     fn convert_to_cam_data(&self, circles: Vec<Circle>) -> Result<botbrain::CamData, String> {
         let cam_points: Vec<botbrain::CamPoint> = circles
             .into_iter()
-            .map(|circle| {
+            .flat_map(|circle| {
                 let hue_probability = Self::compute_probability(
                     circle.color[0] - TARGET_COLOR[0],
                     HUE_TOLERANCE,
@@ -259,9 +259,15 @@ impl Vision {
 
                 let probability = hue_probability + saturation_probability + value_probability;
 
-                let angle = self.camera.get_angle_h(circle.center.x);
+                let mut cam_points: Vec<botbrain::CamPoint> = vec![];
 
-                botbrain::CamPoint { probability, angle }
+                // HACK: Update to use cone for object of interest
+                for i in (-circle.radius / 2)..(circle.radius / 2) {
+                    let angle = self.camera.get_angle_h(circle.center.x + i);
+                    cam_points.push(botbrain::CamPoint { probability, angle });
+                }
+
+                cam_points
             })
             .collect();
 

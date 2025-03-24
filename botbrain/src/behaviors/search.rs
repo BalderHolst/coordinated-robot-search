@@ -220,6 +220,7 @@ impl SearchRobot {
         // Heat up the search grid in the direction of the search items
         // detected by the camera
         {
+            // TODO: Maybe use cones as CamData when object is found.
             let CamData(cam) = self.cam.clone();
             for cam_point in cam {
                 let angle = self.angle + cam_point.angle;
