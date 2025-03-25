@@ -199,7 +199,7 @@ pub struct Simulator {
         (RobotState, Box<dyn botbrain::Robot>),
     >,
     pending_messages: Vec<botbrain::Message>,
-    behavior: Behavior,
+    pub behavior: Behavior,
     dt: f32,
 }
 

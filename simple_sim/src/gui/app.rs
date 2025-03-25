@@ -26,8 +26,8 @@ use eframe::{
     self,
     egui::{
         self, pos2, Align, Align2, Color32, ColorImage, FontFamily, FontId, Frame, ImageData, Key,
-        Margin, Painter, Pos2, Rect, Rgba, Sense, Separator, Stroke, TextureFilter, TextureId,
-        TextureOptions, Vec2,
+        Margin, Painter, Pos2, Rect, Rgba, Sense, Stroke, TextureFilter, TextureId, TextureOptions,
+        Vec2,
     },
     epaint::{Hsva, ImageDelta, PathStroke},
     CreationContext,
@@ -103,6 +103,7 @@ pub struct App {
     textures: AppTextures,
     cursor_state: CursorState,
     robot_soups: Vec<DebugSoup>,
+    behavior_name: String,
 }
 
 fn grid_to_image<C: Clone + Default>(
@@ -146,6 +147,8 @@ impl App {
     pub fn new(mut sim: Simulator, args: AppArgs, cc: &CreationContext) -> Self {
         // Step once to get the initial state
         sim.step();
+
+        let behavior_name = sim.behavior.name().to_string();
 
         let world = sim.world().clone();
         let robot_soups = sim
@@ -251,6 +254,7 @@ impl App {
             },
             cursor_state: CursorState::default(),
             robot_soups,
+            behavior_name,
         }
     }
 
@@ -614,8 +618,6 @@ impl eframe::App for App {
                         });
                     }
 
-                    ui.add(Separator::default().vertical());
-
                     if let Ok(actual_sps) = self.actual_sps_bg.lock() {
                         self.actual_sps = *actual_sps;
                     }
@@ -623,9 +625,12 @@ impl eframe::App for App {
                         ui.label(format!("FPS: {:>03.0}", 1.0 / ctx.input(|i| i.unstable_dt)));
                         ui.label(format!("SPS: {:>03.0}", self.actual_sps));
 
-                        ui.add(Separator::default().vertical());
+                        ui.separator();
 
                         ui.label(format!("Time: {:.1}s", self.sim_state.time.as_secs_f64()));
+
+                        ui.separator();
+                        ui.label(&self.behavior_name);
                     });
                 });
             });
