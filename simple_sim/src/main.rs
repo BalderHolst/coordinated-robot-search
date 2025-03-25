@@ -11,19 +11,19 @@ mod sim;
 mod world;
 
 fn main() -> Result<(), String> {
-    let args = cli::Cli::parse();
-    match args.command {
-        cli::Command::Run(args) => gui::run_interactive(args),
-        cli::Command::Scenario(args) => {
-            let scenario = match args.scenario.clone().contents() {
-                Ok(s) if args.json => serde_json::from_str(&s)
+    let args = cli::GlobArgs::parse();
+    match args.command.clone() {
+        cli::Command::Run(run_args) => gui::run_interactive(args, run_args.clone()),
+        cli::Command::Scenario(scenario_args) => {
+            let scenario = match scenario_args.scenario.clone().contents() {
+                Ok(s) if scenario_args.json => serde_json::from_str(&s)
                     .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
                 Ok(s) => ron::de::from_str::<Scenario>(&s)
                     .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
                 Err(e) => Err(e.to_string())?,
             };
 
-            if let Some(desc_path) = &args.description {
+            if let Some(desc_path) = &scenario_args.description {
                 let json = serde_json::to_string_pretty(&scenario).unwrap();
                 std::fs::write(desc_path, json)
                     .map_err(|e| format!("Could not write description file: {e}"))?;
@@ -38,21 +38,23 @@ fn main() -> Result<(), String> {
 
             let mut sim = sim::Simulator::new(sim::SimArgs {
                 world,
-                behavior: scenario.behavior.clone(),
+                behavior: scenario_args
+                    .behavior
+                    .clone()
+                    .unwrap_or(scenario.behavior.clone()),
                 threads: args.threads,
-                diagnostics: true,
             });
 
             for robot in &scenario.robots {
                 sim.add_robot(robot.clone());
             }
 
-            let mut data = match args.headless {
+            let mut data = match scenario_args.headless {
                 false => gui::run_scenario(sim, scenario, args.clone())?,
-                true => sim::run_scenario_headless(sim, scenario, args.print_interval),
+                true => sim::run_scenario_headless(sim, scenario, scenario_args.clone()),
             };
 
-            if let Some(out_path) = args.output {
+            if let Some(out_path) = scenario_args.output {
                 for out_path in out_path.split(':') {
                     let out_path = PathBuf::from(out_path);
                     if let Err(e) = utils::save_df(&mut data, &out_path) {

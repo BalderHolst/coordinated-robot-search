@@ -12,7 +12,7 @@ use botbrain::params::{CAM_FOV, DIAMETER, RADIUS};
 
 use crate::{
     bind_down, bind_pressed,
-    cli::RunArgs,
+    cli::GlobArgs,
     sim::{SimState, Simulator},
     world::{Cell, World},
 };
@@ -125,9 +125,9 @@ pub struct AppArgs {
     pub pause_at: Option<f32>,
 }
 
-impl From<RunArgs> for AppArgs {
-    fn from(args: RunArgs) -> Self {
-        let RunArgs {
+impl From<GlobArgs> for AppArgs {
+    fn from(args: GlobArgs) -> Self {
+        let GlobArgs {
             paused,
             target_fps,
             target_sps,
@@ -255,21 +255,22 @@ impl App {
     }
 
     fn draw_diagnostics(&mut self, painter: &Painter) {
-        if let Some(diagnostics) = &self.sim_state.diagnostics {
-            if self.global_opts.show_coverage_grid {
-                // Draw coverage grid
-                let (min, max) = self.world.bounds();
-                let min = self.cam.world_to_viewport(min);
-                let max = self.cam.world_to_viewport(max);
-                let canvas = Rect::from_min_max(min, max);
+        if self.global_opts.show_coverage_grid {
+            // Draw coverage grid
+            let (min, max) = self.world.bounds();
+            let min = self.cam.world_to_viewport(min);
+            let max = self.cam.world_to_viewport(max);
+            let canvas = Rect::from_min_max(min, max);
 
-                let image = grid_to_image(diagnostics.coverage_grid.grid(), |c| match c {
+            let image = grid_to_image(
+                self.sim_state.diagnostics.coverage_grid.grid(),
+                |c| match c {
                     true => Color32::LIGHT_GREEN.gamma_multiply(0.2),
                     false => Color32::TRANSPARENT,
-                });
+                },
+            );
 
-                Self::draw_grid_image(&mut self.textures, "coverage-grid", painter, canvas, image);
-            }
+            Self::draw_grid_image(&mut self.textures, "coverage-grid", painter, canvas, image);
         }
     }
 
@@ -669,14 +670,12 @@ impl eframe::App for App {
                         _ => self.cursor_state = CursorState::SpawnManyRobots,
                     });
 
-                    if let Some(diagnostics) = &self.sim_state.diagnostics {
-                        ui.separator();
-                        let coverage = diagnostics.coverage();
-                        ui.toggle_value(
-                            &mut self.global_opts.show_coverage_grid,
-                            format!("Coverage: {:.2}%", coverage * 100.0),
-                        );
-                    }
+                    ui.separator();
+                    let coverage = self.sim_state.diagnostics.coverage();
+                    ui.toggle_value(
+                        &mut self.global_opts.show_coverage_grid,
+                        format!("Coverage: {:.2}%", coverage * 100.0),
+                    );
                 });
             });
 

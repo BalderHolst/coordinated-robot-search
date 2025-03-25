@@ -20,6 +20,7 @@ use pool::ThreadPool;
 use serde::Serialize;
 
 use crate::{
+    cli::ScenarioArgs,
     scenario::Scenario,
     world::{Cell, World},
 };
@@ -84,7 +85,7 @@ impl RobotData {
 pub fn run_scenario_headless(
     mut sim: Simulator,
     scenario: Scenario,
-    print_interval: f64,
+    scenario_args: ScenarioArgs,
 ) -> DataFrame {
     let steps = (scenario.duration / SIMULATION_DT).ceil() as usize;
 
@@ -96,7 +97,7 @@ pub fn run_scenario_headless(
     let mut last_print = start_time;
 
     loop {
-        if (Instant::now() - last_print).as_secs_f64() > print_interval {
+        if (Instant::now() - last_print).as_secs_f64() > scenario_args.print_interval {
             last_print = Instant::now();
             println!("Time: {:.1}s", sim.state.time.as_secs_f64());
         }
@@ -104,7 +105,7 @@ pub fn run_scenario_headless(
         time_data.push(sim.state.time.as_secs_f64());
 
         // Calculate and store coverage
-        let coverage = sim.state.diagnostics.as_ref().map_or(0.0, |d| d.coverage());
+        let coverage = sim.state.diagnostics.coverage();
         coverage_data.push(coverage);
 
         // Store robot data
@@ -161,7 +162,7 @@ pub struct RobotState {
 pub struct SimState {
     pub robot_states: Vec<RobotState>,
     pub time: Duration,
-    pub diagnostics: Option<SimDiagnostics>,
+    pub diagnostics: SimDiagnostics,
 }
 
 #[derive(Clone)]
@@ -186,7 +187,6 @@ pub struct SimArgs {
     pub world: World,
     pub behavior: Behavior,
     pub threads: usize,
-    pub diagnostics: bool,
 }
 
 #[allow(clippy::type_complexity)]
@@ -209,20 +209,14 @@ impl Simulator {
             world,
             behavior,
             threads,
-            diagnostics,
         } = args;
-
-        let diagnostics = match diagnostics {
-            true => Some(SimDiagnostics {
-                coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
-            }),
-            false => None,
-        };
 
         let state = SimState {
             robot_states: vec![],
             time: Duration::default(),
-            diagnostics,
+            diagnostics: SimDiagnostics {
+                coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
+            },
         };
         Self {
             state,
@@ -312,19 +306,18 @@ impl Simulator {
         self.pending_messages = msg_send_rx.try_iter().collect::<Vec<botbrain::Message>>();
 
         // Update diagnostics
-        if let Some(diagnostics) = self.state.diagnostics.as_mut() {
-            for msg in &self.pending_messages {
-                match &msg.kind {
-                    botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
-                        diagnostics.coverage_grid.set_shape(shape, true)
-                    }
-                    botbrain::MessageKind::CamDiff {
-                        cone,
-                        lidar: _,
-                        diff: _,
-                    } => diagnostics.coverage_grid.set_cone(cone, true),
-                    botbrain::MessageKind::Debug(_) => {}
+        let diagnostics = &mut self.state.diagnostics;
+        for msg in &self.pending_messages {
+            match &msg.kind {
+                botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
+                    diagnostics.coverage_grid.set_shape(shape, true)
                 }
+                botbrain::MessageKind::CamDiff {
+                    cone,
+                    lidar: _,
+                    diff: _,
+                } => diagnostics.coverage_grid.set_cone(cone, true),
+                botbrain::MessageKind::Debug(_) => {}
             }
         }
 

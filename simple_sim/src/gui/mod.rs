@@ -3,7 +3,7 @@ use eframe::egui;
 use polars::frame::DataFrame;
 
 use crate::{
-    cli::{RunArgs, ScenarioArgs},
+    cli::{GlobArgs, RunArgs},
     scenario::Scenario,
     sim::{SimArgs, Simulator},
     world::world_from_path,
@@ -13,12 +13,11 @@ mod app;
 mod bind_key;
 mod camera;
 
-pub fn run_interactive(args: RunArgs) -> Result<(), String> {
+pub fn run_interactive(args: GlobArgs, run_args: RunArgs) -> Result<(), String> {
     let sim_args = SimArgs {
-        world: world_from_path(&args.world)?,
-        behavior: args.behavior.clone(),
+        world: world_from_path(&run_args.world)?,
+        behavior: run_args.behavior.clone(),
         threads: args.threads,
-        diagnostics: args.diagnostics,
     };
     let app_args = args.into();
     let sim = Simulator::new(sim_args);
@@ -28,7 +27,7 @@ pub fn run_interactive(args: RunArgs) -> Result<(), String> {
 pub fn run_scenario(
     sim: Simulator,
     scenario: Scenario,
-    args: ScenarioArgs,
+    args: GlobArgs,
 ) -> Result<DataFrame, String> {
     let app_args = AppArgs {
         paused: false,
