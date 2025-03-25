@@ -8,7 +8,7 @@ use std::{
     thread,
 };
 
-use botbrain::params::{CAM_FOV, DIAMETER, RADIUS};
+use botbrain::params::{self, CAM_FOV, DIAMETER, RADIUS};
 
 use crate::{
     bind_down, bind_pressed,
@@ -52,6 +52,7 @@ pub struct GlobalOptions {
     follow: Option<usize>,
     show_only: Option<usize>,
     show_coverage_grid: bool,
+    show_connections: bool,
 }
 
 impl Default for GlobalOptions {
@@ -62,6 +63,7 @@ impl Default for GlobalOptions {
             follow: None,
             show_only: None,
             show_coverage_grid: false,
+            show_connections: false,
         }
     }
 }
@@ -535,6 +537,32 @@ impl App {
                 }
             }
         }
+
+        // Draw connections between robots
+        const CONNECTION_COLOR: Color32 = Color32::RED;
+        if self.global_opts.show_connections {
+            let mut connections = HashSet::new();
+            for r1 in self.sim_state.robot_states.iter() {
+                for r2 in self.sim_state.robot_states.iter() {
+                    let conn_id = (r1.id, r2.id);
+                    if r1.id == r2.id || connections.contains(&conn_id) {
+                        continue;
+                    }
+                    connections.insert(conn_id);
+
+                    if r1.pose.pos.distance(r2.pose.pos) > params::COMMUNICATION_RANGE {
+                        continue;
+                    }
+
+                    let pos1 = self.cam.world_to_viewport(r1.pose.pos);
+                    let pos2 = self.cam.world_to_viewport(r2.pose.pos);
+                    painter.line_segment(
+                        [pos1, pos2],
+                        PathStroke::new(self.cam.scaled(0.03), CONNECTION_COLOR),
+                    );
+                }
+            }
+        }
     }
 
     fn draw_grid_image(
@@ -681,6 +709,7 @@ impl eframe::App for App {
                         &mut self.global_opts.show_coverage_grid,
                         format!("Coverage: {:.2}%", coverage * 100.0),
                     );
+                    ui.toggle_value(&mut self.global_opts.show_connections, "Show Connections");
                 });
             });
 
