@@ -1,10 +1,15 @@
 //! This module contains robot `search` behavior.
 
-use std::{collections::HashMap, f32::consts::PI, time::Duration};
+use std::{
+    collections::{HashMap, HashSet},
+    f32::consts::PI,
+    time::Duration,
+};
 
 use emath::{Pos2, Vec2};
 
 use crate::{
+    params::COMMUNICATION_RANGE,
     shapes::{Line, Shape},
     LidarData,
 };
@@ -17,6 +22,7 @@ use super::{
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
     ("full", behaviors::full),
+    ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
 ];
 
@@ -35,11 +41,12 @@ const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
 const PROXIMITY_GRID_SCALE: f32 = 0.40;
-const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 1.0;
+const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 2.0;
 const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 5.0;
+const PROXIMITY_MAX_LAYERS: usize = 4;
 
-const ROBOT_SPACING: f32 = 3.0;
+const ROBOT_SPACING: f32 = 8.0;
 
 #[derive(Clone, Default)]
 pub struct SearchRobot {
@@ -257,7 +264,7 @@ impl SearchRobot {
         }
     }
 
-    fn update_proximity_grid(&mut self, time: Duration) {
+    fn update_proximity_grid_naive(&mut self, time: Duration) {
         // Don't update the proximity grid too often
         if (time - self.last_proximity_grid_update).as_secs_f32() < PROXIMITY_GRID_UPDATE_INTERVAL {
             return;
@@ -279,6 +286,82 @@ impl SearchRobot {
                 }
                 if let Some(cell) = self.proximity_grid.get(point) {
                     self.proximity_grid.set(point, *cell + PROXIMITY_WEIGHT);
+                }
+            }
+        }
+    }
+
+    fn update_proximity_grid(&mut self, time: Duration) {
+        // Don't update the proximity grid too often
+        if (time - self.last_proximity_grid_update).as_secs_f32() < PROXIMITY_GRID_UPDATE_INTERVAL {
+            return;
+        }
+        self.last_proximity_grid_update = time;
+
+        self.proximity_grid.fill(0.0);
+
+        fn assign(
+            id: RobotId,
+            robots: &Vec<(&RobotId, &(Pos2, f32))>,
+            assigned: &mut HashSet<RobotId>,
+            network: &mut Vec<Pos2>,
+        ) {
+            if assigned.contains(&id) {
+                return;
+            }
+            let (_, (pos, _)) = *robots.iter().find(|(i, _)| *i == &id).unwrap();
+            network.push(*pos);
+            assigned.insert(id);
+
+            for (other_id, (other_pos, _)) in robots {
+                if **other_id == id {
+                    continue;
+                }
+                let d = (*pos - *other_pos).length();
+                if d < COMMUNICATION_RANGE {
+                    assign(**other_id, robots, assigned, network);
+                }
+            }
+        }
+
+        let mut networks = vec![];
+        let mut assigned = HashSet::default();
+
+        let robots: Vec<_> = self.others.iter().collect();
+        let ids = robots
+            .iter()
+            .map(|(id, _)| *id)
+            .cloned()
+            .collect::<Vec<_>>();
+
+        loop {
+            let Some(id) = ids.iter().find(|id| !assigned.contains(*id)) else {
+                break;
+            };
+            let mut network = vec![];
+            assign(*id, &robots, &mut assigned, &mut network);
+            networks.push(network);
+        }
+
+        let Some(largest_network) = networks.iter().max_by_key(|network| network.len()) else {
+            return;
+        };
+
+        for pos in largest_network {
+            let circle = Circle {
+                center: *pos,
+                radius: params::COMMUNICATION_RANGE,
+            };
+
+            for point in self.proximity_grid.iter_circle(&circle).collect::<Vec<_>>() {
+                let d = (point - *pos).length();
+                if d < ROBOT_SPACING {
+                    continue;
+                }
+                if let Some(cell) = self.proximity_grid.get(point) {
+                    let w = (*cell + PROXIMITY_WEIGHT)
+                        .min(PROXIMITY_WEIGHT * PROXIMITY_MAX_LAYERS as f32);
+                    self.proximity_grid.set(point, w);
                 }
             }
         }
@@ -500,6 +583,7 @@ fn gradient(
 fn search(
     robot: &mut RobotRef,
     time: Duration,
+    update: fn(&mut SearchRobot, time: Duration),
     contributions: fn(&mut SearchRobot, &mut Vec2),
 ) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
@@ -507,8 +591,7 @@ fn search(
     // Debug visualization
     robot.visualize();
 
-    robot.update_search_grid(time);
-    robot.update_proximity_grid(time);
+    update(robot, time);
 
     robot.process_messages();
 
@@ -531,15 +614,46 @@ mod behaviors {
     use super::*;
 
     pub fn full(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-        search(robot, time, |robot, target| {
-            *target += robot.search_gradient();
-            *target += robot.proximity_gradient();
-        })
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+            },
+            |robot, target| {
+                *target += robot.search_gradient();
+                *target += robot.proximity_gradient();
+            },
+        )
+    }
+
+    pub fn naive_proximity(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid_naive(time);
+            },
+            |robot, target| {
+                *target += robot.search_gradient();
+                *target += robot.proximity_gradient();
+            },
+        )
     }
 
     pub fn no_proximity(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-        search(robot, time, |robot, target| {
-            *target += robot.search_gradient();
-        })
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+            },
+            |robot, target| {
+                *target += robot.search_gradient();
+            },
+        )
     }
 }
