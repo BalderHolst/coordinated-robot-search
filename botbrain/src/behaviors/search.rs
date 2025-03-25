@@ -36,17 +36,18 @@ const FORWARD_BIAS: f32 = 0.05;
 const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
+const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
-const PROXIMITY_GRID_SCALE: f32 = 0.40;
+const PROXIMITY_GRID_SCALE: f32 = 1.00;
 const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 2.0;
 const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 5.0;
-const PROXIMITY_MAX_LAYERS: usize = 4;
+const PROXIMITY_MAX_LAYERS: usize = 3;
 
-const ROBOT_SPACING: f32 = 8.0;
+const ROBOT_SPACING: f32 = 4.0;
 
 #[derive(Clone, Default)]
 pub struct SearchRobot {
@@ -398,20 +399,21 @@ impl SearchRobot {
 
 impl SearchRobot {
     fn search_gradient(&mut self) -> Vec2 {
-        let g = gradient(
+        let (g, cells) = gradient(
             self.pos,
             self.angle,
-            params::LIDAR_RANGE,
+            SEARCH_GRADIENT_RANGE,
             params::DIAMETER * 2.0,
             self.lidar.clone(),
             &self.search_grid,
         );
+        self.debug("Gradient", "Search Cells", DebugType::NumberPoints(cells));
         self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
         g
     }
 
     fn proximity_gradient(&mut self) -> Vec2 {
-        let g = gradient(
+        let (g, _) = gradient(
             self.pos,
             self.angle,
             PROXIMITY_GRADIENT_RANGE,
@@ -439,17 +441,25 @@ impl SearchRobot {
         {
             let mut total_weight: f32 = 0.0;
             let LidarData(points) = self.lidar.clone();
+
             for point in points {
                 let distance = point.distance.clamp(0.0, LIDAR_OBSTACLE_RANGE);
                 let weight = -(1.0 - distance / LIDAR_OBSTACLE_RANGE).powi(2);
                 lidar_contribution += Vec2::angled(point.angle + self.angle) * weight;
             }
+
             if total_weight == 0.0 {
                 total_weight = 1.0;
             }
             lidar_contribution /= total_weight.abs();
 
             lidar_contribution *= LIDAR_WEIGHT;
+
+            self.debug(
+                "Sensors",
+                "Lidar Obstacle Range",
+                DebugType::Radius(LIDAR_OBSTACLE_RANGE),
+            );
 
             self.debug(
                 "Sensors",
@@ -510,7 +520,7 @@ fn gradient(
     center_range: f32,
     lidar: LidarData,
     grid: &ScaledGrid<f32>,
-) -> Vec2 {
+) -> (Vec2, Vec<(Pos2, f32)>) {
     let mut total_heat = 0.0;
     let mut robot_points: usize = 0;
     for pos in grid.iter_circle(
@@ -526,10 +536,9 @@ fn gradient(
 
     let robot_heat = total_heat / robot_points as f32;
 
+    let mut cells = vec![];
     let mut gradient = Vec2::ZERO;
     {
-        let mut total_cells = 0;
-
         for cell_pos in grid.iter_circle(
             &(Circle {
                 center: pos,
@@ -566,18 +575,17 @@ fn gradient(
 
             gradient += vec.normalized() * weight;
 
-            total_cells += 1;
+            cells.push((cell_pos, weight));
         }
 
-        if total_cells == 0 {
-            total_cells = 1;
+        if !cells.is_empty() {
+            gradient /= cells.len() as f32;
         }
-        gradient /= total_cells as f32;
 
         gradient *= GRADIENT_WEIGHT;
     }
 
-    gradient
+    (gradient, cells)
 }
 
 fn search(

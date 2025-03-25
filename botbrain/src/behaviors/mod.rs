@@ -121,6 +121,11 @@ impl Behavior {
             behavior_fn,
         })
     }
+
+    pub fn name(&self) -> String {
+        let kind_name = self.robot_kind.to_possible_value().unwrap();
+        format!("{}:{}", kind_name.get_name(), self.behavior_name)
+    }
 }
 
 #[cfg(feature = "cli")]
