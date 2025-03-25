@@ -55,6 +55,17 @@ impl DebugSoup {
             .chain(named_iter)
     }
 
+    pub fn get(&self, category: &'static str, key: &'static str) -> Option<&DebugType> {
+        if let Some(inner) = &self.0 {
+            match category {
+                "" => inner.unnamed.get(key),
+                _ => inner.named.get(category).and_then(|m| m.get(key)),
+            }
+        } else {
+            None
+        }
+    }
+
     pub fn add(&mut self, category: &'static str, key: &'static str, value: DebugType) {
         if let Some(inner) = &mut self.0 {
             match category {
