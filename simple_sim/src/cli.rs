@@ -4,7 +4,7 @@ use botbrain::behaviors::Behavior;
 
 use clap::{self, Args, Parser, Subcommand};
 
-fn default_threads() -> usize {
+pub fn default_threads() -> usize {
     match std::thread::available_parallelism() {
         Ok(n) => n.into(),
         Err(e) => {

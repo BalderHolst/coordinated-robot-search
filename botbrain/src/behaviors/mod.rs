@@ -2,6 +2,7 @@
 
 mod avoid_obstacles;
 mod dumb;
+mod rl;
 mod search;
 
 use std::time::Duration;
@@ -27,6 +28,7 @@ pub enum RobotKind {
     Dumb,
     AvoidObstacles,
     Search,
+    Rl,
 }
 
 impl RobotKind {
@@ -36,6 +38,7 @@ impl RobotKind {
             RobotKind::Dumb => dumb::MENU,
             RobotKind::AvoidObstacles => avoid_obstacles::MENU,
             RobotKind::Search => search::MENU,
+            RobotKind::Rl => rl::MENU,
         }
     }
 }
@@ -61,13 +64,14 @@ impl Behavior {
         self.behavior_fn
     }
 
-    pub fn create_fn(&self) -> fn() -> Box<dyn Robot> {
+    pub fn create_fn(&self) -> CreateFn {
         match &self.robot_kind {
             RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
             RobotKind::AvoidObstacles => {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
+            RobotKind::Rl => || Box::new(rl::RlRobot::default()),
         }
     }
 

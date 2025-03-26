@@ -88,7 +88,7 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     Ok(())
 }
 
-pub fn save_df(df: &mut DataFrame, path: &PathBuf) -> Result<(), String> {
+fn save_df(df: &mut DataFrame, path: &PathBuf) -> Result<(), String> {
     let file = || {
         std::fs::File::create(path)
             .map_err(|e| format!("Failed to create file '{}': {}", path.display(), e))
