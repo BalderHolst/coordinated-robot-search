@@ -256,6 +256,7 @@ def spawn_robots(context, *args, **kwargs):
                 executable="map_overlay_testing",
                 namespace=namespace,
                 name="ros_agent",
+                output="screen",
                 parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
             )
         )
