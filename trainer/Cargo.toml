@@ -1,0 +1,9 @@
+[package]
+name = "trainer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+botbrain = { path = "../botbrain" }
+burn = { version = "0.16", features = ["ndarray", "autodiff"] }
+simple_sim = { path = "../simple_sim" }
