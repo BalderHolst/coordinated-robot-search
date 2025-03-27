@@ -52,17 +52,23 @@
         devShells.default = pkgs.mkShell {
             packages = with pkgs; [
                 git
+                cargo
+                rustc
+                rust-analyzer
                 (python3.withPackages (ps: with ps; [
                     polars
                     matplotlib
                 ]))
             ];
 
-            LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
-                wayland
-                libGL
-                libxkbcommon
-            ]);
+            env = {
+                LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
+                    wayland
+                    libGL
+                    libxkbcommon
+                    vulkan-loader
+                ]);
+            };
 
             shellHook = /* bash */ ''
 

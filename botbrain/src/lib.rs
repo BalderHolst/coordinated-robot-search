@@ -2,6 +2,7 @@
 
 use std::{any::Any, collections::HashSet};
 
+pub use burn;
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
 use serde::{Deserialize, Serialize};
