@@ -2,10 +2,12 @@
 
 mod avoid_obstacles;
 mod dumb;
-mod rl;
+pub mod rl;
 mod search;
 
 use std::time::Duration;
+
+use burn::backend::Wgpu;
 
 #[cfg(feature = "cli")]
 use {

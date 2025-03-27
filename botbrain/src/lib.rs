@@ -2,6 +2,7 @@
 
 use std::{any::Any, collections::HashSet};
 
+pub use burn;
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
 use serde::{Deserialize, Serialize};
@@ -290,7 +291,7 @@ pub type RobotRef = Box<dyn Robot>;
 ///
 /// Methods starting with `input_` are used to input data into the robot and should be
 /// called before calling a behavior function on the robot.
-pub trait Robot: Send + Sync {
+pub trait Robot {
     /// Get the id of the robot
     fn get_id(&self) -> &RobotId;
 

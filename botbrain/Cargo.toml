@@ -13,3 +13,8 @@ emath = { version = "0.30.0", features = ["serde"] }
 serde = { version = "1.0.218", features = ["derive"]}
 clap = { version = "4.5.31", features = ["derive"], optional = true }
 serde-binary = { version = "0.5.0", optional = true }
+
+# Reinforcement learning
+burn = { version = "0.16.0", features = ["train", "wgpu"] }
+bincode = "=2.0.0-rc.3"        # For burn
+bincode_derive = "=2.0.0-rc.3" # For burn
