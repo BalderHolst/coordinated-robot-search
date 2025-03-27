@@ -1,23 +1,22 @@
-mod pool;
+mod collisions;
+mod robot_pool;
 
 use std::{
-    f32::consts::PI,
     mem,
     sync::{mpsc, Arc},
-    time::{Duration, Instant},
+    time::Instant,
 };
 
 use botbrain::{
     self,
-    behaviors::{Behavior, BehaviorFn},
-    params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE, RADIUS},
+    behaviors::{Behavior, Time},
+    debug::DebugSoup,
     scaled_grid::ScaledGrid,
-    CamData, CamPoint, Control, RobotId, RobotPose,
+    Control, Pos2, RobotId, RobotPose,
 };
-use eframe::egui::{Pos2, Vec2};
+use eframe::egui::Vec2;
 use polars::prelude::*;
-use pool::ThreadPool;
-use serde::Serialize;
+use robot_pool::RobotThreadPool;
 
 use crate::{
     cli::ScenarioArgs,
@@ -149,19 +148,20 @@ pub fn run_scenario_headless(
     DataFrame::new(cols).unwrap()
 }
 
-#[derive(Debug, Clone, Default, Serialize)]
+#[derive(Clone, Default)]
 pub struct RobotState {
     pub id: RobotId,
     pub pose: RobotPose,
     pub vel: f32,
     pub avel: f32,
-    pub control: botbrain::Control,
+    pub control: Control,
+    pub soup: DebugSoup,
 }
 
 #[derive(Clone)]
 pub struct SimState {
     pub robot_states: Vec<RobotState>,
-    pub time: Duration,
+    pub time: Time,
     pub diagnostics: SimDiagnostics,
 }
 
@@ -192,15 +192,16 @@ pub struct SimArgs {
 #[allow(clippy::type_complexity)]
 pub struct Simulator {
     pub state: SimState,
-    robots: Vec<Box<dyn botbrain::Robot + 'static>>,
-    world: World,
-    pool: ThreadPool<
-        (RobotState, Box<dyn botbrain::Robot>, Arc<StepArgs>),
-        (RobotState, Box<dyn botbrain::Robot>),
-    >,
+    pool: RobotThreadPool,
     pending_messages: Vec<botbrain::Message>,
     pub behavior: Behavior,
+    agents: Vec<RobotState>,
+    world: World,
+    time: Time,
     dt: f32,
+    msg_send_rx: mpsc::Receiver<botbrain::Message>,
+    msg_send_tx: mpsc::Sender<botbrain::Message>,
+    pending_msgs: Vec<botbrain::Message>,
 }
 
 impl Simulator {
@@ -213,29 +214,32 @@ impl Simulator {
 
         let state = SimState {
             robot_states: vec![],
-            time: Duration::default(),
+            time: Time::default(),
             diagnostics: SimDiagnostics {
                 coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
             },
         };
+
+        let world_size = world.size();
+        let (msg_send_tx, msg_send_rx) = mpsc::channel();
+
         Self {
             state,
-            robots: vec![],
-            world,
-            pool: ThreadPool::new(
+            pool: RobotThreadPool::new(
                 threads,
-                |(mut agent_state, mut robot, args): (
-                    RobotState,
-                    Box<dyn botbrain::Robot>,
-                    Arc<StepArgs>,
-                )| {
-                    step_agent(&mut agent_state, &mut robot, args);
-                    (agent_state, robot)
-                },
+                behavior.behavior_fn(),
+                behavior.create_fn(),
+                world_size,
             ),
             pending_messages: vec![],
             behavior,
+            agents: vec![],
+            world: world.clone(),
+            time: Time::default(),
             dt: SIMULATION_DT,
+            msg_send_tx,
+            pending_msgs: vec![],
+            msg_send_rx,
         }
     }
 
@@ -243,67 +247,60 @@ impl Simulator {
         &self.world
     }
 
-    pub fn robots(&self) -> &[Box<dyn botbrain::Robot>] {
-        &self.robots
+    fn create_step_args(&self) -> Arc<StepArgs> {
+        Arc::new(StepArgs {
+            agents: self.state.robot_states.clone(),
+            world: self.world.clone(),
+            time: self.state.time,
+            dt: self.dt,
+            msg_send_tx: self.msg_send_tx.clone(),
+            pending_msgs: self.pending_msgs.clone(),
+        })
     }
 
     pub fn add_robot(&mut self, robot_pose: RobotPose) {
         let id = RobotId::new(self.state.robot_states.len() as u32);
 
         // Add the robot to the state which is managed by the simulator
-        let agent_state = RobotState {
+        let state = RobotState {
             id,
             pose: robot_pose.clone(),
             ..Default::default()
         };
-        self.state.robot_states.push(agent_state);
+        self.state.robot_states.push(state.clone());
 
-        // Create a new robot and add it to the simulator. This calculates
-        // the robot's movement and behavior
-        let mut robot = self.behavior.create_robot();
-        robot.input_pose(robot_pose);
-        robot.set_id(id);
-        robot.set_world_size(self.world.size());
-        robot.get_debug_soup_mut().activate();
-        self.robots.push(robot);
+        let args = self.create_step_args();
+
+        self.pool.add_robot(state, args);
     }
 
     pub fn step(&mut self) {
-        let dt = self.dt;
+        let args = self.create_step_args();
 
-        let (msg_send_tx, msg_send_rx) = mpsc::channel();
-
-        let args = Arc::new(StepArgs {
-            agents: self.state.robot_states.clone(),
-            behavior_fn: self.behavior.behavior_fn(),
-            world: self.world.clone(),
-            time: self.state.time,
-            dt,
-            msg_send_tx,
-            pending_messages: mem::take(&mut self.pending_messages),
-        });
+        let dt = args.dt;
 
         // Move the agents and robots to the thread pool
         let agents = mem::replace(&mut self.state.robot_states, Vec::with_capacity(0));
-        let robots: Vec<Box<dyn botbrain::Robot + 'static>> =
-            mem::replace(&mut self.robots, Vec::with_capacity(0));
 
         // Construct the input for the thread pool function
-        let input = agents
-            .into_iter()
-            .zip(robots)
-            .map(|(a, r)| (a, r, args.clone()))
-            .collect::<Vec<_>>();
+        let input = agents.into_iter().map(|a| (a.id, a)).collect::<Vec<_>>();
 
         // Process the agents and robots in parallel
-        let (states, robots) = self.pool.process(input).into_iter().unzip();
+        let mut outputs = self.pool.process(input, args);
+
+        outputs.sort_by_key(|(id, _)| *id);
+
+        // let mut tmp = outputs.iter().map(|(id, state)| (id, state.pose.pos)).collect::<Vec<_>>();
+        // println!("outputs: {:?}", tmp);
 
         // Move the agents and robots back to the simulator
-        self.state.robot_states = states;
-        self.robots = robots;
+        self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();
 
         // Collect all pending messages
-        self.pending_messages = msg_send_rx.try_iter().collect::<Vec<botbrain::Message>>();
+        self.pending_messages = self
+            .msg_send_rx
+            .try_iter()
+            .collect::<Vec<botbrain::Message>>();
 
         // Update diagnostics
         let diagnostics = &mut self.state.diagnostics;
@@ -321,160 +318,22 @@ impl Simulator {
             }
         }
 
-        self.state.time += Duration::from_secs_f32(dt);
+        self.state.time += Time::from_secs_f32(dt);
     }
 }
 
 /// Shared state needed to step an agent forward in time
+#[derive(Clone)]
 struct StepArgs {
     agents: Vec<RobotState>,
-    behavior_fn: BehaviorFn,
     world: World,
-    time: Duration,
+    time: Time,
     dt: f32,
     msg_send_tx: mpsc::Sender<botbrain::Message>,
-    pending_messages: Vec<botbrain::Message>,
+    pending_msgs: Vec<botbrain::Message>,
 }
 
-fn step_agent(
-    agent_state: &mut RobotState,
-    robot: &mut Box<dyn botbrain::Robot>,
-    args: Arc<StepArgs>,
-) {
-    let StepArgs {
-        agents,
-        behavior_fn,
-        world,
-        time,
-        dt,
-        msg_send_tx,
-        pending_messages,
-    } = &*args;
-
-    let dt = *dt;
-
-    // Call the behavior function
-    let (control, msgs) = behavior_fn(robot, *time);
-
-    {
-        agent_state.control = control;
-        agent_state.vel = agent_state.control.speed * SPEED_MULTIPLIER;
-        agent_state.avel = agent_state.control.steer * STEER_MULTIPLIER;
-
-        // Update position of the robot
-        let vel = Vec2::angled(agent_state.pose.angle) * agent_state.vel;
-        agent_state.pose.pos += vel * dt;
-        agent_state.pose.angle += agent_state.avel * dt;
-
-        // Set the new state of the robot
-        robot.input_pose(RobotPose {
-            pos: agent_state.pose.pos,
-            angle: agent_state.pose.angle,
-        });
-    }
-
-    // Update postboxes
-    {
-        // Send messages
-        for msg in msgs {
-            msg_send_tx.send(msg).unwrap();
-        }
-
-        // Receive messages
-        robot.input_msgs(pending_messages.clone());
-    }
-
-    // Update lidar data
-    {
-        let points = (0..LIDAR_RAYS)
-            .map(|n| {
-                let angle = n as f32 / LIDAR_RAYS as f32 * 2.0 * PI;
-                let (distance, _) = cast_ray(
-                    world,
-                    agents,
-                    agent_state.pose.pos,
-                    agent_state.pose.angle + angle,
-                    DIAMETER / 2.0,
-                    LIDAR_RANGE,
-                    &[Cell::SearchItem],
-                );
-                botbrain::LidarPoint { angle, distance }
-            })
-            .collect();
-
-        robot.input_lidar(botbrain::LidarData::new(points));
-    }
-
-    // Update robot camera
-    {
-        let angle_step = CAM_FOV / (CAMERA_RAYS - 1) as f32;
-        let points = (0..CAMERA_RAYS)
-            .filter_map(|n| {
-                let angle = n as f32 * angle_step - CAM_FOV / 2.0;
-                let (distance, cell) = cast_ray(
-                    world,
-                    agents,
-                    agent_state.pose.pos,
-                    agent_state.pose.angle + angle,
-                    DIAMETER / 2.0,
-                    CAM_RANGE,
-                    &[],
-                );
-                match cell {
-                    Some(Cell::SearchItem) => {
-                        let probability = (CAM_RANGE - distance) / CAM_RANGE;
-                        Some((n, botbrain::CamPoint { angle, probability }))
-                    }
-                    _ => None,
-                }
-            })
-            .collect::<Vec<_>>();
-
-        // Consolidate points next to each other
-        {
-            let mut sparse_points = vec![];
-            let mut adjacant = vec![];
-
-            let consolidate_points = |adjacant: &mut Vec<_>, sparse_points: &mut Vec<_>| {
-                if adjacant.is_empty() {
-                    return;
-                }
-
-                let mut avg_point = adjacant.iter().fold(
-                    CamPoint {
-                        angle: 0.0,
-                        probability: 0.0,
-                    },
-                    |a: CamPoint, (_, b): &(usize, CamPoint)| CamPoint {
-                        angle: a.angle + b.angle,
-                        probability: a.probability + b.probability,
-                    },
-                );
-                avg_point.probability /= adjacant.len() as f32;
-                avg_point.angle /= adjacant.len() as f32;
-                sparse_points.push(avg_point);
-                adjacant.clear();
-            };
-
-            for (n, point) in points {
-                match adjacant.last() {
-                    None => adjacant.push((n, point)),
-                    Some((last_n, _)) if *last_n == n - 1 => adjacant.push((n, point)),
-                    Some(_) => consolidate_points(&mut adjacant, &mut sparse_points),
-                }
-            }
-            consolidate_points(&mut adjacant, &mut sparse_points);
-            robot.input_cam(CamData::Points(sparse_points));
-        }
-    }
-
-    // Resolve collisions
-    resolve_robot_collisions(agent_state, agents);
-    resolve_border_collisions(agent_state, world);
-    resolve_world_collisions(agent_state, world);
-}
-
-fn cast_ray(
+pub fn cast_ray(
     world: &World,
     agents: &[RobotState],
     base_pos: Pos2,
@@ -514,72 +373,4 @@ fn cast_ray(
         distance += step_size;
     }
     (distance - step_size / 2.0, None)
-}
-
-fn resolve_robot_collisions(me: &mut RobotState, all: &[RobotState]) {
-    for other in all {
-        if me.id == other.id {
-            continue;
-        }
-        if (me.pose.pos - other.pose.pos).length() < DIAMETER {
-            let diff = me.pose.pos - other.pose.pos;
-            let overlap = DIAMETER - diff.length();
-            let dir = diff.normalized() * overlap / 2.0;
-            me.pose.pos += dir;
-        }
-    }
-}
-
-fn resolve_world_collisions(robot_state: &mut RobotState, world: &World) {
-    // Look in a circle around the robot
-    let radius = DIAMETER / 2.0 * 1.4 / world.scale();
-    let center = world.world_to_grid(robot_state.pose.pos);
-    let mut nudge = Vec2::ZERO;
-    let mut nudgers = 0;
-    let grid = world.grid();
-    for (x, y) in grid.iter_circle(center, radius) {
-        let cell = grid.get(x, y);
-        if matches!(cell, Some(Cell::Wall) | None) {
-            let cell_center = world.grid_to_world(Pos2 {
-                x: x as f32,
-                y: y as f32,
-            });
-            let diff = robot_state.pose.pos - cell_center;
-
-            let overlap = DIAMETER / 2.0 - diff.length() + 0.5 * world.scale();
-            if overlap < 0.0 {
-                continue;
-            }
-
-            let diff = match diff.x.abs() > diff.y.abs() {
-                true => Vec2::new(diff.x, 0.0),
-                false => Vec2::new(0.0, diff.y),
-            };
-            let dir = diff.normalized();
-
-            nudge += dir * overlap;
-            nudgers += 1;
-        }
-    }
-
-    if nudgers > 0 {
-        // Only nudge in the direction with most difference
-        robot_state.pose.pos += nudge / nudgers as f32;
-    }
-}
-
-fn resolve_border_collisions(robot_state: &mut RobotState, world: &World) {
-    let pos = &mut robot_state.pose.pos;
-    if pos.x - RADIUS < -world.width() / 2.0 {
-        pos.x = -world.width() / 2.0 + RADIUS;
-    }
-    if pos.x + RADIUS > world.width() / 2.0 {
-        pos.x = world.width() / 2.0 - RADIUS;
-    }
-    if pos.y - RADIUS < -world.height() / 2.0 {
-        pos.y = -world.height() / 2.0 + RADIUS;
-    }
-    if pos.y + RADIUS > world.height() / 2.0 {
-        pos.y = world.height() / 2.0 - RADIUS;
-    }
 }
