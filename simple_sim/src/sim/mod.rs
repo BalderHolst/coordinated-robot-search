@@ -193,7 +193,6 @@ pub struct SimArgs {
 pub struct Simulator {
     pub state: SimState,
     pool: RobotThreadPool,
-    pending_messages: Vec<botbrain::Message>,
     pub behavior: Behavior,
     agents: Vec<RobotState>,
     world: World,
@@ -231,14 +230,13 @@ impl Simulator {
                 behavior.create_fn(),
                 world_size,
             ),
-            pending_messages: vec![],
+            pending_msgs: vec![],
             behavior,
             agents: vec![],
             world: world.clone(),
             time: Time::default(),
             dt: SIMULATION_DT,
             msg_send_tx,
-            pending_msgs: vec![],
             msg_send_rx,
         }
     }
@@ -292,14 +290,14 @@ impl Simulator {
         self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();
 
         // Collect all pending messages
-        self.pending_messages = self
+        self.pending_msgs = self
             .msg_send_rx
             .try_iter()
             .collect::<Vec<botbrain::Message>>();
 
         // Update diagnostics
         let diagnostics = &mut self.state.diagnostics;
-        for msg in &self.pending_messages {
+        for msg in &self.pending_msgs {
             match &msg.kind {
                 botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
                     diagnostics.coverage_grid.set_shape(shape, true)
