@@ -15,8 +15,10 @@ use {
 
 use super::*;
 
+pub type Time = Duration;
 pub type BehaviorOutput = (Control, Vec<Message>);
-pub type BehaviorFn = fn(&mut Box<dyn Robot>, Duration) -> BehaviorOutput;
+pub type BehaviorFn = fn(&mut Box<dyn Robot>, Time) -> BehaviorOutput;
+pub type CreateFn = fn() -> Box<dyn Robot>;
 
 /// The kind of robot. Behaviors can only be run the robot kind they were designed for.
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
@@ -59,14 +61,20 @@ impl Behavior {
         self.behavior_fn
     }
 
+    pub fn create_fn(&self) -> fn() -> Box<dyn Robot> {
+        match &self.robot_kind {
+            RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
+            RobotKind::AvoidObstacles => {
+                || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
+            }
+            RobotKind::Search => || Box::new(search::SearchRobot::default()),
+        }
+    }
+
     /// Create a new robot that corresponds to the behavior.
     /// This is the main way to create a `Box<dyn Robot>`.
     pub fn create_robot(&self) -> Box<dyn Robot> {
-        match &self.robot_kind {
-            RobotKind::Dumb => Box::new(dumb::DumbRobot::default()),
-            RobotKind::AvoidObstacles => Box::new(avoid_obstacles::AvoidObstaclesRobot::default()),
-            RobotKind::Search => Box::new(search::SearchRobot::default()),
-        }
+        (self.create_fn())()
     }
 }
 
