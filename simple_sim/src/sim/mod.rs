@@ -286,12 +286,7 @@ impl Simulator {
         let input = agents.into_iter().map(|a| (a.id, a)).collect::<Vec<_>>();
 
         // Process the agents and robots in parallel
-        let mut outputs = self.pool.process(input, args);
-
-        outputs.sort_by_key(|(id, _)| *id);
-
-        // let mut tmp = outputs.iter().map(|(id, state)| (id, state.pose.pos)).collect::<Vec<_>>();
-        // println!("outputs: {:?}", tmp);
+        let outputs = self.pool.process(input, args);
 
         // Move the agents and robots back to the simulator
         self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();

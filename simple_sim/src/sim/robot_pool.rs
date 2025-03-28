@@ -230,8 +230,13 @@ fn step_agent(
             angle: state.pose.angle,
         });
 
+        let robot_soup = robot.get_debug_soup_mut();
+        if robot_soup.is_active() {
+            state.soup.activate();
+        }
+
         // Swap soups
-        std::mem::swap(robot.get_debug_soup_mut(), &mut state.soup);
+        std::mem::swap(robot_soup, &mut state.soup);
     }
 
     // Update postboxes
