@@ -59,22 +59,19 @@ impl RobotThreadPool {
     ) -> RobotThreadPool {
         let (output_tx, output_rx) = mpsc::channel();
 
-        let ctxs = (0..threads).map(|_| ThreadCtx {
-            robots: vec![],
-            behavior_fn,
-            create_robot_fn,
-            world_size,
-        });
-
-        let (input_channels, handles): (Vec<_>, Vec<_>) = ctxs
-            .into_iter()
-            .enumerate()
-            .map(|(thread_id, mut ctx)| {
+        let (input_channels, handles): (Vec<_>, Vec<_>) = (0..threads)
+            .map(|thread_id| {
                 let (input_tx, input_rx) =
                     mpsc::channel::<Option<WorkerInput>>();
                 let output_tx = output_tx.clone();
                 let handle = {
                     thread::spawn(move || {
+                        let mut ctx = ThreadCtx {
+                            robots: vec![],
+                            behavior_fn,
+                            create_robot_fn,
+                            world_size,
+                        };
                         while let Ok(Some((id, mut state, args))) = input_rx.recv() {
                             let robot =
                                 match ctx.robots.iter_mut().find(|robot| *robot.get_id() == id) {
