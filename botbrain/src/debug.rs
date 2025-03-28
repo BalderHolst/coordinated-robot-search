@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
 use emath::{Pos2, Vec2};
 
@@ -6,8 +6,8 @@ use crate::scaled_grid::ScaledGrid;
 
 #[derive(Clone)]
 struct InnerSoup {
-    unnamed: BTreeMap<&'static str, DebugType>,
-    named: BTreeMap<&'static str, BTreeMap<&'static str, DebugType>>,
+    unnamed: BTreeMap<&'static str, Arc<DebugType>>,
+    named: BTreeMap<&'static str, BTreeMap<&'static str, Arc<DebugType>>>,
 }
 
 impl InnerSoup {
@@ -39,7 +39,7 @@ impl DebugSoup {
         self.0 = None;
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, &DebugType)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&'static str, &'static str, &Arc<DebugType>)> {
         let unnamed_iter = self.0.iter().flat_map(|inner| inner.unnamed.iter());
         let named_iter = self
             .0
@@ -55,12 +55,13 @@ impl DebugSoup {
             .chain(named_iter)
     }
 
-    pub fn get(&self, category: &'static str, key: &'static str) -> Option<&DebugType> {
+    pub fn get(&self, category: &'static str, key: &'static str) -> Option<Arc<DebugType>> {
         if let Some(inner) = &self.0 {
             match category {
                 "" => inner.unnamed.get(key),
                 _ => inner.named.get(category).and_then(|m| m.get(key)),
             }
+            .cloned()
         } else {
             None
         }
@@ -68,6 +69,7 @@ impl DebugSoup {
 
     pub fn add(&mut self, category: &'static str, key: &'static str, value: DebugType) {
         if let Some(inner) = &mut self.0 {
+            let value = Arc::new(value);
             match category {
                 "" => {
                     inner.unnamed.insert(key, value);

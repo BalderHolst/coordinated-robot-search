@@ -355,6 +355,7 @@ impl App {
                     continue;
                 }
                 let color = get_color(n);
+                let data = &**data;
                 match data {
                     DebugType::Vector(vec) => {
                         let end = robot_pos + self.cam.scaled(*vec);
