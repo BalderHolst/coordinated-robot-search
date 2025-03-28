@@ -607,11 +607,14 @@ impl App {
 
     fn spawn_robot(&mut self, pos: Pos2) {
         println!("[INFO] Spawning robot at {:?}", pos);
+        self.global_opts.paused.store(true, Ordering::SeqCst);
+
         let mut sim = self.sim_bg.lock().unwrap();
         let angle = PI / 2.0 * self.sim_state.robot_states.len() as f32;
         sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
+        self.global_opts.paused.store(false, Ordering::SeqCst);
     }
 }
 
