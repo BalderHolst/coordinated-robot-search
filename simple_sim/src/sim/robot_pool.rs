@@ -3,16 +3,15 @@ use std::{
     f32::consts::PI,
     sync::{
         mpsc::{self, Receiver, Sender},
-        Arc, Mutex,
+        Arc,
     },
     thread,
 };
 
 use botbrain::{
     behaviors::{BehaviorFn, CreateFn},
-    debug::DebugSoup,
     params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE},
-    CamData, CamPoint, LidarData, Message, Robot, RobotId, RobotPose, Vec2,
+    CamData, CamPoint, Robot, RobotId, RobotPose, Vec2,
 };
 
 use crate::world::Cell;
@@ -22,45 +21,14 @@ use super::{
     STEER_MULTIPLIER,
 };
 
-pub struct RobotInput {
-    pose: Option<RobotPose>,
-    cam: Option<CamData>,
-    lidar: Option<LidarData>,
-    msgs: Option<Vec<Message>>,
-}
-
-impl RobotInput {
-    fn empty() -> Self {
-        Self {
-            pose: None,
-            cam: None,
-            lidar: None,
-            msgs: None,
-        }
-    }
-
-    fn update_robot(self, robot: &mut Box<dyn Robot>) {
-        if let Some(pose) = self.pose {
-            robot.input_pose(pose);
-        }
-        if let Some(cam) = self.cam {
-            robot.input_cam(cam);
-        }
-        if let Some(lidar) = self.lidar {
-            robot.input_lidar(lidar);
-        }
-        if let Some(msgs) = self.msgs {
-            robot.input_msgs(msgs);
-        }
-    }
-}
+type WorkerInput = (RobotId, RobotState, Arc<StepArgs>);
+type WorkerOutput = (RobotId, RobotState);
 
 pub struct RobotThreadPool {
     threads: usize,
     robot_map: HashMap<RobotId, usize>,
-    soups: HashMap<RobotId, Arc<Mutex<DebugSoup>>>,
-    input_channels: Vec<Sender<Option<(RobotId, RobotState, Arc<StepArgs>)>>>,
-    output_channel: Receiver<(RobotId, RobotState)>,
+    input_channels: Vec<Sender<Option<WorkerInput>>>,
+    output_channel: Receiver<WorkerOutput>,
     handles: Vec<thread::JoinHandle<()>>,
     next_id: u32,
 }
@@ -103,7 +71,7 @@ impl RobotThreadPool {
             .enumerate()
             .map(|(thread_id, mut ctx)| {
                 let (input_tx, input_rx) =
-                    mpsc::channel::<Option<(RobotId, RobotState, Arc<StepArgs>)>>();
+                    mpsc::channel::<Option<WorkerInput>>();
                 let output_tx = output_tx.clone();
                 let handle = {
                     thread::spawn(move || {
@@ -113,7 +81,7 @@ impl RobotThreadPool {
                                     Some(robot) => robot,
                                     None => {
                                         println!(
-                                            "[{thread_id}] Creating new robot with id {id:?}!"
+                                            "[INFO] [thread {thread_id}] Creating new robot with id {id:?}!"
                                         );
                                         let robot = ctx.create_robot(id);
                                         ctx.robots.push(robot);
@@ -137,7 +105,6 @@ impl RobotThreadPool {
             output_channel: output_rx,
             handles,
             robot_map: HashMap::new(),
-            soups: HashMap::new(),
             next_id: 0,
         }
     }
@@ -244,7 +211,7 @@ fn step_agent(
         // Send messages
         for msg in msgs {
             let _ = msg_send_tx.send(msg).map_err(|e| {
-                eprintln!("Error sending message: {:?}", e.to_string());
+                eprintln!("[ERROR] Error sending message: {:?}", e.to_string());
             });
         }
 
