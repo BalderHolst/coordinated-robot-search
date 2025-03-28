@@ -337,50 +337,52 @@ impl RosAgent {
                     let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
                     let mut min = f32::INFINITY;
                     let mut max = f32::NEG_INFINITY;
-                    if let Some(DebugType::Grid(grid)) = search_grid {
-                        let size = (map.info.width, map.info.height);
-                        for y in 0..size.1 {
-                            for x in 0..size.0 {
-                                let cell = grid.get(
-                                    Pos2 {
-                                        x: x as f32 * self.map_scale,
-                                        y: y as f32 * self.map_scale,
-                                    } - grid.size() / 2.0,
-                                );
+                    if let Some(item) = search_grid {
+                        if let DebugType::Grid(grid) = &*item {
+                            let size = (map.info.width, map.info.height);
+                            for y in 0..size.1 {
+                                for x in 0..size.0 {
+                                    let cell = grid.get(
+                                        Pos2 {
+                                            x: x as f32 * self.map_scale,
+                                            y: y as f32 * self.map_scale,
+                                        } - grid.size() / 2.0,
+                                    );
 
-                                if let Some(&cell) = cell {
-                                    min = min.min(cell);
-                                    max = max.max(cell);
-                                } else {
-                                    log_error!(&self.nl, "Cell is none: {},{}", x, y);
+                                    if let Some(&cell) = cell {
+                                        min = min.min(cell);
+                                        max = max.max(cell);
+                                    } else {
+                                        log_error!(&self.nl, "Cell is none: {},{}", x, y);
+                                    }
                                 }
                             }
-                        }
-                        for y in 0..size.1 {
-                            for x in 0..size.0 {
-                                let cell = grid.get(
-                                    Pos2 {
-                                        x: x as f32 * self.map_scale,
-                                        y: y as f32 * self.map_scale,
-                                    } - grid.size() / 2.0,
-                                );
-                                // Between 1 and 98 from blue to red
-                                // 0 is black
-                                let value: i8 = match cell {
-                                    Some(&cell) if cell > 0.0 => {
-                                        // Max should be 98
-                                        // 0 should be (98+1)/2
-                                        // Range (98-1)/2
-                                        let ratio = cell / max;
-                                        (49.5 + 48.5 * ratio).clamp(49.0, 98.0) as i8
-                                    }
-                                    Some(&cell) if cell < 0.0 => {
-                                        let ratio = cell / min;
-                                        (49.5 - 48.5 * ratio).clamp(1.0, 49.5) as i8
-                                    }
-                                    _ => 0,
-                                };
-                                map.data[y as usize * size.0 as usize + x as usize] = value;
+                            for y in 0..size.1 {
+                                for x in 0..size.0 {
+                                    let cell = grid.get(
+                                        Pos2 {
+                                            x: x as f32 * self.map_scale,
+                                            y: y as f32 * self.map_scale,
+                                        } - grid.size() / 2.0,
+                                    );
+                                    // Between 1 and 98 from blue to red
+                                    // 0 is black
+                                    let value: i8 = match cell {
+                                        Some(&cell) if cell > 0.0 => {
+                                            // Max should be 98
+                                            // 0 should be (98+1)/2
+                                            // Range (98-1)/2
+                                            let ratio = cell / max;
+                                            (49.5 + 48.5 * ratio).clamp(49.0, 98.0) as i8
+                                        }
+                                        Some(&cell) if cell < 0.0 => {
+                                            let ratio = cell / min;
+                                            (49.5 - 48.5 * ratio).clamp(1.0, 49.5) as i8
+                                        }
+                                        _ => 0,
+                                    };
+                                    map.data[y as usize * size.0 as usize + x as usize] = value;
+                                }
                             }
                         }
                     }
