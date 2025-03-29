@@ -1,6 +1,0 @@
-[build]
-rustflags = "--cfg r2r__rosgraph_msgs__msg__Clock"
-
-[env]
-# TODO: Find better way than this to make colcon happy
-PKG_CONFIG_PATH = "/usr/lib/aarch64-linux-gnu/pkgconfig"

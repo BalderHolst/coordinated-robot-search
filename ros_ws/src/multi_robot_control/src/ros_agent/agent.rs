@@ -2,17 +2,20 @@ use std::{
     sync::{Arc, Mutex},
     time::Duration,
 };
-mod convert_msg;
 
-use botbrain::{Pos2, Vec2, debug::DebugType};
-use convert_msg::{
+use crate::convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
+    sensor_image_to_opencv_image,
 };
+use crate::{camera_info::CameraInfo, vision::Vision};
+use botbrain::{Pos2, Vec2, debug::DebugType};
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
+use opencv::highgui;
 use r2r::{
     self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
     ros_agent_msgs, sensor_msgs,
 };
+
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct RosAgent {
@@ -31,6 +34,8 @@ pub struct RosAgent {
     map_origin: Vec2,
     map_scale: f32,
     map_size: Vec2,
+    image: Arc<Mutex<Option<sensor_msgs::msg::Image>>>,
+    vision: Vision,
 }
 
 impl RosAgent {
@@ -202,6 +207,32 @@ impl RosAgent {
             )
             .unwrap();
 
+        // Subscribe to map
+        let image = Arc::new(Mutex::new(None));
+        let mut sub_image = node
+            .subscribe::<sensor_msgs::msg::Image>(
+                "rgbd_camera/image",
+                QosProfile::default().keep_last(1),
+            )
+            .unwrap();
+        {
+            let nl = nl.clone();
+            let image = image.clone();
+            pool.spawner()
+                .spawn_local(async move {
+                    log_info!(&nl, "Image listener started");
+                    while let Some(msg) = sub_image.next().await {
+                        image.lock().unwrap().replace(msg);
+                    }
+                })
+                .unwrap();
+        }
+
+        // Vertical fov not used
+        // CameraInfo are hard coeded for GZ sim of Turtlebot4
+        let camera = CameraInfo::new(320, 240, 1.25, 1.0);
+        let vision = Vision::new(camera);
+
         Self {
             node,
             robot,
@@ -218,6 +249,8 @@ impl RosAgent {
             map_origin,
             map_scale,
             map_size,
+            vision,
+            image,
         }
     }
 
@@ -269,6 +302,22 @@ impl RosAgent {
                     let lidar = scan_to_lidar_data(&scan);
                     self.robot.input_lidar(lidar);
                 }
+                if let Some(mut image) = self.image.lock().unwrap().take() {
+                    if let Ok(img) = sensor_image_to_opencv_image(&mut image) {
+                        match self.vision.find_search_objects_probability(&img) {
+                            Ok(cam_data) => {
+                                highgui::wait_key(1).unwrap();
+                                // BUG: Program crashes when inputting cam_data
+                                // [ros_agent-12] thread 'main' panicked at /home/balling/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-binary-0.5.0/src/deserializer.rs:19:9:
+                                // [ros_agent-12] deserialization of any type for binary data format is not supported
+                                // self.robot.input_cam(cam_data);
+                            }
+                            Err(e) => log_warn!(&self.nl, "Error finding search objects: {}", e),
+                        }
+                    } else {
+                        println!("Could not convert rgbd_image to opencv image");
+                    }
+                }
 
                 // Set the robot pose
                 if let Some(pose) = self.pose.lock().unwrap().take() {
@@ -292,23 +341,21 @@ impl RosAgent {
                         }
                     });
 
-                    let postbox = self.robot.get_postbox_mut();
-
                     // Deposit incoming msgs in the robot postbox
-                    postbox.deposit(msgs);
-
-                    // Empty the outgoing messages from the robot postbox and send them to via ROS2
-                    postbox.empty().into_iter().for_each(|msg| {
-                        if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
-                            self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
-                        } else {
-                            log_warn!(&self.nl, "Error converting message to ROS2");
-                        }
-                    });
+                    self.robot.input_msgs(msgs.collect());
                 }
             }
 
-            let (control, _) = (self.behavior.behavior_fn())(&mut self.robot, time);
+            let (control, outgoing_msgs) = (self.behavior.behavior_fn())(&mut self.robot, time);
+
+            // Empty the outgoing messages from the robot postbox and send them to via ROS2
+            outgoing_msgs.into_iter().for_each(|msg| {
+                if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
+                    self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                } else {
+                    log_warn!(&self.nl, "Error converting message to ROS2");
+                }
+            });
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();
@@ -400,9 +447,4 @@ impl Default for RosAgent {
     fn default() -> Self {
         Self::new()
     }
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut agent = RosAgent::new();
-    agent.run()
 }

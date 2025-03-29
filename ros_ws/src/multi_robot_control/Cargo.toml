@@ -21,14 +21,6 @@ path = "./src/ros_agent/main.rs"
 name = "ros_agent_msg_printer"
 path = "./src/ros_agent_msg_printer/main.rs"
 
-[[bin]]
-name = "map_overlay_testing"
-path = "./src/map_overlay_testing/main.rs"
-
-[[bin]]
-name = "ros2time"
-path = "./src/ros2time/main.rs"
-
 [dependencies]
 botbrain = { path = "../../../botbrain", features = ["cli", "serde-bin"] }
 clap = { version = "4.5.31", features = ["derive"] }
