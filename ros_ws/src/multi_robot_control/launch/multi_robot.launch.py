@@ -3,7 +3,7 @@ from pathlib import Path
 import tempfile
 
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription, condition
+from launch import LaunchDescription
 from launch.actions import (
     AppendEnvironmentVariable,
     DeclareLaunchArgument,
@@ -71,7 +71,7 @@ def generate_launch_description():
         executable="rviz2",
         name="rviz2",
         output="screen",
-        arguments=["-d", os.path.join(sim_dir, "config", "rviz", "config.rviz")],
+        arguments=["-d", os.path.join(sim_dir, "config", "rviz", "map_overlay.rviz")],
         parameters=[{"use_sim_time": use_sim_time}],
     )
 
@@ -256,6 +256,7 @@ def spawn_robots(context, *args, **kwargs):
                 executable="ros_agent",
                 namespace=namespace,
                 name="ros_agent",
+                output="screen",
                 parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
             )
         )

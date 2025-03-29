@@ -4,7 +4,7 @@ use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(untagged)]
+// #[serde(untagged)]
 pub enum Shape {
     Circle(Circle),
     Cone(Cone),

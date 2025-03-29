@@ -9,4 +9,6 @@ Bachelor Project 2025
 
 [Useful Ros 2 Commands](./ros_ws/commands.md)
 
+![screenshot](./Screenshots/multi_robot_map_overlay.png)
+
 ![screenshot](./Screenshots/multi_robot.png)

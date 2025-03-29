@@ -1,4 +1,3 @@
-#[allow(dead_code)]
 use crate::camera_info::CameraInfo;
 
 use opencv::{
@@ -68,22 +67,6 @@ impl Vision {
             hsv,
             masked_circles,
         }
-    }
-
-    /// Util function to convert a r2r::sensor_msgs::msg::Image to an opencv::Mat
-    pub fn sensor_image_to_opencv_image(
-        image: &mut r2r::sensor_msgs::msg::Image,
-    ) -> Result<Mat, Box<dyn std::error::Error>> {
-        let mat = unsafe {
-            Mat::new_rows_cols_with_data_unsafe(
-                image.height as i32,
-                image.width as i32,
-                CV_8UC3,
-                image.data.as_mut_ptr() as *mut std::ffi::c_void,
-                image.step as usize,
-            )
-        };
-        mat.map_err(|e| e.into())
     }
 
     pub fn find_search_objects_probability(

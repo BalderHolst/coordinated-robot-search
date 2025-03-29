@@ -154,9 +154,10 @@ impl App {
 
         let world = sim.world().clone();
         let robot_soups = sim
-            .robots()
+            .state
+            .robot_states
             .iter()
-            .map(|r| r.get_debug_soup().clone())
+            .map(|r| r.soup.clone())
             .collect();
 
         let sim_bg = Arc::new(Mutex::new(sim));
@@ -354,6 +355,7 @@ impl App {
                     continue;
                 }
                 let color = get_color(n);
+                let data = &**data;
                 match data {
                     DebugType::Vector(vec) => {
                         let end = robot_pos + self.cam.scaled(*vec);
@@ -605,13 +607,14 @@ impl App {
 
     fn spawn_robot(&mut self, pos: Pos2) {
         println!("[INFO] Spawning robot at {:?}", pos);
+        self.global_opts.paused.store(true, Ordering::SeqCst);
+
         let mut sim = self.sim_bg.lock().unwrap();
         let angle = PI / 2.0 * self.sim_state.robot_states.len() as f32;
         sim.add_robot(RobotPose { pos, angle });
         self.robot_opts.push(RobotOptions::default());
-        let robot = sim.robots().last().unwrap();
-        self.robot_soups.push(robot.get_debug_soup().clone());
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
+        self.global_opts.paused.store(false, Ordering::SeqCst);
     }
 }
 
@@ -902,9 +905,10 @@ impl eframe::App for App {
                     if let Ok(sim) = self.sim_bg.try_lock() {
                         self.sim_state = sim.state.clone();
                         self.robot_soups = sim
-                            .robots()
+                            .state
+                            .robot_states
                             .iter()
-                            .map(|r| r.get_debug_soup().clone())
+                            .map(|r| r.soup.clone())
                             .collect();
                         break;
                     }

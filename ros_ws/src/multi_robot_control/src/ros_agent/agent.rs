@@ -1,19 +1,21 @@
 use std::{
-    borrow::Borrow,
     sync::{Arc, Mutex},
     time::Duration,
 };
-mod convert_msg;
 
-use botbrain::Vec2;
-use convert_msg::{
+use crate::convert_msg::{
     agent_msg_to_ros2_msg, cov_pose_to_pose2d, ros2_msg_to_agent_msg, scan_to_lidar_data,
+    sensor_image_to_opencv_image,
 };
+use crate::{camera_info::CameraInfo, vision::Vision};
+use botbrain::{Pos2, Vec2, debug::DebugType};
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
+use opencv::highgui;
 use r2r::{
     self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
     ros_agent_msgs, sensor_msgs,
 };
+
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
 pub struct RosAgent {
@@ -29,6 +31,11 @@ pub struct RosAgent {
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
     map: Arc<Mutex<Option<nav_msgs::msg::OccupancyGrid>>>,
     map_overlay_pub: Publisher<nav_msgs::msg::OccupancyGrid>,
+    map_origin: Vec2,
+    map_scale: f32,
+    map_size: Vec2,
+    image: Arc<Mutex<Option<sensor_msgs::msg::Image>>>,
+    vision: Vision,
 }
 
 impl RosAgent {
@@ -38,6 +45,12 @@ impl RosAgent {
         let mut node = r2r::Node::create(ctx, "agent", "").unwrap();
 
         let nl = node.logger().to_string();
+
+        let map_origin = Vec2::default();
+
+        let map_scale = 0.1; // Overwritten when a map is received
+
+        let map_size = Vec2 { x: 0.0, y: 0.0 }; // Overwritten when a map is received
 
         if node.get_parameter::<bool>("use_sim_time").unwrap_or(false) {
             node.get_time_source()
@@ -178,6 +191,7 @@ impl RosAgent {
             pool.spawner()
                 .spawn_local(async move {
                     log_info!(&nl, "Map listener started");
+                    // No need wor while let as we only need the map once
                     if let Some(msg) = sub_map.next().await {
                         map.lock().unwrap().replace(msg);
                     }
@@ -193,6 +207,32 @@ impl RosAgent {
             )
             .unwrap();
 
+        // Subscribe to map
+        let image = Arc::new(Mutex::new(None));
+        let mut sub_image = node
+            .subscribe::<sensor_msgs::msg::Image>(
+                "rgbd_camera/image",
+                QosProfile::default().keep_last(1),
+            )
+            .unwrap();
+        {
+            let nl = nl.clone();
+            let image = image.clone();
+            pool.spawner()
+                .spawn_local(async move {
+                    log_info!(&nl, "Image listener started");
+                    while let Some(msg) = sub_image.next().await {
+                        image.lock().unwrap().replace(msg);
+                    }
+                })
+                .unwrap();
+        }
+
+        // Vertical fov not used
+        // CameraInfo are hard coeded for GZ sim of Turtlebot4
+        let camera = CameraInfo::new(320, 240, 1.25, 1.0);
+        let vision = Vision::new(camera);
+
         Self {
             node,
             robot,
@@ -206,39 +246,86 @@ impl RosAgent {
             cmd_pub,
             map,
             map_overlay_pub,
+            map_origin,
+            map_scale,
+            map_size,
+            vision,
+            image,
         }
     }
 
     pub fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
         let mut last_map_update = Duration::default();
-        let mut map_val = 0;
-        let mut is_map_size_set = false;
+        let mut is_map_received = false;
         loop {
-            self.node.spin_once(Duration::from_secs(1));
+            self.node.spin_once(Duration::from_secs_f32(0.5));
             self.pool.run_until_stalled();
+
+            let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
+            // Prevents botbrain from updating
+            if time.as_millis() < 100 {
+                // Simulated time is not available yet
+                log_warn!(&self.nl, "RosTime not ready yet: {:?}", time);
+                std::thread::sleep(std::time::Duration::from_secs(2));
+                continue;
+            }
+
+            // Initialize the world size if it hasn't been set yet
+            if !is_map_received {
+                if let Some(map) = self.map.lock().unwrap().as_ref() {
+                    // Only set world size once as it resets the internal grid
+                    self.map_scale = map.info.resolution;
+
+                    // Match map scale to ros2 map scale
+                    self.robot.set_world_size(Vec2::new(
+                        map.info.width as f32 * self.map_scale,
+                        map.info.height as f32 * self.map_scale,
+                    ));
+
+                    // Used for position transformation
+                    self.map_origin = Vec2::new(
+                        map.info.origin.position.x as f32,
+                        map.info.origin.position.y as f32,
+                    );
+
+                    self.map_size = Vec2::new(map.info.width as f32, map.info.height as f32);
+
+                    is_map_received = true;
+                }
+                continue;
+            }
 
             // Set inputs for robot
             {
-                // Initialize the world size if it hasn't been set yet
-                if !is_map_size_set {
-                    if let Some(map) = self.map.lock().unwrap().as_ref() {
-                        self.robot.set_world_size(Vec2::new(
-                            map.info.width as f32,
-                            map.info.height as f32,
-                        ));
-                        is_map_size_set = true;
-                    }
-                }
-
                 // Set the robot lidar input
                 if let Some(scan) = self.scan.lock().unwrap().take() {
                     let lidar = scan_to_lidar_data(&scan);
                     self.robot.input_lidar(lidar);
                 }
+                if let Some(mut image) = self.image.lock().unwrap().take() {
+                    if let Ok(img) = sensor_image_to_opencv_image(&mut image) {
+                        match self.vision.find_search_objects_probability(&img) {
+                            Ok(cam_data) => {
+                                highgui::wait_key(1).unwrap();
+                                // BUG: Program crashes when inputting cam_data
+                                // [ros_agent-12] thread 'main' panicked at /home/balling/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-binary-0.5.0/src/deserializer.rs:19:9:
+                                // [ros_agent-12] deserialization of any type for binary data format is not supported
+                                self.robot.input_cam(cam_data);
+                            }
+                            Err(e) => {
+                                log_warn!(&self.nl, "Error finding search objects: {}", e)
+                            }
+                        }
+                    } else {
+                        println!("Could not convert rgbd_image to opencv image");
+                    }
+                }
 
                 // Set the robot pose
                 if let Some(pose) = self.pose.lock().unwrap().take() {
                     let (pos, angle) = cov_pose_to_pose2d(&pose);
+
+                    let pos = pos - self.map_origin - (self.map_size / 2.0) * self.map_scale;
                     self.robot.input_pose(botbrain::RobotPose { pos, angle });
                 }
 
@@ -256,51 +343,103 @@ impl RosAgent {
                         }
                     });
 
-                    let postbox = self.robot.get_postbox_mut();
-
                     // Deposit incoming msgs in the robot postbox
-                    postbox.deposit(msgs);
-
-                    // Empty the outgoing messages from the robot postbox and send them to via ROS2
-                    postbox.empty().into_iter().for_each(|msg| {
-                        if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
-                            self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
-                        } else {
-                            log_warn!(&self.nl, "Error converting message to ROS2");
-                        }
-                    });
+                    self.robot.input_msgs(msgs.collect());
                 }
             }
 
-            let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
-            if time.is_zero() {
-                // Simulated time is not available yet
-                log_warn!(&self.nl, "RosTime not ready yet: {:?}", time);
-                std::thread::sleep(std::time::Duration::from_secs(1));
-                continue;
-            }
+            let (control, outgoing_msgs) = (self.behavior.behavior_fn())(&mut self.robot, time);
 
-            let (control, _) = (self.behavior.behavior_fn())(&mut self.robot, time);
+            // Empty the outgoing messages from the robot postbox and send them to via ROS2
+            outgoing_msgs.into_iter().for_each(|msg| {
+                if let Some(ros_msg) = agent_msg_to_ros2_msg(msg) {
+                    self.outgoing_msgs_pub.publish(&ros_msg).unwrap();
+                } else {
+                    log_warn!(&self.nl, "Error converting message to ROS2");
+                }
+            });
 
             // Only linear x and angular z are used by robot
             let mut twist = geometry_msgs::msg::Twist::default();
-            twist.linear.x = control.speed as f64;
-            twist.angular.z = control.steer as f64;
+            // Check for
+            twist.linear.x = if control.speed.is_finite() {
+                control.speed as f64
+            } else {
+                log_error!(&self.nl, "Wierd input x: {}", control.speed);
+                0.0
+            };
+            twist.angular.z = if control.steer.is_finite() {
+                control.steer as f64
+            } else {
+                log_error!(&self.nl, "Wierd input z: {}", control.steer);
+                0.0
+            };
+
+            // Publish the cmd_vel
+            if let Err(e) = self.cmd_pub.publish(&twist) {
+                log_warn!(&self.nl, "Error publishing twist: {}", e);
+            }
 
             if time > last_map_update + Duration::from_secs_f32(0.5) {
                 last_map_update = time;
                 if let Some(mut map) = self.map.lock().unwrap().clone() {
-                    map.data.iter_mut().for_each(|v| *v = map_val);
+                    let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
+                    let mut min = f32::INFINITY;
+                    let mut max = f32::NEG_INFINITY;
+                    if let Some(item) = search_grid {
+                        if let DebugType::Grid(grid) = &*item {
+                            let size = (map.info.width, map.info.height);
+                            for y in 0..size.1 {
+                                for x in 0..size.0 {
+                                    let cell = grid.get(
+                                        Pos2 {
+                                            x: x as f32 * self.map_scale,
+                                            y: y as f32 * self.map_scale,
+                                        } - grid.size() / 2.0,
+                                    );
+
+                                    if let Some(&cell) = cell {
+                                        min = min.min(cell);
+                                        max = max.max(cell);
+                                    } else {
+                                        log_error!(&self.nl, "Cell is none: {},{}", x, y);
+                                    }
+                                }
+                            }
+                            for y in 0..size.1 {
+                                for x in 0..size.0 {
+                                    let cell = grid.get(
+                                        Pos2 {
+                                            x: x as f32 * self.map_scale,
+                                            y: y as f32 * self.map_scale,
+                                        } - grid.size() / 2.0,
+                                    );
+                                    // Between 1 and 98 from blue to red
+                                    // 0 is black
+                                    let value: i8 = match cell {
+                                        Some(&cell) if cell > 0.0 => {
+                                            // Max should be 98
+                                            // 0 should be (98+1)/2
+                                            // Range (98-1)/2
+                                            let ratio = cell / max;
+                                            (49.5 + 48.5 * ratio).clamp(49.0, 98.0) as i8
+                                        }
+                                        Some(&cell) if cell < 0.0 => {
+                                            let ratio = cell / min;
+                                            (49.5 - 48.5 * ratio).clamp(1.0, 49.5) as i8
+                                        }
+                                        _ => 0,
+                                    };
+                                    map.data[y as usize * size.0 as usize + x as usize] = value;
+                                }
+                            }
+                        }
+                    }
+                    // map.data.iter_mut().for_each(|v| *v = map_val);
                     if let Err(e) = self.map_overlay_pub.publish(&map) {
                         log_warn!(&self.nl, "Error publishing map_overlay: {}", e);
                     }
-                    map_val += 10;
-                    map_val %= 100;
                 }
-            }
-
-            if let Err(e) = self.cmd_pub.publish(&twist) {
-                log_warn!(&self.nl, "Error publishing twist: {}", e);
             }
         }
     }
@@ -310,9 +449,4 @@ impl Default for RosAgent {
     fn default() -> Self {
         Self::new()
     }
-}
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut agent = RosAgent::new();
-    agent.run()
 }
