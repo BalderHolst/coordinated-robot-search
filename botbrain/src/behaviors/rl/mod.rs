@@ -1,7 +1,8 @@
 pub mod model;
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, f32::consts::PI, time::Duration};
 
+use burn::tensor;
 use emath::Pos2;
 
 use crate::{
@@ -59,7 +60,10 @@ pub struct RlRobot {
     /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
 
-    pub model: Arc<model::Model<MyBackend>>,
+    /// The neural network used to control the robot. It is protexted
+    /// by a `RwLock` to allow multiple threads to read the model and
+    /// for the model to be dynamically updated when training.
+    pub model: model::Model<MyBackend>,
 }
 
 impl Default for RlRobot {
@@ -78,7 +82,7 @@ impl Default for RlRobot {
             proximity_grid: Default::default(),
             others: Default::default(),
             debug_soup: Default::default(),
-            model: Arc::new(model::ModelConfig::new().init(&Default::default())),
+            model: model::ModelConfig::new().init(&Default::default()),
         }
     }
 }
@@ -131,6 +135,26 @@ impl Robot for RlRobot {
 
     fn any(&mut self) -> &mut dyn std::any::Any {
         self
+    }
+}
+
+impl RlRobot {
+    fn lidar_tensor<const SIZE: usize>(&self) -> tensor::Tensor<MyBackend, 1> {
+        let mut data = [0.0; SIZE];
+
+        for (i, d) in data.iter_mut().enumerate() {
+            let angle = i as f32 * 2.0 * PI / SIZE as f32;
+            *d = self.lidar.interpolate(angle);
+        }
+
+        tensor::Tensor::from(data)
+    }
+
+    pub fn from_model(model: model::Model<MyBackend>) -> Self {
+        Self {
+            model,
+            ..Default::default()
+        }
     }
 }
 

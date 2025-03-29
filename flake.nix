@@ -53,6 +53,7 @@
             packages = with pkgs; [
                 git
                 cargo
+                clippy
                 rustc
                 rust-analyzer
                 (python3.withPackages (ps: with ps; [
