@@ -310,9 +310,11 @@ impl RosAgent {
                                 // BUG: Program crashes when inputting cam_data
                                 // [ros_agent-12] thread 'main' panicked at /home/balling/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-binary-0.5.0/src/deserializer.rs:19:9:
                                 // [ros_agent-12] deserialization of any type for binary data format is not supported
-                                // self.robot.input_cam(cam_data);
+                                self.robot.input_cam(cam_data);
                             }
-                            Err(e) => log_warn!(&self.nl, "Error finding search objects: {}", e),
+                            Err(e) => {
+                                log_warn!(&self.nl, "Error finding search objects: {}", e)
+                            }
                         }
                     } else {
                         println!("Could not convert rgbd_image to opencv image");
