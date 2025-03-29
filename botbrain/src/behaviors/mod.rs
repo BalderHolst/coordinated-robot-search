@@ -7,8 +7,6 @@ mod search;
 
 use std::time::Duration;
 
-use burn::backend::Wgpu;
-
 #[cfg(feature = "cli")]
 use {
     clap::ValueEnum,
@@ -43,6 +41,26 @@ impl RobotKind {
             RobotKind::Rl => rl::MENU,
         }
     }
+
+    pub fn create_fn(&self) -> fn() -> Box<dyn Robot> {
+        match &self {
+            RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
+            RobotKind::AvoidObstacles => {
+                || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
+            }
+            RobotKind::Search => || Box::new(search::SearchRobot::default()),
+            RobotKind::Rl => || Box::new(rl::RlRobot::default()),
+        }
+    }
+
+    fn get_name(&self) -> &'static str {
+        match self {
+            RobotKind::Dumb => "dumb",
+            RobotKind::AvoidObstacles => "avoid-obstacles",
+            RobotKind::Search => "search",
+            RobotKind::Rl => "rl",
+        }
+    }
 }
 
 #[cfg(feature = "cli")]
@@ -55,32 +73,45 @@ impl Display for RobotKind {
 /// A behavior defines the kind of robot and the behavior function to run on the robot.
 #[derive(Clone, Debug)]
 pub struct Behavior {
-    robot_kind: RobotKind,
+    robot_name: &'static str,
     behavior_name: &'static str,
     behavior_fn: BehaviorFn,
+    create_fn: CreateFn,
 }
 
 impl Behavior {
+    pub fn new(
+        robot_kind: RobotKind,
+        behavior_name: &'static str,
+        behavior_fn: BehaviorFn,
+    ) -> Self {
+        Self {
+            robot_name: robot_kind.get_name(),
+            behavior_name,
+            behavior_fn,
+            create_fn: robot_kind.create_fn(),
+        }
+    }
+
     /// Get the behavior function
     pub fn behavior_fn(&self) -> BehaviorFn {
         self.behavior_fn
     }
 
+    /// Get the function used to create a new robot
     pub fn create_fn(&self) -> CreateFn {
-        match &self.robot_kind {
-            RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
-            RobotKind::AvoidObstacles => {
-                || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
-            }
-            RobotKind::Search => || Box::new(search::SearchRobot::default()),
-            RobotKind::Rl => || Box::new(rl::RlRobot::default()),
-        }
+        self.create_fn
     }
 
     /// Create a new robot that corresponds to the behavior.
     /// This is the main way to create a `Box<dyn Robot>`.
     pub fn create_robot(&self) -> Box<dyn Robot> {
-        (self.create_fn())()
+        (self.create_fn)()
+    }
+
+    /// Get the name of the behavior and robot. Format: "<robot>:<behavior>".
+    pub fn name(&self) -> String {
+        format!("{}:{}", self.robot_name, self.behavior_name)
     }
 }
 
@@ -110,11 +141,8 @@ impl Behavior {
                 .menu()
                 .first()
                 .expect("Robots should have at least one behavior");
-            return Ok(Self {
-                robot_kind: RobotKind::from_str(s, false)?,
-                behavior_name,
-                behavior_fn,
-            });
+
+            return Ok(Self::new(robot_kind, behavior_name, behavior_fn));
         };
 
         let robot_kind = RobotKind::from_str(robot_kind_name, true)?;
@@ -129,16 +157,7 @@ impl Behavior {
                 Self::behavior_names().join(", ")
             ))?;
 
-        Ok(Self {
-            robot_kind,
-            behavior_name,
-            behavior_fn,
-        })
-    }
-
-    pub fn name(&self) -> String {
-        let kind_name = self.robot_kind.to_possible_value().unwrap();
-        format!("{}:{}", kind_name.get_name(), self.behavior_name)
+        Ok(Self::new(robot_kind, behavior_name, behavior_fn))
     }
 }
 
@@ -167,6 +186,6 @@ impl Serialize for Behavior {
     where
         S: serde::Serializer,
     {
-        format!("{}:{}", self.robot_kind, self.behavior_name).serialize(serializer)
+        self.name().serialize(serializer)
     }
 }
