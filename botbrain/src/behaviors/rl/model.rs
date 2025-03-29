@@ -12,8 +12,7 @@ pub struct Model<B: Backend> {
 impl<B: Backend> Model<B> {
     pub fn forward(&self, input: Tensor<B, 1>) -> Tensor<B, 1> {
         let x = self.linear1.forward(input);
-        let x = self.linear2.forward(x);
-        x
+        self.linear2.forward(x)
     }
 }
 

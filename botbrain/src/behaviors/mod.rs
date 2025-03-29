@@ -42,7 +42,7 @@ impl RobotKind {
         }
     }
 
-    pub fn create_fn(&self) -> fn() -> Box<dyn Robot> {
+    pub fn create_fn(&self) -> CreateFn {
         match &self {
             RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
             RobotKind::AvoidObstacles => {
@@ -90,6 +90,20 @@ impl Behavior {
             behavior_name,
             behavior_fn,
             create_fn: robot_kind.create_fn(),
+        }
+    }
+
+    pub fn from_raw(
+        robot_name: &'static str,
+        behavior_name: &'static str,
+        behavior_fn: BehaviorFn,
+        create_fn: CreateFn,
+    ) -> Self {
+        Self {
+            robot_name,
+            behavior_name,
+            behavior_fn,
+            create_fn,
         }
     }
 
