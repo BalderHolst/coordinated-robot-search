@@ -1,4 +1,7 @@
-use botbrain::behaviors::rl::{state::RlState, RlRobot};
+use botbrain::{
+    behaviors::rl::{state::RlState, RlRobot},
+    burn::prelude::Backend,
+};
 use simple_sim::sim::Simulator;
 
 struct Enviornment {
@@ -30,8 +33,8 @@ impl Enviornment {
         // Get states
         let state = self
             .sim
-            .robots()
-            .iter()
+            .robots_mut()
+            .iter_mut()
             .map(|r| {
                 let r = r.any().downcast_ref::<RlRobot>().unwrap();
                 r.state()

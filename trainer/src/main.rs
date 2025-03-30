@@ -1,4 +1,5 @@
 mod enviornment;
+mod memory;
 
 use std::cell::RefCell;
 use std::path::PathBuf;
@@ -21,14 +22,16 @@ type MyBackend = Wgpu;
 
 #[derive(Config)]
 pub struct TrainingConfig {
-    #[config(default = 64)]
+    #[config(default = 32)]
     pub batch_size: usize,
-    #[config(default = 4)]
-    pub num_workers: usize,
     #[config(default = 42)]
     pub seed: u64,
-    #[config(default = 1e-4)]
+    #[config(default = 0.001)]
     pub lr: f64,
+    #[config(default = 0.999)]
+    pub gamma: f64,
+    #[config(default = 0.005)]
+    pub tau: f64,
 
     pub model: ModelConfig,
 
@@ -67,4 +70,14 @@ fn main() {
     let sim = Simulator::with_robots(SimArgs { world, behavior }, robots);
 
     println!("{}", model_ref.borrow());
+
+    const MEMORY_SIZE: usize = 4096;
+    const DENSE_SIZE: usize = 128;
+    const EPS_DECAY: f64 = 1000.0;
+    const EPS_START: f64 = 0.9;
+    const EPS_END: f64 = 0.05;
+
+    let mut memory = memory::Memory::<MEMORY_SIZE>::new();
+
+    let mut policy_net = model_ref.borrow().clone();
 }

@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, marker::PhantomData};
+use std::f32::consts::PI;
 
 use burn::{prelude::Backend, tensor::Tensor};
 use emath::Pos2;
@@ -6,7 +6,7 @@ use rand::Rng;
 
 use crate::{Control, LidarData};
 
-pub struct RlState<B: Backend> {
+pub struct RlState {
     pub pos: Pos2,
     pub angle: f32,
     pub lidar: LidarData,
@@ -14,17 +14,11 @@ pub struct RlState<B: Backend> {
     // group_spread: Vec2,
     // search_gradient: Vec2,
     // global_gradient: Vec2,
-    backend: PhantomData<B>,
 }
 
-impl<B: Backend> RlState<B> {
+impl RlState {
     pub fn new(pos: Pos2, angle: f32, lidar: LidarData) -> Self {
-        Self {
-            pos,
-            angle,
-            lidar,
-            backend: PhantomData,
-        }
+        Self { pos, angle, lidar }
     }
 
     pub fn lidar_data<const RAYS: usize>(&self) -> [f32; RAYS] {
@@ -42,7 +36,7 @@ impl<B: Backend> RlState<B> {
         [self.pos.x, self.pos.y, self.angle]
     }
 
-    pub fn to_tensor<const LIDAR_RAYS: usize>(&self) -> Tensor<B, 1> {
+    pub fn to_tensor<const LIDAR_RAYS: usize, B: Backend>(&self) -> Tensor<B, 1> {
         let device = Default::default();
 
         let lidar_data = self.lidar_data::<LIDAR_RAYS>();

@@ -379,4 +379,8 @@ impl Simulator {
     pub fn robots(&self) -> &[Box<dyn botbrain::Robot>] {
         &self.robots
     }
+
+    pub fn robots_mut(&mut self) -> &mut [Box<dyn botbrain::Robot>] {
+        &mut self.robots
+    }
 }
