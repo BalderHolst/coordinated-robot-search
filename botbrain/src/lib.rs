@@ -362,7 +362,7 @@ pub trait Robot {
 }
 
 /// Cast a robot to a specific type
-fn cast_robot<T: 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
+fn cast_robot<T: Robot + 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
     robot
         .any()
         .downcast_mut()

@@ -1,9 +1,10 @@
 pub mod model;
+pub mod state;
 
-use std::{collections::HashMap, f32::consts::PI, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
-use burn::tensor;
 use emath::Pos2;
+use state::RlState;
 
 use crate::{
     debug::DebugSoup, scaled_grid::ScaledGrid, CamData, LidarData, Postbox, Robot, RobotId,
@@ -26,14 +27,8 @@ pub struct RlRobot {
     /// The position of the robot
     pub pos: Pos2,
 
-    /// The velocity of the robot
-    pub vel: f32,
-
     /// The angle of the robot
     pub angle: f32,
-
-    /// The angular velocity of the robot
-    pub avel: f32,
 
     /// The data from the camera. Angles and probability of objects.
     pub cam: CamData,
@@ -71,9 +66,7 @@ impl Default for RlRobot {
         Self {
             id: Default::default(),
             pos: Default::default(),
-            vel: Default::default(),
             angle: Default::default(),
-            avel: Default::default(),
             cam: Default::default(),
             lidar: Default::default(),
             postbox: Default::default(),
@@ -139,15 +132,8 @@ impl Robot for RlRobot {
 }
 
 impl RlRobot {
-    fn lidar_tensor<const SIZE: usize>(&self) -> tensor::Tensor<MyBackend, 1> {
-        let mut data = [0.0; SIZE];
-
-        for (i, d) in data.iter_mut().enumerate() {
-            let angle = i as f32 * 2.0 * PI / SIZE as f32;
-            *d = self.lidar.interpolate(angle);
-        }
-
-        tensor::Tensor::from(data)
+    pub fn state(&self) -> RlState<MyBackend> {
+        RlState::new(self.pos, self.angle, self.lidar.clone())
     }
 
     pub fn from_model(model: model::ModelRef<MyBackend>) -> Self {
