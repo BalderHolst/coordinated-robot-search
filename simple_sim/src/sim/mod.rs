@@ -354,8 +354,8 @@ struct StepArgs {
     pending_msgs: Vec<botbrain::Message>,
 }
 #[cfg(feature = "single-thread")]
+#[allow(unused)]
 impl Simulator {
-    #[allow(dead_code)]
     pub fn with_robots(
         sim_args: SimArgs,
         robots: Vec<(RobotPose, Box<dyn botbrain::Robot>)>,
@@ -374,5 +374,9 @@ impl Simulator {
             sim.robots.push(robot);
         }
         sim
+    }
+
+    pub fn robots(&self) -> &[Box<dyn botbrain::Robot>] {
+        &self.robots
     }
 }
