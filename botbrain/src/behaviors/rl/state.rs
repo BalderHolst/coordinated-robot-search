@@ -51,7 +51,7 @@ impl<B: Backend> RlState<B> {
         let lidar_tensor = Tensor::from_floats(lidar_data, &device);
         let pose_tensor = Tensor::from_floats(pose_data, &device);
 
-        Tensor::cat(vec![pose_tensor, lidar_tensor], 1)
+        Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
     }
 }
 
@@ -59,8 +59,8 @@ pub struct RlAction(usize);
 
 impl<B: Backend> From<Tensor<B, 1>> for RlAction {
     fn from(tensor: Tensor<B, 1>) -> Self {
-        let i = tensor.argmax(1).to_data(); // TODO: I an not sure that `1` is correct
-        let i = i.as_slice::<i64>().unwrap();
+        let i = tensor.argmax(0).to_data();
+        let i = i.as_slice::<i32>().unwrap();
         let i = i[0] as usize;
         i.into()
     }
@@ -86,11 +86,11 @@ impl RlAction {
     /// The maximum steering command
     const MAX_STEER: f32 = 1.0;
 
-    fn random() -> Self {
+    pub fn random() -> Self {
         rand::rng().random_range(0..Self::SIZE).into()
     }
 
-    fn control(&self) -> Control {
+    pub fn control(&self) -> Control {
         let Self(i) = self;
 
         let speed = 0.5;
