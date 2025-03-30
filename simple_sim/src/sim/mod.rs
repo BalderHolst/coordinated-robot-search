@@ -1,8 +1,9 @@
 mod collisions;
+#[cfg(not(feature = "single-thread"))]
 mod robot_pool;
+mod step;
 
 use std::{
-    mem,
     sync::{mpsc, Arc},
     time::Instant,
 };
@@ -12,17 +13,14 @@ use botbrain::{
     behaviors::{Behavior, Time},
     debug::DebugSoup,
     scaled_grid::ScaledGrid,
-    Control, Pos2, RobotId, RobotPose,
+    Control, RobotId, RobotPose,
 };
-use eframe::egui::Vec2;
 use polars::prelude::*;
+
+#[cfg(not(feature = "single-thread"))]
 use robot_pool::RobotThreadPool;
 
-use crate::{
-    cli::ScenarioArgs,
-    scenario::Scenario,
-    world::{Cell, World},
-};
+use crate::{cli::ScenarioArgs, scenario::Scenario, world::World};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -186,19 +184,25 @@ impl SimDiagnostics {
 pub struct SimArgs {
     pub world: World,
     pub behavior: Behavior,
+    #[cfg(not(feature = "single-thread"))]
     pub threads: usize,
 }
 
 #[allow(clippy::type_complexity)]
 pub struct Simulator {
     pub state: SimState,
-    pool: RobotThreadPool,
     pub behavior: Behavior,
     world: World,
     dt: f32,
     msg_send_rx: mpsc::Receiver<botbrain::Message>,
     msg_send_tx: mpsc::Sender<botbrain::Message>,
     pending_msgs: Vec<botbrain::Message>,
+
+    #[cfg(not(feature = "single-thread"))]
+    pool: RobotThreadPool,
+
+    #[cfg(feature = "single-thread")]
+    robots: Vec<Box<dyn botbrain::Robot>>,
 }
 
 impl Simulator {
@@ -206,6 +210,7 @@ impl Simulator {
         let SimArgs {
             world,
             behavior,
+            #[cfg(not(feature = "single-thread"))]
             threads,
         } = args;
 
@@ -217,23 +222,30 @@ impl Simulator {
             },
         };
 
-        let world_size = world.size();
         let (msg_send_tx, msg_send_rx) = mpsc::channel();
+
+        #[cfg(not(feature = "single-thread"))]
+        let pool = RobotThreadPool::new(
+            threads,
+            behavior.behavior_fn(),
+            behavior.create_fn(),
+            world.size(),
+        );
 
         Self {
             state,
-            pool: RobotThreadPool::new(
-                threads,
-                behavior.behavior_fn(),
-                behavior.create_fn(),
-                world_size,
-            ),
             pending_msgs: vec![],
-            behavior,
+            behavior: behavior.clone(),
             world: world.clone(),
             dt: SIMULATION_DT,
             msg_send_tx,
             msg_send_rx,
+
+            #[cfg(not(feature = "single-thread"))]
+            pool,
+
+            #[cfg(feature = "single-thread")]
+            robots: vec![],
         }
     }
 
@@ -263,27 +275,47 @@ impl Simulator {
         };
         self.state.robot_states.push(state.clone());
 
-        let args = self.create_step_args();
+        #[cfg(not(feature = "single-thread"))]
+        {
+            let args = self.create_step_args();
+            self.pool.add_robot(state, args);
+        }
 
-        self.pool.add_robot(state, args);
+        #[cfg(feature = "single-thread")]
+        {
+            let mut robot = (self.behavior.create_fn())();
+            robot.set_id(id);
+            robot.set_world_size(self.world.size());
+            robot.get_debug_soup_mut().activate();
+            robot.input_pose(robot_pose);
+            self.robots.push(robot);
+        }
     }
 
     pub fn step(&mut self) {
         let args = self.create_step_args();
 
-        let dt = args.dt;
+        #[cfg(not(feature = "single-thread"))]
+        {
+            // Move the robot states to the robot pool
+            let agents = std::mem::replace(&mut self.state.robot_states, Vec::with_capacity(0));
 
-        // Move the agents and robots to the thread pool
-        let agents = mem::replace(&mut self.state.robot_states, Vec::with_capacity(0));
+            // Construct the input for the thread pool function
+            let input = agents.into_iter().map(|a| (a.id, a)).collect::<Vec<_>>();
 
-        // Construct the input for the thread pool function
-        let input = agents.into_iter().map(|a| (a.id, a)).collect::<Vec<_>>();
+            // Process the agents and robots in parallel
+            let outputs = self.pool.process(input, args);
 
-        // Process the agents and robots in parallel
-        let outputs = self.pool.process(input, args);
+            // Move the agents and robots back to the simulator
+            self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();
+        }
 
-        // Move the agents and robots back to the simulator
-        self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();
+        #[cfg(feature = "single-thread")]
+        {
+            for (state, robot) in self.state.robot_states.iter_mut().zip(&mut self.robots) {
+                step::step_agent(state, robot, &args, self.behavior.behavior_fn());
+            }
+        }
 
         // Collect all pending messages
         self.pending_msgs = self
@@ -307,7 +339,7 @@ impl Simulator {
             }
         }
 
-        self.state.time += Time::from_secs_f32(dt);
+        self.state.time += Time::from_secs_f32(self.dt);
     }
 }
 
@@ -320,46 +352,4 @@ struct StepArgs {
     dt: f32,
     msg_send_tx: mpsc::Sender<botbrain::Message>,
     pending_msgs: Vec<botbrain::Message>,
-}
-
-pub fn cast_ray(
-    world: &World,
-    agents: &[RobotState],
-    base_pos: Pos2,
-    angle: f32,
-    robot_radius: f32,
-    max_range: f32,
-    ignore: &[Cell],
-) -> (f32, Option<Cell>) {
-    let step_size = world.scale() * 0.5;
-    let direction = Vec2::angled(angle);
-
-    let mut distance = robot_radius;
-
-    while distance < max_range {
-        let pos = base_pos + direction * distance;
-
-        let cell = world.get(pos);
-
-        // Check for collisions with the world
-        if let Some(cell) = cell {
-            if !cell.is_empty() && !ignore.contains(cell) {
-                return (distance, Some(*cell));
-            }
-        } else {
-            return (distance, Some(Cell::Wall));
-        }
-
-        // Check for collisions with other robots
-        if distance > robot_radius {
-            for robot_state in agents {
-                let d = (robot_state.pose.pos - pos).length();
-                if d < robot_radius {
-                    return (distance, None);
-                }
-            }
-        }
-        distance += step_size;
-    }
-    (distance - step_size / 2.0, None)
 }

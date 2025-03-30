@@ -3,6 +3,10 @@ name = "simple_sim"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = []
+single-thread = []
+
 [dependencies]
 botbrain = { path = "../botbrain/", features = ["cli"] }
 eframe = { version = "0.30.0" }
