@@ -142,13 +142,13 @@ impl RlRobot {
     }
 
     /// Get the state used as input to the neural network
-    pub fn state(&self) -> RlState<MyBackend> {
+    pub fn state(&self) -> RlState {
         RlState::new(self.pos, self.angle, self.lidar.clone())
     }
 
     /// React to the environment and return a control signal
     pub fn react(&self) -> Control {
-        let input = self.state().to_tensor::<20>();
+        let input = self.state().to_tensor::<20, MyBackend>();
         let output = self.model.forward(input);
         let action = RlAction::from(output);
         action.control()
