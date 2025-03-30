@@ -48,6 +48,7 @@ struct AppTextures {
 
 pub struct GlobalOptions {
     paused: Arc<AtomicBool>,
+    pause_at: Arc<Mutex<Option<f32>>>,
     focused: Option<usize>,
     follow: Option<usize>,
     show_only: Option<usize>,
@@ -59,6 +60,7 @@ impl Default for GlobalOptions {
     fn default() -> Self {
         Self {
             paused: Arc::new(AtomicBool::new(false)),
+            pause_at: Arc::new(Mutex::new(None)),
             focused: None,
             follow: None,
             show_only: None,
@@ -145,6 +147,54 @@ impl From<GlobArgs> for AppArgs {
     }
 }
 
+fn step_sim(
+    sim_bg: &Arc<Mutex<Simulator>>,
+    target_sps: &Arc<Mutex<f32>>,
+    target_fps: f32,
+    actual_sps: &Arc<Mutex<f32>>,
+    paused: &Arc<AtomicBool>,
+    pause_at: &Arc<Mutex<Option<f32>>>,
+) {
+    let target_sps = *target_sps.lock().unwrap();
+
+    {
+        let paused = paused.load(Ordering::Relaxed);
+        if paused || target_sps == 0.0 {
+            thread::sleep(std::time::Duration::from_secs_f32(1.0 / target_fps));
+            return;
+        }
+    }
+
+    let frame_start = std::time::Instant::now();
+
+    {
+        let mut pause_at = pause_at.lock().unwrap();
+        let mut sim = sim_bg.lock().unwrap();
+
+        // Pause simulation if time is reached
+        if let Some(pause_at_time) = *pause_at {
+            if sim.state.time.as_secs_f32() >= pause_at_time {
+                println!("[INFO] Pausing simulation at {:.1}s", pause_at_time);
+                paused.store(true, Ordering::Relaxed);
+                *pause_at = None;
+                return;
+            }
+        }
+
+        sim.step();
+    }
+
+    let step_time = frame_start.elapsed();
+
+    let target_time = std::time::Duration::from_secs_f32(1.0 / target_sps);
+    let remaining = target_time.checked_sub(step_time).unwrap_or_default();
+    thread::sleep(remaining);
+
+    if let Ok(mut actual_sps) = actual_sps.try_lock() {
+        *actual_sps = 1.0 / frame_start.elapsed().as_secs_f32();
+    }
+}
+
 impl App {
     pub fn new(mut sim: Simulator, args: AppArgs, cc: &CreationContext) -> Self {
         // Step once to get the initial state
@@ -160,6 +210,7 @@ impl App {
             .map(|r| r.soup.clone())
             .collect();
 
+        #[allow(clippy::arc_with_non_send_sync)] // Sim is `Send + Sync` in multi-threaded mode
         let sim_bg = Arc::new(Mutex::new(sim));
         let sim_state = sim_bg.lock().unwrap().state.clone();
 
@@ -168,6 +219,7 @@ impl App {
         let paused = Arc::new(AtomicBool::new(args.paused));
         let pause_at = Arc::new(Mutex::new(args.pause_at));
 
+        #[cfg(not(feature = "single-thread"))]
         {
             let sim_bg = sim_bg.clone();
             let actual_sps = actual_sps_bg.clone();
@@ -176,44 +228,14 @@ impl App {
             let pause_at = pause_at.clone();
 
             thread::spawn(move || loop {
-                let target_sps = *target_sps.lock().unwrap();
-
-                {
-                    let paused = paused.load(Ordering::Relaxed);
-                    if paused || target_sps == 0.0 {
-                        thread::sleep(std::time::Duration::from_secs_f32(1.0 / args.target_fps));
-                        continue;
-                    }
-                }
-
-                let frame_start = std::time::Instant::now();
-
-                {
-                    let mut pause_at = pause_at.lock().unwrap();
-                    let mut sim = sim_bg.lock().unwrap();
-
-                    // Pause simulation if time is reached
-                    if let Some(pause_at_time) = *pause_at {
-                        if sim.state.time.as_secs_f32() >= pause_at_time {
-                            println!("[INFO] Pausing simulation at {:.1}s", pause_at_time);
-                            paused.store(true, Ordering::Relaxed);
-                            *pause_at = None;
-                            continue;
-                        }
-                    }
-
-                    sim.step();
-                }
-
-                let step_time = frame_start.elapsed();
-
-                let target_time = std::time::Duration::from_secs_f32(1.0 / target_sps);
-                let remaining = target_time.checked_sub(step_time).unwrap_or_default();
-                thread::sleep(remaining);
-
-                if let Ok(mut actual_sps) = actual_sps.try_lock() {
-                    *actual_sps = 1.0 / frame_start.elapsed().as_secs_f32();
-                }
+                step_sim(
+                    &sim_bg,
+                    &target_sps,
+                    args.target_fps,
+                    &actual_sps,
+                    &paused,
+                    &pause_at,
+                )
             });
         }
 
@@ -234,6 +256,7 @@ impl App {
 
         let global_opts = GlobalOptions {
             paused,
+            pause_at,
             ..Default::default()
         };
 
@@ -695,6 +718,36 @@ impl eframe::App for App {
                             self.global_opts.paused.store(!paused, Ordering::Relaxed);
                         });
 
+                    // Pause at field
+                    let is_set = self.global_opts.pause_at.lock().unwrap().is_some();
+                    match is_set {
+                        true => {
+                            if let Some(pause_at) =
+                                self.global_opts.pause_at.lock().unwrap().as_mut()
+                            {
+                                ui.add(
+                                    egui::DragValue::new(pause_at)
+                                        .prefix("Pause at: ")
+                                        .suffix("s"),
+                                )
+                                .lost_focus()
+                                .then(|| {
+                                    self.global_opts.paused.store(false, Ordering::Relaxed);
+                                });
+                            }
+                        }
+                        false => {
+                            ui.button("Pause at").clicked().then(|| {
+                                self.global_opts.paused.store(true, Ordering::Relaxed);
+                                self.global_opts
+                                    .pause_at
+                                    .lock()
+                                    .unwrap()
+                                    .replace(self.sim_state.time.as_secs_f32());
+                            });
+                        }
+                    }
+
                     // Spawn Robot Button
                     ui.selectable_label(
                         matches!(self.cursor_state, CursorState::SpawnManyRobots),
@@ -897,21 +950,49 @@ impl eframe::App for App {
                 self.draw_diagnostics(&painter);
                 self.draw_robots(&painter);
 
-                // Update simulation state
                 let remaining_time = (frame_time - frame_start.elapsed().as_secs_f32()).max(0.0);
                 let timeout = std::time::Duration::from_secs_f32(remaining_time);
                 let get_sim_start = std::time::Instant::now();
-                while get_sim_start.elapsed() < timeout {
-                    if let Ok(sim) = self.sim_bg.try_lock() {
-                        self.sim_state = sim.state.clone();
-                        self.robot_soups = sim
-                            .state
-                            .robot_states
-                            .iter()
-                            .map(|r| r.soup.clone())
-                            .collect();
-                        break;
+
+                // Update simulation state from background thread in case of threading
+                #[cfg(not(feature = "single-thread"))]
+                {
+                    while get_sim_start.elapsed() < timeout {
+                        if let Ok(sim) = self.sim_bg.try_lock() {
+                            self.sim_state = sim.state.clone();
+                            self.robot_soups = sim
+                                .state
+                                .robot_states
+                                .iter()
+                                .map(|r| r.soup.clone())
+                                .collect();
+                            break;
+                        }
                     }
+                }
+
+                #[cfg(feature = "single-thread")]
+                {
+                    // Run the simulator
+                    while get_sim_start.elapsed() < timeout {
+                        step_sim(
+                            &self.sim_bg,
+                            &self.target_sps_bg,
+                            self.target_fps,
+                            &self.actual_sps_bg,
+                            &self.global_opts.paused,
+                            &self.global_opts.pause_at,
+                        );
+                    }
+
+                    let sim = self.sim_bg.lock().unwrap();
+                    self.sim_state = sim.state.clone();
+                    self.robot_soups = sim
+                        .state
+                        .robot_states
+                        .iter()
+                        .map(|r| r.soup.clone())
+                        .collect();
                 }
             });
     }

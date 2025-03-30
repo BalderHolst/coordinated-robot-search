@@ -4,6 +4,7 @@ use botbrain::behaviors::Behavior;
 
 use clap::{self, Args, Parser, Subcommand};
 
+#[cfg(not(feature = "single-thread"))]
 pub fn default_threads() -> usize {
     match std::thread::available_parallelism() {
         Ok(n) => n.into(),
@@ -26,6 +27,7 @@ pub struct GlobArgs {
     pub target_sps: f32,
 
     /// Number of threads to use for simulation
+    #[cfg(not(feature = "single-thread"))]
     #[arg(short('j'), long, default_value_t = default_threads())]
     pub threads: usize,
 

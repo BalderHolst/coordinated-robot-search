@@ -64,6 +64,7 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
             .behavior
             .clone()
             .unwrap_or(scenario.behavior.clone()),
+        #[cfg(not(feature = "single-thread"))]
         threads: args.threads,
     });
 

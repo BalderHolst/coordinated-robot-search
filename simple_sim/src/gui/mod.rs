@@ -17,6 +17,7 @@ pub fn run_interactive(args: GlobArgs, run_args: RunArgs) -> Result<(), String> 
     let sim_args = SimArgs {
         world: world_from_path(&run_args.world)?,
         behavior: run_args.behavior.clone(),
+        #[cfg(not(feature = "single-thread"))]
         threads: args.threads,
     };
     let app_args = args.into();
