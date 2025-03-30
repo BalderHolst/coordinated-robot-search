@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 botbrain = { path = "../botbrain" }
-simple_sim = { path = "../simple_sim" }
+simple_sim = { path = "../simple_sim", features = ["single-thread"] }

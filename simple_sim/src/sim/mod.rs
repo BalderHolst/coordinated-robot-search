@@ -353,3 +353,26 @@ struct StepArgs {
     msg_send_tx: mpsc::Sender<botbrain::Message>,
     pending_msgs: Vec<botbrain::Message>,
 }
+#[cfg(feature = "single-thread")]
+impl Simulator {
+    #[allow(dead_code)]
+    pub fn with_robots(
+        sim_args: SimArgs,
+        robots: Vec<(RobotPose, Box<dyn botbrain::Robot>)>,
+    ) -> Self {
+        let mut sim = Self::new(sim_args);
+        for (pose, mut robot) in robots {
+            sim.state.robot_states.push(RobotState {
+                id: RobotId::new(sim.state.robot_states.len() as u32),
+                pose: pose.clone(),
+                ..Default::default()
+            });
+
+            robot.set_world_size(sim.world.size());
+            robot.get_debug_soup_mut().activate();
+            robot.input_pose(pose);
+            sim.robots.push(robot);
+        }
+        sim
+    }
+}
