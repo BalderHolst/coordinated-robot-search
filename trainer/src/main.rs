@@ -1,19 +1,16 @@
+use std::cell::RefCell;
 use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::rc::Rc;
 
-use botbrain::behaviors::rl::model::Model;
 use botbrain::behaviors::rl::RlRobot;
-use botbrain::behaviors::BehaviorOutput;
 use botbrain::behaviors::{rl::model::ModelConfig, Behavior};
-use botbrain::{burn, Robot};
+use botbrain::{burn, Pos2, Robot, RobotPose};
 
 use burn::backend::Wgpu;
 use burn::config::Config;
 use burn::optim::AdamConfig;
 
 use simple_sim::{
-    cli::default_threads,
     sim::{SimArgs, Simulator},
     world::world_from_path,
 };
@@ -42,20 +39,30 @@ fn main() {
 
     let model_config = ModelConfig::new();
     let optimizer = AdamConfig::new();
-    let config = TrainingConfig::new(model_config, optimizer);
+    let train_config = TrainingConfig::new(model_config, optimizer);
 
     let behavior = Behavior::parse("rl").unwrap();
 
-    let threads = default_threads();
-    let sim = Simulator::new(SimArgs {
-        world,
-        behavior,
-        threads,
-    });
-
     // Setup the model
     let device = Default::default();
-    let model = ModelConfig::new().init::<MyBackend>(&device);
+    let model = train_config.model.init::<MyBackend>(&device);
+    let model_ref = Rc::new(RefCell::new(model));
 
-    println!("{}", model);
+    let poses = vec![RobotPose {
+        pos: Pos2::new(0.0, 0.0),
+        angle: 0.0,
+    }];
+
+    let robots = poses
+        .into_iter()
+        .map(|pose| {
+            let robot = RlRobot::from_model(model_ref.clone());
+            let robot = Box::new(robot) as Box<dyn Robot>;
+            (pose, robot)
+        })
+        .collect();
+
+    let sim = Simulator::with_robots(SimArgs { world, behavior }, robots);
+
+    println!("{}", model_ref.borrow());
 }

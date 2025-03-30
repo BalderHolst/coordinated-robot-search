@@ -63,7 +63,7 @@ pub struct RlRobot {
     /// The neural network used to control the robot. It is protexted
     /// by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::Model<MyBackend>,
+    pub model: model::BotModel<MyBackend>,
 }
 
 impl Default for RlRobot {
@@ -82,7 +82,7 @@ impl Default for RlRobot {
             proximity_grid: Default::default(),
             others: Default::default(),
             debug_soup: Default::default(),
-            model: model::ModelConfig::new().init(&Default::default()),
+            model: model::BotModel::new_model(),
         }
     }
 }
@@ -150,9 +150,9 @@ impl RlRobot {
         tensor::Tensor::from(data)
     }
 
-    pub fn from_model(model: model::Model<MyBackend>) -> Self {
+    pub fn from_model(model: model::ModelRef<MyBackend>) -> Self {
         Self {
-            model,
+            model: model::BotModel::new_ref(model),
             ..Default::default()
         }
     }
