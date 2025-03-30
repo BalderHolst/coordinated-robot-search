@@ -4,11 +4,11 @@ pub mod state;
 use std::{collections::HashMap, time::Duration};
 
 use emath::Pos2;
-use state::RlState;
+use state::{RlAction, RlState};
 
 use crate::{
-    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, LidarData, Postbox, Robot, RobotId,
-    RobotPose, Vec2,
+    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
+    RobotId, RobotPose, Vec2,
 };
 
 use super::{cast_robot, BehaviorFn, BehaviorOutput, RobotRef};
@@ -132,19 +132,31 @@ impl Robot for RlRobot {
 }
 
 impl RlRobot {
-    pub fn state(&self) -> RlState<MyBackend> {
-        RlState::new(self.pos, self.angle, self.lidar.clone())
-    }
-
+    /// Create a robot with uses the given model. This is useful for
+    /// sharing a model between multiple robots.
     pub fn from_model(model: model::ModelRef<MyBackend>) -> Self {
         Self {
             model: model::BotModel::new_ref(model),
             ..Default::default()
         }
     }
+
+    /// Get the state used as input to the neural network
+    pub fn state(&self) -> RlState<MyBackend> {
+        RlState::new(self.pos, self.angle, self.lidar.clone())
+    }
+
+    /// React to the environment and return a control signal
+    pub fn react(&self) -> Control {
+        let input = self.state().to_tensor::<20>();
+        let output = self.model.forward(input);
+        let action = RlAction::from(output);
+        action.control()
+    }
 }
 
 fn run_nn(robot: &mut RobotRef, _time: Duration) -> BehaviorOutput {
-    let _robot = cast_robot::<RlRobot>(robot);
-    todo!();
+    let robot = cast_robot::<RlRobot>(robot);
+    let control = robot.react();
+    (control, vec![])
 }
