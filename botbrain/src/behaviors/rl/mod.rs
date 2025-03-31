@@ -17,6 +17,9 @@ pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
 
+/// The frequency at which the robot reacts to the environment
+const REACT_HZ: f32 = 2.0;
+
 type MyBackend = burn::backend::Wgpu;
 
 #[derive(Clone)]
@@ -59,6 +62,12 @@ pub struct RlRobot {
     /// by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
     pub model: model::BotModel<MyBackend>,
+
+    /// Last time the robot reacted to the environment
+    pub last_control_update: Duration,
+
+    /// The current control signal
+    pub control: Control,
 }
 
 impl Default for RlRobot {
@@ -76,6 +85,8 @@ impl Default for RlRobot {
             others: Default::default(),
             debug_soup: Default::default(),
             model: model::BotModel::new_model(),
+            last_control_update: Default::default(),
+            control: Default::default(),
         }
     }
 }
@@ -147,16 +158,22 @@ impl RlRobot {
     }
 
     /// React to the environment and return a control signal
-    pub fn react(&self) -> Control {
+    pub fn react(&mut self) {
         let input = self.state().to_tensor::<20, MyBackend>();
         let output = self.model.forward(input);
         let action = RlAction::from(output);
-        action.control()
+        self.control = action.control();
     }
 }
 
-fn run_nn(robot: &mut RobotRef, _time: Duration) -> BehaviorOutput {
+fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
     let robot = cast_robot::<RlRobot>(robot);
-    let control = robot.react();
-    (control, vec![])
+
+    // Only update the control signal at a fixed rate
+    if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ {
+        robot.last_control_update = time;
+        robot.react();
+    }
+
+    (robot.control.clone(), vec![])
 }
