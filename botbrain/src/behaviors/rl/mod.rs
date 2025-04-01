@@ -7,8 +7,9 @@ use emath::Pos2;
 use state::{RlAction, RlState};
 
 use crate::{
-    debug::{DebugSoup, DebugType}, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
-    RobotId, RobotPose, Vec2,
+    debug::{DebugSoup, DebugType},
+    scaled_grid::ScaledGrid,
+    CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
 };
 
 use super::{cast_robot, common, BehaviorFn, BehaviorOutput, RobotRef};
@@ -205,5 +206,8 @@ fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         robot.react();
     }
 
-    (robot.control.clone(), vec![])
+    robot.postbox.clean();
+
+    let msgs = robot.postbox.empty();
+    (robot.control.clone(), msgs)
 }
