@@ -10,14 +10,19 @@ use botbrain::behaviors::rl::state::{RlAction, RlState};
 use botbrain::behaviors::rl::RlRobot;
 use botbrain::behaviors::RobotKind;
 use botbrain::behaviors::{rl::model::ModelConfig, Behavior};
-use botbrain::burn::optim::Adam;
+use botbrain::burn::module::AutodiffModule;
+use botbrain::burn::optim::{Adam, Optimizer};
 use botbrain::burn::prelude::Backend;
+use botbrain::burn::tensor;
+use botbrain::burn::tensor::backend::AutodiffBackend;
 use botbrain::{burn, Pos2, Robot, RobotPose};
 
-use burn::backend::Wgpu;
+use burn::backend::{Autodiff, Wgpu};
 use burn::config::Config;
-use burn::optim::AdamConfig;
+use burn::optim::adaptor::OptimizerAdaptor;
+use burn::optim::{AdamConfig, GradientsParams};
 
+use burn::tensor::{Int, Tensor};
 use enviornment::Enviornment;
 use memory::Memory;
 use simple_sim::world::World;
@@ -26,7 +31,7 @@ use simple_sim::{
     world::world_from_path,
 };
 
-type MyBackend = Wgpu;
+type MyBackend = Autodiff<Wgpu>;
 
 type SwarmState = Vec<RlState>;
 type SwarmAction = Vec<RlAction>;
@@ -78,7 +83,7 @@ const EPS_END: f64 = 0.05;
 fn train(
     init_poses: Vec<RobotPose>,
     world: World,
-    model: Model<MyBackend>,
+    target_net: Model<MyBackend>,
     config: TrainingConfig,
     num_episodes: usize,
 ) {
@@ -95,15 +100,15 @@ fn train(
 
     let sim = Simulator::with_robots(SimArgs { world, behavior }, robots);
 
-    let env = Enviornment::new(sim, MAX_STEPS);
+    let mut env = Enviornment::new(sim, MAX_STEPS);
 
-    println!("{}", model);
+    println!("{}", target_net);
 
-    let mut optimizer = config.optimizer.init();
+    let mut optimizer = config.optimizer.init::<MyBackend, Model<MyBackend>>();
 
     let mut memory = memory::Memory::<MEMORY_SIZE>::new();
 
-    let mut policy_net = model.clone();
+    let mut policy_net = target_net.clone();
 
     for episode in 0..num_episodes {
         let mut episode_done = false;
@@ -111,22 +116,22 @@ fn train(
         let mut episode_duration = 0_usize;
         let mut states = env.states();
 
-        let step: usize = 0;
+        let mut step: usize = 0;
 
         while !episode_done {
             let eps = EPS_END + (EPS_START - EPS_END) * f64::exp(-(step as f64) / EPS_DECAY);
 
             let actions = states
                 .iter()
-                .map(|state| model.react_with_exploration(*state, eps))
+                .map(|state| target_net.react_with_exploration(state.clone(), eps))
                 .collect::<Vec<_>>();
 
-            let snapshot = env.step(actions);
+            let snapshot = env.step(actions.clone());
 
             episode_reward += snapshot.reward;
 
             memory.push(
-                states,
+                states.clone(),
                 snapshot.state,
                 actions,
                 snapshot.reward.clone(),
@@ -134,14 +139,19 @@ fn train(
             );
 
             if config.batch_size < memory.len() {
-                policy_net =
-                    agent.train::<MEMORY_SIZE>(policy_net, &memory, &mut optimizer, &config);
+                train_model(
+                    &policy_net,
+                    &mut target_net.clone(),
+                    &memory,
+                    &mut optimizer,
+                    &config,
+                );
             }
 
             step += 1;
             episode_duration += 1;
 
-            if snapshot.done() || episode_duration >= E::MAX_STEPS {
+            if snapshot.done {
                 env.reset();
                 episode_done = true;
 
@@ -149,32 +159,55 @@ fn train(
                     "{{\"episode\": {}, \"reward\": {:.4}, \"duration\": {}}}",
                     episode, episode_reward, episode_duration
                 );
-            } else {
-                states = *snapshot.state();
+            }
+            {
+                println!("Step: {}", step);
+                // State is incremented automatically by the simulator
             }
         }
     }
 }
 
-fn train_model<B: Backend, const CAP: usize>(
-    target_model: Model<B>,
-    policy_model: Model<B>,
+fn train_model<B: AutodiffBackend, const CAP: usize>(
+    target_model: &Model<B>,
+    policy_model: &mut Model<B>,
     memory: &Memory<CAP>,
-    optimizer: Adam,
-    config: TrainingConfig,
-) -> Model<B> {
+    optimizer: &mut OptimizerAdaptor<Adam, Model<B>, B>,
+    config: &TrainingConfig,
+) {
+    let (states, next_states, actions, rewards, dones) = memory.random_batch(config.batch_size);
 
-    let batch = memory .random_batch(config.batch_size);
+    // For memory in batch
+    for i in 0..states.len() {
+        let swarm_state = &states[i];
+        let next_swarm_state = &next_states[i];
+        let swarm_action = &actions[i];
 
-    let state_action_values = batch
-        .iter()
-        .map(|(state, next_state, action, reward, done)| {
-        })
-        .collect::<Vec<_>>();
+        let reward = Tensor::<B, 1>::from([rewards[i].clone()]);
+        let done = dones[i];
 
+        if done {
+            continue;
+        }
 
+        // For each robot
+        for j in 0..swarm_state.len() {
+            let robot_state = &swarm_state[j];
+            let next_robot_state = &next_swarm_state[j];
+            let robot_action = Tensor::<B, 1, Int>::from([usize::from(swarm_action[j])]);
 
-    // let (states, next_states, actions, rewards, dones) = batch.into_iter().cloned().unzip();
+            let next_state_tensor = next_robot_state.to_tensor::<20, B>();
+            let next_q_values = policy_model.forward(next_state_tensor).detach();
+            let target = reward.clone() + next_q_values.max().mul_scalar(config.gamma);
 
-    todo!()
+            let q_values = target_model.forward(robot_state.to_tensor::<20, B>());
+            let q_value = q_values.select(0, robot_action);
+            let loss = (q_value - target).abs();
+
+            let grads = loss.backward();
+            let grads2 = GradientsParams::from_grads(grads, policy_model);
+
+            *policy_model = optimizer.step(config.lr, policy_model.clone(), grads2);
+        }
+    }
 }

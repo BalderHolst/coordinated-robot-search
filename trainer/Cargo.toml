@@ -8,3 +8,7 @@ botbrain = { path = "../botbrain" }
 rand = "0.9.0"
 ringbuffer = "0.15.0"
 simple_sim = { path = "../simple_sim", features = ["single-thread"] }
+
+burn = { version = "0.16.0", features = ["train", "wgpu", "autodiff"] }
+bincode = "=2.0.0-rc.3"        # For burn
+bincode_derive = "=2.0.0-rc.3" # For burn
