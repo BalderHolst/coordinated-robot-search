@@ -6,6 +6,7 @@ use rand::Rng;
 
 use crate::{Control, LidarData};
 
+#[derive(Debug, Clone)]
 pub struct RlState {
     pub pos: Pos2,
     pub angle: f32,
@@ -49,6 +50,7 @@ impl RlState {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct RlAction(usize);
 
 impl<B: Backend> From<Tensor<B, 1>> for RlAction {
@@ -91,5 +93,11 @@ impl RlAction {
         let steer = *i as f32 / (Self::SIZE - 1) as f32 * 2.0 * Self::MAX_STEER - Self::MAX_STEER;
 
         Control { speed, steer }
+    }
+}
+
+impl Default for RlAction {
+    fn default() -> Self {
+        (Self::SIZE / 2 + 1).into()
     }
 }

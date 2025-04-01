@@ -137,21 +137,16 @@ impl Robot for RlRobot {
         Box::new(self.clone())
     }
 
-    fn any(&mut self) -> &mut dyn std::any::Any {
+    fn any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
 
 impl RlRobot {
-    /// Create a robot with uses the given model. This is useful for
-    /// sharing a model between multiple robots.
-    pub fn from_model(model: model::ModelRef<MyBackend>) -> Self {
-        Self {
-            model: model::BotModel::new_ref(model),
-            ..Default::default()
-        }
-    }
-
     /// Get the state used as input to the neural network
     pub fn state(&self) -> RlState {
         RlState::new(self.pos, self.angle, self.lidar.clone())
@@ -160,9 +155,15 @@ impl RlRobot {
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
         let input = self.state().to_tensor::<20, MyBackend>();
-        let output = self.model.forward(input);
-        let action = RlAction::from(output);
+        let action = self.model.action(input);
         self.control = action.control();
+    }
+
+    pub fn new_controlled() -> Self {
+        Self {
+            model: model::BotModel::new_controlled(RlAction::default()),
+            ..Default::default()
+        }
     }
 }
 
@@ -170,7 +171,9 @@ fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
     let robot = cast_robot::<RlRobot>(robot);
 
     // Only update the control signal at a fixed rate
-    if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ {
+    if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ
+        || robot.model.is_controlled()
+    {
         robot.last_control_update = time;
         robot.react();
     }

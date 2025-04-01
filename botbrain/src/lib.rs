@@ -358,13 +358,16 @@ pub trait Robot {
     fn clone_box(&self) -> Box<dyn Robot>;
 
     /// Get the robot as [Any]. This is used for downcasting the robot to a specific type.
-    fn any(&mut self) -> &mut dyn Any;
+    fn any(&self) -> &dyn Any;
+
+    /// Get the robot as mutable [Any]. This is used for downcasting the robot to a specific mutable type.
+    fn any_mut(&mut self) -> &mut dyn Any;
 }
 
 /// Cast a robot to a specific type
 fn cast_robot<T: Robot + 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
     robot
-        .any()
+        .any_mut()
         .downcast_mut()
         .expect("We should always be downcasting to the correct")
 }

@@ -142,7 +142,11 @@ impl Robot for SearchRobot {
         Box::new(self.clone())
     }
 
-    fn any(&mut self) -> &mut dyn std::any::Any {
+    fn any(&self) -> &dyn std::any::Any {
+        self
+    }
+
+    fn any_mut(&mut self) -> &mut dyn std::any::Any {
         self
     }
 }
