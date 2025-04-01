@@ -35,13 +35,16 @@ impl Enviornment {
     }
 
     pub fn step(&mut self, actions: Vec<RlAction>) -> Snapshot {
-
         assert_eq!(actions.len(), self.sim.robots().len());
 
-        self.sim.robots_mut().iter_mut().zip(actions).for_each(|(r, a)| {
-            let r = r.any_mut().downcast_mut::<RlRobot>().unwrap();
-            r.model.set_action(a);
-        });
+        self.sim
+            .robots_mut()
+            .iter_mut()
+            .zip(actions)
+            .for_each(|(r, a)| {
+                let r = r.any_mut().downcast_mut::<RlRobot>().unwrap();
+                r.model.set_action(a);
+            });
 
         // TODO: Maybe store the last coverage instead of recalculating it here
         let before_coverage = self.sim.state.diagnostics.coverage();
@@ -57,7 +60,7 @@ impl Enviornment {
         let state = self.states();
 
         // TODO: Add terminal state at 100% coverage
-        let done = self.step >= self.max_steps;
+        let done = self.step >= self.max_steps || after_coverage >= 0.95;
 
         Snapshot {
             state,
