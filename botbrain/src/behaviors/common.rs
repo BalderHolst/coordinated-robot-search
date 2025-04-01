@@ -64,6 +64,7 @@ pub(crate) fn update_search_line(search_grid: &mut SearchGrid, line: &Line, diff
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) fn update_search_grid(
     search_grid: &mut SearchGrid,
     id: RobotId,
@@ -139,10 +140,13 @@ pub(crate) fn update_search_grid(
     }
 }
 
-fn process_search_messages(search_grid: &mut SearchGrid, postbox: &mut Postbox, others: &mut HashMap<RobotId, (Pos2, f32)>) {
+fn process_search_messages(
+    search_grid: &mut SearchGrid,
+    postbox: &mut Postbox,
+    others: &mut HashMap<RobotId, (Pos2, f32)>,
+) {
     for (msg_id, msg) in postbox
         .recv()
-        .into_iter()
         .map(|(id, msg)| (id, msg.clone()))
         .collect::<Vec<_>>()
     {
@@ -151,7 +155,7 @@ fn process_search_messages(search_grid: &mut SearchGrid, postbox: &mut Postbox, 
                 match shape {
                     Shape::Cone(_cone) => todo!(),
                     Shape::Line(line) => update_search_line(search_grid, line, *diff),
-                    _ => todo!()
+                    _ => todo!(),
                 };
                 postbox.set_processed(msg_id);
             }
