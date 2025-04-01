@@ -8,16 +8,12 @@ use std::{
 
 use emath::{Pos2, Vec2};
 
-use crate::{
-    params::COMMUNICATION_RANGE,
-    shapes::Shape,
-    LidarData,
-};
+use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
     cast_robot, common, debug, params, scaled_grid::ScaledGrid, shapes::Circle,
-    utils::normalize_angle, BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup,
-    DebugType, MessageKind, Postbox, Robot, RobotId, RobotPose, RobotRef,
+    utils::normalize_angle, BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType,
+    Postbox, Robot, RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
