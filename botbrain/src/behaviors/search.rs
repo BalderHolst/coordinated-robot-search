@@ -10,14 +10,14 @@ use emath::{Pos2, Vec2};
 
 use crate::{
     params::COMMUNICATION_RANGE,
-    shapes::{Line, Shape},
+    shapes::Shape,
     LidarData,
 };
 
 use super::{
-    cast_robot, debug, params, scaled_grid::ScaledGrid, shapes::Circle, utils::normalize_angle,
-    BehaviorFn, BehaviorOutput, CamData, Cone, Control, DebugSoup, DebugType, Message, MessageKind,
-    Postbox, Robot, RobotId, RobotPose, RobotRef,
+    cast_robot, common, debug, params, scaled_grid::ScaledGrid, shapes::Circle,
+    utils::normalize_angle, BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup,
+    DebugType, MessageKind, Postbox, Robot, RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -152,121 +152,24 @@ impl Robot for SearchRobot {
 }
 
 impl SearchRobot {
-    pub(crate) fn update_search_cone(&mut self, cone: &Cone, lidar: &LidarData, diff: f32) {
-        for (point, mut cell) in self
-            .search_grid
-            .iter_cone(cone)
-            .filter_map(|p| {
-                let angle = (p - cone.center).angle();
-                let distance = (p - cone.center).length();
-                let cell = self.search_grid.get(p)?;
-                match distance <= lidar.interpolate(angle - cone.angle) {
-                    true => Some((p, *cell)),
-                    false => None,
-                }
-            })
-            .collect::<Vec<_>>()
-        {
-            cell += diff;
-            self.search_grid.set(point, cell);
-        }
-    }
-
-    pub(crate) fn update_search_line(&mut self, line: &Line, diff: f32) {
-        let dir = (line.end - line.start).normalized();
-        let step_size = self.search_grid.scale();
-        let radius = step_size * 2.0;
-        let mut distance = 0.0;
-        while distance < params::CAM_RANGE - radius / 2.0 {
-            let pos = line.start + dir * distance;
-
-            // Nearness is in range [0, 1]
-            let nearness = distance / params::CAM_RANGE;
-
-            for (point, mut cell) in self
-                .search_grid
-                .iter_circle(&Circle {
-                    center: pos,
-                    radius,
-                })
-                .filter_map(|p| self.search_grid.get(p).map(|c| (p, *c)))
-                .collect::<Vec<_>>()
-            {
-                // We weight points closer to the robot more
-                cell += 2.0 * (diff * nearness);
-
-                self.search_grid.set(point, cell);
-            }
-
-            distance += step_size;
-        }
-    }
-
-    pub(crate) fn update_search_grid(&mut self, time: Duration) {
-        const HEAT_WIDTH: f32 = PI / 4.0;
-        const CAM_MULTPLIER: f32 = 20.0;
-
+    fn update_search_grid(&mut self, time: Duration) {
         // Only update the search grid every UPDATE_INTERVAL seconds
         if (time - self.last_search_grid_update).as_secs_f32() < SEARCH_GRID_UPDATE_INTERVAL {
             return;
         }
         self.last_search_grid_update = time;
 
-        // Cool down the search grid within the view of the camera
-        {
-            let cone = Cone {
-                center: self.pos,
-                radius: params::CAM_RANGE,
-                angle: self.angle,
-                fov: params::CAM_FOV,
-            };
-            let lidar = self.lidar.within_fov(params::CAM_FOV);
-            let diff = -1.0 * SEARCH_GRID_UPDATE_INTERVAL;
-            self.update_search_cone(&cone, &lidar, diff);
-            self.postbox.post(Message {
-                sender_id: self.id,
-                kind: MessageKind::CamDiff { cone, lidar, diff },
-            });
-        }
-
-        // Heat up the search grid in the direction of the search items
-        // detected by the camera
-        {
-            let cam = self.cam.clone();
-            match cam {
-                CamData::Cone(cam_cone) => {
-                    let diff = CAM_MULTPLIER * cam_cone.probability * SEARCH_GRID_UPDATE_INTERVAL;
-                    let lidar = self.lidar.within_fov(params::CAM_FOV);
-                    self.update_search_cone(&cam_cone.cone, &lidar, diff);
-                    self.postbox.post(Message {
-                        sender_id: self.id,
-                        kind: MessageKind::CamDiff {
-                            cone: cam_cone.cone,
-                            lidar,
-                            diff,
-                        },
-                    });
-                }
-                CamData::Points(cam_points) => {
-                    for cam_point in cam_points {
-                        let angle = self.angle + cam_point.angle;
-                        let dir = Vec2::angled(angle);
-                        let start = self.pos;
-                        let end = start + dir * params::CAM_RANGE;
-                        let line = Line { start, end };
-
-                        let diff =
-                            CAM_MULTPLIER * cam_point.probability * SEARCH_GRID_UPDATE_INTERVAL;
-
-                        self.update_search_line(&line, diff);
-                        self.post(MessageKind::ShapeDiff {
-                            shape: Shape::Line(line),
-                            diff,
-                        });
-                    }
-                }
-            }
-        }
+        common::update_search_grid(
+            &mut self.search_grid,
+            self.id,
+            self.pos,
+            self.angle,
+            &mut self.postbox,
+            &self.lidar,
+            &self.cam,
+            &mut self.others,
+            SEARCH_GRID_UPDATE_INTERVAL,
+        );
     }
 
     fn update_proximity_grid_naive(&mut self, time: Duration) {
@@ -369,34 +272,6 @@ impl SearchRobot {
                     self.proximity_grid.set(point, w);
                 }
             }
-        }
-    }
-
-    /// Process incoming messages
-    fn process_messages(&mut self) {
-        // Read incoming messages and update the search grid accordingly
-        for (msg_id, msg) in self
-            .recv()
-            .into_iter()
-            .map(|(id, msg)| (id, msg.clone()))
-            .collect::<Vec<_>>()
-        {
-            match &msg.kind {
-                MessageKind::ShapeDiff { shape, diff } => match shape {
-                    Shape::Cone(_cone) => todo!(),
-                    Shape::Line(line) => self.update_search_line(line, *diff),
-                    _ => {}
-                },
-                MessageKind::CamDiff { cone, lidar, diff } => {
-                    // Update the position of the other robot
-                    self.others.insert(msg.sender_id, (cone.center, cone.angle));
-
-                    // Update the search grid based on the camera data
-                    self.update_search_cone(cone, lidar, *diff);
-                }
-                MessageKind::Debug(_) => {}
-            }
-            self.postbox.set_processed(msg_id);
         }
     }
 }
@@ -604,8 +479,6 @@ fn search(
     robot.visualize();
 
     update(robot, time);
-
-    robot.process_messages();
 
     let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
     robot.debug("", "Forward Bias", DebugType::Vector(forward_bias));

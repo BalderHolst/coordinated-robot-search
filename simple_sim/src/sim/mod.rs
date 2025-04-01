@@ -341,6 +341,14 @@ impl Simulator {
 
         self.state.time += Time::from_secs_f32(self.dt);
     }
+
+    #[allow(unused)]
+    pub fn step_duration(&mut self, duration: f32) {
+        let steps = (duration / self.dt).ceil() as usize;
+        for _ in 0..steps {
+            self.step();
+        }
+    }
 }
 
 /// Shared state needed to step an agent forward in time

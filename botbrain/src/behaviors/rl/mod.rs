@@ -7,18 +7,19 @@ use emath::Pos2;
 use state::{RlAction, RlState};
 
 use crate::{
-    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
+    debug::{DebugSoup, DebugType}, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
     RobotId, RobotPose, Vec2,
 };
 
-use super::{cast_robot, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{cast_robot, common, BehaviorFn, BehaviorOutput, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
+const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
 /// The frequency at which the robot reacts to the environment
-const REACT_HZ: f32 = 2.0;
+pub const REACT_HZ: f32 = 3.0;
 
 type MyBackend = burn::backend::Wgpu;
 
@@ -46,10 +47,6 @@ pub struct RlRobot {
 
     /// The time of the last search grid update
     pub last_search_grid_update: Duration,
-
-    /// Grid containing position preferences for the robot based on
-    /// the positions of other robots
-    pub proximity_grid: ScaledGrid<f32>,
 
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
@@ -81,9 +78,8 @@ impl Default for RlRobot {
             postbox: Default::default(),
             search_grid: Default::default(),
             last_search_grid_update: Default::default(),
-            proximity_grid: Default::default(),
             others: Default::default(),
-            debug_soup: Default::default(),
+            debug_soup: DebugSoup::new_active(),
             model: model::BotModel::new_model(),
             last_control_update: Default::default(),
             control: Default::default(),
@@ -165,10 +161,41 @@ impl RlRobot {
             ..Default::default()
         }
     }
+
+    fn update_search_grid(&mut self, time: Duration) {
+        // Only update the search grid every UPDATE_INTERVAL seconds
+        if (time - self.last_search_grid_update).as_secs_f32() < SEARCH_GRID_UPDATE_INTERVAL {
+            return;
+        }
+        self.last_search_grid_update = time;
+
+        common::update_search_grid(
+            &mut self.search_grid,
+            self.id,
+            self.pos,
+            self.angle,
+            &mut self.postbox,
+            &self.lidar,
+            &self.cam,
+            &mut self.others,
+            SEARCH_GRID_UPDATE_INTERVAL,
+        );
+    }
+
+    fn visualize(&mut self) {
+        if !self.debug_enabled() {
+            return;
+        }
+        self.debug("", "Search Grid", DebugType::Grid(self.search_grid.clone()));
+    }
 }
 
 fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
     let robot = cast_robot::<RlRobot>(robot);
+
+    robot.visualize();
+
+    robot.update_search_grid(time);
 
     // Only update the control signal at a fixed rate
     if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ
