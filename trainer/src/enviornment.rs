@@ -67,7 +67,7 @@ impl Enviornment {
     }
 }
 
-struct Snapshot {
+pub struct Snapshot {
     pub state: Vec<RlState>,
     pub reward: f32,
     pub done: bool,
