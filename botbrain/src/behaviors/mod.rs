@@ -107,6 +107,13 @@ impl Behavior {
         }
     }
 
+    pub fn with_name(self, name: &'static str) -> Self {
+        Self {
+            behavior_name: name,
+            ..self
+        }
+    }
+
     /// Get the behavior function
     pub fn behavior_fn(&self) -> BehaviorFn {
         self.behavior_fn

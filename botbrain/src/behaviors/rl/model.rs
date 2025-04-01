@@ -7,12 +7,14 @@ use burn::{
     tensor::activation,
 };
 
+use super::state::{RlAction, RlState};
+
 pub type ModelRef<B> = Rc<RefCell<Model<B>>>;
 
 #[derive(Clone)]
 pub enum BotModel<B: Backend> {
     Model(Model<B>),
-    Ref(ModelRef<B>),
+    Controlled(RlAction),
 }
 
 impl<B: Backend> BotModel<B> {
@@ -21,15 +23,23 @@ impl<B: Backend> BotModel<B> {
         BotModel::Model(config.init(&Default::default()))
     }
 
-    pub fn new_ref(model: ModelRef<B>) -> Self {
-        BotModel::Ref(model)
+    pub fn new_controlled(action: RlAction) -> Self {
+        BotModel::Controlled(action)
     }
 
-    pub fn forward(&self, input: Tensor<B, 1>) -> Tensor<B, 1> {
+    pub fn action(&self, input: Tensor<B, 1>) -> RlAction {
         match self {
-            BotModel::Model(model) => model.forward(input),
-            BotModel::Ref(model) => model.borrow().forward(input),
+            BotModel::Model(model) => model.forward(input).into(),
+            BotModel::Controlled(action) => *action,
         }
+    }
+
+    pub fn is_controlled(&self) -> bool {
+        matches!(self, BotModel::Controlled(_))
+    }
+
+    pub fn set_action(&mut self, action: RlAction) {
+        *self = BotModel::Controlled(action);
     }
 }
 
@@ -74,6 +84,15 @@ impl<B: Backend> Model<B> {
             linear1: soft_update_linear(this.linear1, &that.linear1, tau),
             linear2: soft_update_linear(this.linear2, &that.linear2, tau),
             linear3: soft_update_linear(this.linear3, &that.linear3, tau),
+        }
+    }
+
+    pub fn react_with_exploration(&self, input: RlState, epsilon: f64) -> RlAction {
+        if rand::random::<f64>() > epsilon {
+            let input_tensor = input.to_tensor::<20, B>();
+            self.forward(input_tensor).into()
+        } else {
+            RlAction::random()
         }
     }
 }

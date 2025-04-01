@@ -1,9 +1,11 @@
 use std::ops::Range;
 
-use botbrain::behaviors::rl::state::{RlAction, RlState};
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+use rand;
 
-type MemoryTuple = (RlState, RlState, RlAction, f32, bool);
+use crate::{SwarmAction, SwarmState};
+
+type MemoryTuple = (SwarmState, SwarmState, SwarmAction, f32, bool);
 
 pub struct Memory<const CAP: usize> {
     memories: ConstGenericRingBuffer<MemoryTuple, CAP>,
@@ -18,9 +20,9 @@ impl<const CAP: usize> Memory<CAP> {
 
     pub fn push(
         &mut self,
-        state: RlState,
-        next_state: RlState,
-        action: RlAction,
+        state: SwarmState,
+        next_state: SwarmState,
+        action: SwarmAction,
         reward: f32,
         done: bool,
     ) {
@@ -39,7 +41,13 @@ impl<const CAP: usize> Memory<CAP> {
     pub fn batch(&self, range: Range<usize>) -> Vec<&MemoryTuple> {
         range
             .into_iter()
-            .filter_map(|i| self.memories.get(i))
+            .map(|i| self.memories.get(i).unwrap())
             .collect::<Vec<_>>()
+    }
+
+    pub fn random_batch(&self, size: usize) -> Vec<&MemoryTuple> {
+        let start = rand::random_range(0..self.memories.len()-size);
+        let end = start + size;
+        self.batch(start..end)
     }
 }

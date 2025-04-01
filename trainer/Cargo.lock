@@ -6795,6 +6795,7 @@ name = "trainer"
 version = "0.1.0"
 dependencies = [
  "botbrain",
+ "rand 0.9.0",
  "ringbuffer",
  "simple_sim",
 ]

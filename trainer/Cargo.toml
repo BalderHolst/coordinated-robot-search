@@ -5,5 +5,6 @@ edition = "2021"
 
 [dependencies]
 botbrain = { path = "../botbrain" }
+rand = "0.9.0"
 ringbuffer = "0.15.0"
 simple_sim = { path = "../simple_sim", features = ["single-thread"] }
