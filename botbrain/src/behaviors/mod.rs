@@ -4,6 +4,7 @@ mod avoid_obstacles;
 mod dumb;
 pub mod rl;
 mod search;
+mod common;
 
 use std::time::Duration;
 

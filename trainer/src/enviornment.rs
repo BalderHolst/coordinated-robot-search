@@ -1,6 +1,6 @@
 use botbrain::behaviors::rl::{
     state::{RlAction, RlState},
-    RlRobot,
+    RlRobot, REACT_HZ,
 };
 use simple_sim::sim::Simulator;
 
@@ -21,6 +21,10 @@ impl Enviornment {
 
     pub fn reset(&mut self) -> Snapshot {
         todo!()
+    }
+
+    pub fn sim(&self) -> &Simulator {
+        &self.sim
     }
 
     pub fn states(&self) -> Vec<RlState> {
@@ -50,7 +54,7 @@ impl Enviornment {
         let before_coverage = self.sim.state.diagnostics.coverage();
 
         // Step internal simulator
-        self.sim.step();
+        self.sim.step_duration(1.0 / REACT_HZ);
 
         // Get reward
         // TODO: Maybe refine reward

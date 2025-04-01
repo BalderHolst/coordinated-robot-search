@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 use botbrain::behaviors::rl::model::{Model, ModelRef};
 use botbrain::behaviors::rl::state::{RlAction, RlState};
-use botbrain::behaviors::rl::RlRobot;
+use botbrain::behaviors::rl::{RlRobot, REACT_HZ};
 use botbrain::behaviors::RobotKind;
 use botbrain::behaviors::{rl::model::ModelConfig, Behavior};
 use botbrain::burn::module::AutodiffModule;
@@ -75,7 +75,7 @@ fn main() {
 }
 
 const MEMORY_SIZE: usize = 4096;
-const MAX_STEPS: usize = 5000;
+const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
 const EPS_DECAY: f64 = 1000.0;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.05;
@@ -161,7 +161,8 @@ fn train(
                 );
             }
             {
-                println!("Step: {}", step);
+                let sim = env.sim();
+                println!("Time: {:.3}, Coverage: {:.3}", sim.state.time.as_secs_f32(), sim.state.diagnostics.coverage());
                 // State is incremented automatically by the simulator
             }
         }
