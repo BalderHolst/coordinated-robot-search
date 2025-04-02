@@ -55,7 +55,7 @@ pub struct TrainingConfig {
 }
 
 fn main() {
-    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/medium_empty.ron");
+    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_empty.ron");
     let world = world_from_path(&world_path).unwrap();
 
     let model_config = ModelConfig::new();
@@ -89,18 +89,7 @@ fn train(
 ) {
     let behavior = Behavior::parse("rl").unwrap().with_name("training");
 
-    let robots = init_poses
-        .into_iter()
-        .map(|pose| {
-            let robot = RlRobot::new_controlled();
-            let robot = Box::new(robot) as Box<dyn Robot>;
-            (pose, robot)
-        })
-        .collect();
-
-    let sim = Simulator::with_robots(SimArgs { world, behavior }, robots);
-
-    let mut env = Enviornment::new(sim, MAX_STEPS);
+    let mut env = Enviornment::new(world, behavior, init_poses, MAX_STEPS);
 
     println!("{}", target_net);
 
@@ -156,13 +145,11 @@ fn train(
                 episode_done = true;
 
                 println!(
-                    "{{\"episode\": {}, \"reward\": {:.4}, \"duration\": {}}}",
-                    episode, episode_reward, episode_duration
+                    "{{\"episode\": {}, \"eps\": {:.3}, \"reward\": {:.4}, \"duration\": {}}}",
+                    episode, eps, episode_reward, episode_duration
                 );
             }
             {
-                let sim = env.sim();
-                println!("Time: {:.3}, Coverage: {:.3}", sim.state.time.as_secs_f32(), sim.state.diagnostics.coverage());
                 // State is incremented automatically by the simulator
             }
         }
