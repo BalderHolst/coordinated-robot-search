@@ -181,6 +181,7 @@ impl SimDiagnostics {
     }
 }
 
+#[derive(Clone)]
 pub struct SimArgs {
     pub world: World,
     pub behavior: Behavior,
