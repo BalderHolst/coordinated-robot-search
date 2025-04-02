@@ -2,11 +2,16 @@
     inputs = {
         nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
         flake-utils.url = "github:numtide/flake-utils";
+        rust-overlay = {
+            url = "github:oxalica/rust-overlay";
+            inputs.nixpkgs.follows = "nixpkgs";
+        };
     };
-    outputs = { flake-utils, nixpkgs, ... }:
+    outputs = { flake-utils, nixpkgs, rust-overlay, ... }:
         flake-utils.lib.eachDefaultSystem (system:
         let
-            pkgs = import nixpkgs { inherit system; };
+            overlays = [ (import rust-overlay) ];
+            pkgs = import nixpkgs { inherit system overlays; };
         in {
         packages = rec {
             site = pkgs.stdenv.mkDerivation {
@@ -52,10 +57,7 @@
         devShells.default = pkgs.mkShell {
             packages = with pkgs; [
                 git
-                cargo
-                clippy
-                rustc
-                rust-analyzer
+                rust-bin.stable.latest.default
                 (python3.withPackages (ps: with ps; [
                     polars
                     matplotlib
