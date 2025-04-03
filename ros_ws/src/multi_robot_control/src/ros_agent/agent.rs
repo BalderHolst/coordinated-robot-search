@@ -8,7 +8,7 @@ use crate::convert_msg::{
     sensor_image_to_opencv_image,
 };
 use crate::{camera_info::CameraInfo, vision::Vision};
-use botbrain::{Pos2, Vec2, debug::DebugType};
+use botbrain::{CamCone, CamData, Pos2, Vec2, debug::DebugType, shapes::Cone};
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use opencv::highgui;
 use r2r::{
@@ -263,7 +263,7 @@ impl RosAgent {
 
             let time = self.node.get_ros_clock().lock().unwrap().get_now()?;
             // Prevents botbrain from updating
-            if time.as_millis() < 100 {
+            if time.as_millis() < 200 {
                 // Simulated time is not available yet
                 log_warn!(&self.nl, "RosTime not ready yet: {:?}", time);
                 std::thread::sleep(std::time::Duration::from_secs(2));
@@ -312,8 +312,33 @@ impl RosAgent {
                                 // [ros_agent-12] deserialization of any type for binary data format is not supported
                                 self.robot.input_cam(cam_data);
                             }
-                            Err(e) => {
-                                log_warn!(&self.nl, "Error finding search objects: {}", e)
+                            Err(_) => {
+                                let cam_data = CamData::Cone(CamCone {
+                                    cone: {
+                                        if let Some(pose) = self.pose.lock().unwrap().as_ref() {
+                                            let pose = cov_pose_to_pose2d(pose);
+                                            Cone {
+                                                center: pose.0,
+                                                radius: botbrain::params::CAM_RANGE, // TODO: Change this
+                                                angle: pose.1,
+                                                fov: 1.25,
+                                            }
+                                        } else {
+                                            log_error!(
+                                                &self.nl,
+                                                "No pose for updating object detection"
+                                            );
+                                            Cone {
+                                                center: Pos2::default(),
+                                                radius: botbrain::params::CAM_RANGE, // TODO: Change this
+                                                angle: 0.0,
+                                                fov: 1.25,
+                                            }
+                                        }
+                                    },
+                                    probability: 0.0,
+                                });
+                                self.robot.input_cam(cam_data);
                             }
                         }
                     } else {
@@ -322,8 +347,8 @@ impl RosAgent {
                 }
 
                 // Set the robot pose
-                if let Some(pose) = self.pose.lock().unwrap().take() {
-                    let (pos, angle) = cov_pose_to_pose2d(&pose);
+                if let Some(pose) = self.pose.lock().unwrap().as_ref() {
+                    let (pos, angle) = cov_pose_to_pose2d(pose);
 
                     let pos = pos - self.map_origin - (self.map_size / 2.0) * self.map_scale;
                     self.robot.input_pose(botbrain::RobotPose { pos, angle });

@@ -246,7 +246,7 @@ impl Vision {
 
                 // HACK: Update to use cone for object of interest
                 for i in (-circle.radius / 2)..(circle.radius / 2) {
-                    let angle = self.camera.get_angle_h(circle.center.x + i);
+                    let angle = -self.camera.get_angle_h(circle.center.x + i);
                     cam_points.push(botbrain::CamPoint { probability, angle });
                 }
 
