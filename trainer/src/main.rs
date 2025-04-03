@@ -1,40 +1,51 @@
 mod enviornment;
 mod memory;
 
-use std::cell::RefCell;
+use std::io::Write;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::{fmt, fs};
 
-use botbrain::behaviors::rl::model::{Model, ModelRef};
+use botbrain::behaviors::rl::model::Model;
 use botbrain::behaviors::rl::state::{RlAction, RlState};
-use botbrain::behaviors::rl::{RlRobot, REACT_HZ};
-use botbrain::behaviors::RobotKind;
-use botbrain::behaviors::{rl::model::ModelConfig, Behavior};
-use botbrain::burn::module::AutodiffModule;
+use botbrain::behaviors::{
+    rl::{model::ModelConfig, REACT_HZ},
+    Behavior,
+};
 use botbrain::burn::optim::{Adam, Optimizer};
-use botbrain::burn::prelude::Backend;
-use botbrain::burn::tensor;
 use botbrain::burn::tensor::backend::AutodiffBackend;
-use botbrain::{burn, Pos2, Robot, RobotPose};
+use botbrain::{burn, Pos2, RobotPose};
 
 use burn::backend::{Autodiff, Wgpu};
 use burn::config::Config;
+use burn::module::Module;
 use burn::optim::adaptor::OptimizerAdaptor;
 use burn::optim::{AdamConfig, GradientsParams};
 
 use burn::tensor::{Int, Tensor};
+use clap::Parser;
 use enviornment::Enviornment;
 use memory::Memory;
+use serde::{Deserialize, Serialize};
+use simple_sim::world::world_from_path;
 use simple_sim::world::World;
-use simple_sim::{
-    sim::{SimArgs, Simulator},
-    world::world_from_path,
-};
 
 type MyBackend = Autodiff<Wgpu>;
 
 type SwarmState = Vec<RlState>;
 type SwarmAction = Vec<RlAction>;
+
+const EPISODES: usize = 1000;
+const MEMORY_SIZE: usize = 4096;
+const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
+const EPS_DECAY: f64 = 0.96;
+const EPS_START: f64 = 0.9;
+const EPS_END: f64 = 0.05;
+
+#[derive(Parser)]
+struct Cli {
+    #[arg(short, long)]
+    model: PathBuf,
+}
 
 #[derive(Config)]
 pub struct TrainingConfig {
@@ -42,7 +53,7 @@ pub struct TrainingConfig {
     pub batch_size: usize,
     #[config(default = 42)]
     pub seed: u64,
-    #[config(default = 0.001)]
+    #[config(default = 0.01)]
     pub lr: f64,
     #[config(default = 0.999)]
     pub gamma: f64,
@@ -55,6 +66,8 @@ pub struct TrainingConfig {
 }
 
 fn main() {
+    let args = Cli::parse();
+
     let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_empty.ron");
     let world = world_from_path(&world_path).unwrap();
 
@@ -64,21 +77,52 @@ fn main() {
 
     // Setup the model
     let device = Default::default();
-    let model = train_config.model.init::<MyBackend>(&device);
+
+    let mut model = train_config.model.init::<MyBackend>(&device);
+
+    // Load the model if it exists
+    if args.model.exists() {
+        println!("Loading model from '{}'", args.model.display());
+        model = model.load_file(
+            &args.model,
+            &burn::record::DefaultRecorder::default(),
+            &device,
+        )
+        .unwrap();
+    }
 
     let poses = vec![RobotPose {
         pos: Pos2::new(0.0, 0.0),
         angle: 0.0,
     }];
 
-    train(poses, world, model, train_config, 100);
+    train(poses, world, model, train_config, EPISODES, args.model);
 }
 
-const MEMORY_SIZE: usize = 4096;
-const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 1000.0;
-const EPS_START: f64 = 0.9;
-const EPS_END: f64 = 0.05;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct EpisodeStats {
+    episode: usize,
+    eps: f64,
+    reward: f32,
+    coverage: f32,
+    steps: usize,
+    sim_time: f32,
+}
+
+impl fmt::Display for EpisodeStats {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "episode: {}, eps: {:.2}, reward: {:.3}, coverage: {:.2}%, steps: {}, sim_time: {:.0}s",
+            self.episode,
+            self.eps,
+            self.reward,
+            self.coverage * 100.0,
+            self.steps,
+            self.sim_time
+        )
+    }
+}
 
 fn train(
     init_poses: Vec<RobotPose>,
@@ -86,7 +130,10 @@ fn train(
     target_net: Model<MyBackend>,
     config: TrainingConfig,
     num_episodes: usize,
+    model_file: PathBuf,
 ) {
+    let stats_file = model_file.with_extension("json");
+
     let behavior = Behavior::parse("rl").unwrap().with_name("training");
 
     let mut env = Enviornment::new(world, behavior, init_poses, MAX_STEPS);
@@ -99,17 +146,23 @@ fn train(
 
     let mut policy_net = target_net.clone();
 
+    let mut stats = Vec::new();
+
+    let start_time = std::time::Instant::now();
+
     for episode in 0..num_episodes {
         let mut episode_done = false;
         let mut episode_reward: f32 = 0.0;
         let mut episode_duration = 0_usize;
         let mut states = env.states();
+        let mut eps = EPS_START;
 
         let mut step: usize = 0;
 
-        while !episode_done {
-            let eps = EPS_END + (EPS_START - EPS_END) * f64::exp(-(step as f64) / EPS_DECAY);
+        print!("[{}/{}]", episode + 1, num_episodes);
+        _ = std::io::stdout().flush();
 
+        while !episode_done {
             let actions = states
                 .iter()
                 .map(|state| target_net.react_with_exploration(state.clone(), eps))
@@ -141,17 +194,50 @@ fn train(
             episode_duration += 1;
 
             if snapshot.done {
+                let stat = EpisodeStats {
+                    episode,
+                    eps,
+                    reward: episode_reward,
+                    steps: step,
+                    coverage: env.sim().state.diagnostics.coverage(),
+                    sim_time: env.sim().state.time.as_secs_f32(),
+                };
+
                 env.reset();
                 episode_done = true;
 
-                println!(
-                    "{{\"episode\": {}, \"eps\": {:.3}, \"reward\": {:.4}, \"duration\": {}}}",
-                    episode, eps, episode_reward, episode_duration
-                );
+                println!(" [time: {:.0}s] {}", start_time.elapsed().as_secs(), stat);
+
+                stats.push(stat);
             }
             {
                 // State is incremented automatically by the simulator
             }
+
+            eps = f64::max(
+                EPS_END,
+                eps * EPS_DECAY
+            );
+        }
+
+        // Save stats
+        match serde_json::to_string(&stats) {
+            Ok(s) => {
+                _ = fs::write(stats_file.clone(), s).map_err(|e| {
+                    eprintln!("Failed to write stats: {}", e);
+                });
+            }
+            Err(e) => {
+                eprintln!("Failed to serialize stats: {}", e);
+            }
+        }
+
+        // Save the model
+        if let Err(e) = policy_net
+            .clone()
+            .save_file(&model_file, &burn::record::DefaultRecorder::default())
+        {
+            eprintln!("Failed to save model: {}", e);
         }
     }
 }
