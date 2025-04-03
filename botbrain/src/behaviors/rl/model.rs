@@ -103,9 +103,9 @@ pub struct ModelConfig {
     pub input_size: usize,
     #[config(default = 7)]
     pub output_size: usize,
-    #[config(default = 40)]
+    #[config(default = 20)]
     pub hidden_size1: usize,
-    #[config(default = 30)]
+    #[config(default = 20)]
     pub hidden_size2: usize,
 }
 
