@@ -37,9 +37,11 @@ type SwarmAction = Vec<RlAction>;
 const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.96;
+const EPS_DECAY: f64 = 0.99;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.05;
+
+const UPDATE_TARGET_FREQ: usize = 100;
 
 #[derive(Parser)]
 struct Cli {
@@ -83,12 +85,13 @@ fn main() {
     // Load the model if it exists
     if args.model.exists() {
         println!("Loading model from '{}'", args.model.display());
-        model = model.load_file(
-            &args.model,
-            &burn::record::DefaultRecorder::default(),
-            &device,
-        )
-        .unwrap();
+        model = model
+            .load_file(
+                &args.model,
+                &burn::record::DefaultRecorder::default(),
+                &device,
+            )
+            .unwrap();
     }
 
     let poses = vec![RobotPose {
@@ -107,19 +110,21 @@ struct EpisodeStats {
     coverage: f32,
     steps: usize,
     sim_time: f32,
+    avg_loss: f32,
 }
 
 impl fmt::Display for EpisodeStats {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "episode: {}, eps: {:.2}, reward: {:.3}, coverage: {:.2}%, steps: {}, sim_time: {:.0}s",
+            "episode: {}, eps: {:.2}, reward: {:.3}, coverage: {:.2}%, steps: {}, sim_time: {:.0}s, avg_loss: {:.3}",
             self.episode,
             self.eps,
             self.reward,
             self.coverage * 100.0,
             self.steps,
-            self.sim_time
+            self.sim_time,
+            self.avg_loss,
         )
     }
 }
@@ -127,7 +132,7 @@ impl fmt::Display for EpisodeStats {
 fn train(
     init_poses: Vec<RobotPose>,
     world: World,
-    target_net: Model<MyBackend>,
+    mut target_net: Model<MyBackend>,
     config: TrainingConfig,
     num_episodes: usize,
     model_file: PathBuf,
@@ -150,12 +155,13 @@ fn train(
 
     let start_time = std::time::Instant::now();
 
+    let mut eps = EPS_START;
+
     for episode in 0..num_episodes {
         let mut episode_done = false;
         let mut episode_reward: f32 = 0.0;
-        let mut episode_duration = 0_usize;
-        let mut states = env.states();
-        let mut eps = EPS_START;
+
+        let mut total_avg_loss: f32 = 0.0;
 
         let mut step: usize = 0;
 
@@ -163,6 +169,10 @@ fn train(
         _ = std::io::stdout().flush();
 
         while !episode_done {
+
+            // Get environment state
+            let states = env.states();
+
             let actions = states
                 .iter()
                 .map(|state| target_net.react_with_exploration(state.clone(), eps))
@@ -181,17 +191,21 @@ fn train(
             );
 
             if config.batch_size < memory.len() {
-                train_model(
-                    &policy_net,
-                    &mut target_net.clone(),
+                total_avg_loss += train_model(
+                    &target_net,
+                    &mut policy_net,
                     &memory,
                     &mut optimizer,
                     &config,
                 );
             }
 
+            // Update target network
+            if step % UPDATE_TARGET_FREQ == 0 {
+                target_net = policy_net.clone();
+            }
+
             step += 1;
-            episode_duration += 1;
 
             if snapshot.done {
                 let stat = EpisodeStats {
@@ -201,6 +215,7 @@ fn train(
                     steps: step,
                     coverage: env.sim().state.diagnostics.coverage(),
                     sim_time: env.sim().state.time.as_secs_f32(),
+                    avg_loss: total_avg_loss / step as f32,
                 };
 
                 env.reset();
@@ -214,11 +229,9 @@ fn train(
                 // State is incremented automatically by the simulator
             }
 
-            eps = f64::max(
-                EPS_END,
-                eps * EPS_DECAY
-            );
         }
+
+        eps = f64::max(EPS_END, eps * EPS_DECAY);
 
         // Save stats
         match serde_json::to_string(&stats) {
@@ -248,8 +261,11 @@ fn train_model<B: AutodiffBackend, const CAP: usize>(
     memory: &Memory<CAP>,
     optimizer: &mut OptimizerAdaptor<Adam, Model<B>, B>,
     config: &TrainingConfig,
-) {
+) -> f32 {
     let (states, next_states, actions, rewards, dones) = memory.random_batch(config.batch_size);
+
+    let mut loss_total: f32 = 0.0;
+    let mut loss_count: usize = 0;
 
     // For memory in batch
     for i in 0..states.len() {
@@ -278,10 +294,15 @@ fn train_model<B: AutodiffBackend, const CAP: usize>(
             let q_value = q_values.select(0, robot_action);
             let loss = (q_value - target).abs();
 
+            loss_total += loss.clone().to_data().as_slice::<f32>().unwrap()[0];
+            loss_count += 1;
+
             let grads = loss.backward();
             let grads2 = GradientsParams::from_grads(grads, policy_model);
 
             *policy_model = optimizer.step(config.lr, policy_model.clone(), grads2);
         }
     }
+
+    loss_total / loss_count as f32
 }
