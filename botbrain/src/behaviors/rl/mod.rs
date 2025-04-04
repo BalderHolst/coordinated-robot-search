@@ -151,7 +151,7 @@ impl RlRobot {
 
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
-        let input = self.state().to_tensor::<20, MyBackend>();
+        let input = self.state().to_tensor::<MyBackend>();
         let action = self.model.action(input);
         self.control = action.control();
     }

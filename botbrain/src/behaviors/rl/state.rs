@@ -6,6 +6,8 @@ use rand::Rng;
 
 use crate::{Control, LidarData};
 
+pub const LIDAR_RAYS: usize = 10;
+
 #[derive(Debug, Clone)]
 pub struct RlState {
     pub pos: Pos2,
@@ -37,7 +39,7 @@ impl RlState {
         [self.pos.x, self.pos.y, self.angle]
     }
 
-    pub fn to_tensor<const LIDAR_RAYS: usize, B: Backend>(&self) -> Tensor<B, 1> {
+    pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
         let device = Default::default();
 
         let lidar_data = self.lidar_data::<LIDAR_RAYS>();
