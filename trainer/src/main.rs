@@ -34,10 +34,10 @@ type MyBackend = Autodiff<Wgpu>;
 type SwarmState = Vec<RlState>;
 type SwarmAction = Vec<RlAction>;
 
-const EPISODES: usize = 1000;
+const EPISODES: usize = 200;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.99;
+const EPS_DECAY: f64 = 0.96;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.05;
 
@@ -53,11 +53,9 @@ struct Cli {
 pub struct TrainingConfig {
     #[config(default = 32)]
     pub batch_size: usize,
-    #[config(default = 42)]
-    pub seed: u64,
     #[config(default = 0.01)]
     pub lr: f64,
-    #[config(default = 0.999)]
+    #[config(default = 0.95)]
     pub gamma: f64,
     #[config(default = 0.005)]
     pub tau: f64,
@@ -70,7 +68,7 @@ pub struct TrainingConfig {
 fn main() {
     let args = Cli::parse();
 
-    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_empty.ron");
+    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_simple.ron");
     let world = world_from_path(&world_path).unwrap();
 
     let model_config = ModelConfig::new();
@@ -139,6 +137,14 @@ fn train(
 ) {
     let stats_file = model_file.with_extension("json");
 
+    let stem = model_file.file_stem().unwrap().to_str().unwrap();
+    let config_file = model_file.with_file_name(format!("{}-config.json", stem));
+
+    serde_json::to_writer(
+        fs::File::create(config_file.clone()).unwrap(),
+        &config,
+    ).unwrap();
+
     let behavior = Behavior::parse("rl").unwrap().with_name("training");
 
     let mut env = Enviornment::new(world, behavior, init_poses, MAX_STEPS);
@@ -202,6 +208,7 @@ fn train(
 
             // Update target network
             if step % UPDATE_TARGET_FREQ == 0 {
+                println!("========== UPDATE TARGET NETWORK ==========");
                 target_net = policy_net.clone();
             }
 
@@ -286,11 +293,11 @@ fn train_model<B: AutodiffBackend, const CAP: usize>(
             let next_robot_state = &next_swarm_state[j];
             let robot_action = Tensor::<B, 1, Int>::from([usize::from(swarm_action[j])]);
 
-            let next_state_tensor = next_robot_state.to_tensor::<20, B>();
+            let next_state_tensor = next_robot_state.to_tensor::<B>();
             let next_q_values = policy_model.forward(next_state_tensor).detach();
             let target = reward.clone() + next_q_values.max().mul_scalar(config.gamma);
 
-            let q_values = target_model.forward(robot_state.to_tensor::<20, B>());
+            let q_values = target_model.forward(robot_state.to_tensor::<B>());
             let q_value = q_values.select(0, robot_action);
             let loss = (q_value - target).abs();
 

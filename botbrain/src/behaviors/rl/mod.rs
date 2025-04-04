@@ -3,7 +3,6 @@ pub mod state;
 
 use std::{collections::HashMap, time::Duration};
 
-use burn::tensor::Tensor;
 use emath::Pos2;
 use state::{RlAction, RlState};
 
@@ -147,28 +146,17 @@ impl Robot for RlRobot {
 impl RlRobot {
     /// Get the state used as input to the neural network
     pub fn state(&self) -> RlState {
+        // Map the robot position to the range [-1, 1]
         let pos = Pos2 {
-            x: self.pos.x / self.search_grid.width(),
-            y: self.pos.y / self.search_grid.height(),
+            x: 2.0 * self.pos.x / self.search_grid.width(),
+            y: 2.0 * self.pos.y / self.search_grid.height(),
         };
         RlState::new(pos, self.angle, self.lidar.clone())
     }
 
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
-        // let input = self.state().to_tensor::<MyBackend>();
-
-        let Some(shortest_ray) = self
-            .lidar
-            .points()
-            .map(|p| (p.angle, p.distance))
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-        else {
-            return;
-        };
-
-        let input = Tensor::from_floats([shortest_ray.0, shortest_ray.1], &Default::default());
-
+        let input = self.state().to_tensor::<MyBackend>();
         let action = self.model.action(input);
         self.control = action.control();
     }

@@ -4,7 +4,7 @@ use burn::{prelude::Backend, tensor::Tensor};
 use emath::Pos2;
 use rand::Rng;
 
-use crate::{Control, LidarData};
+use crate::{utils::normalize_angle, Control, LidarData};
 
 pub const LIDAR_RAYS: usize = 10;
 
@@ -29,7 +29,7 @@ impl RlState {
         let mut data = [(0.0, 0.0); LIDAR_RAYS];
 
         for (i, (a, d)) in data.iter_mut().enumerate() {
-            *a = i as f32 * 2.0 * PI / LIDAR_RAYS as f32;
+            *a = normalize_angle(i as f32 * 2.0 * PI / LIDAR_RAYS as f32);
             *d = self.lidar.interpolate(*a);
         }
 
@@ -49,15 +49,23 @@ impl RlState {
     }
 
     pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
-        let device = Default::default();
+        // let device = Default::default();
 
-        let lidar_data = self.lidar_data();
-        let pose_data = self.pose_data();
+        // let lidar_data = self.lidar_data();
+        // let pose_data = self.pose_data();
 
-        let lidar_tensor = Tensor::from_floats(lidar_data, &device);
-        let pose_tensor = Tensor::from_floats(pose_data, &device);
+        // let lidar_tensor = Tensor::from_floats(lidar_data, &device);
+        // let pose_tensor = Tensor::from_floats(pose_data, &device);
 
-        Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
+        // Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
+
+        let rays = self.lidar_rays();
+        let Some(shortest_ray) = rays.iter().min_by(|a, b| a.1.total_cmp(&b.1)) else {
+            eprintln!("[WARNING]: No lidar data: {:?}", rays);
+            return Tensor::from_floats([0.0, 0.0], &Default::default());
+        };
+
+        Tensor::from_floats([shortest_ray.0, shortest_ray.1], &Default::default())
     }
 }
 

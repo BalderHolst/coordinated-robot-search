@@ -90,7 +90,16 @@ impl<B: Backend> Model<B> {
     pub fn react_with_exploration(&self, input: RlState, epsilon: f64) -> RlAction {
         if rand::random::<f64>() > epsilon {
             let input_tensor = input.to_tensor::<B>();
-            self.forward(input_tensor).into()
+            let output_tensor = self.forward(input_tensor.clone());
+            let action = output_tensor.clone().into();
+            println!(
+                "[pos: {:?}]: {:?} => {:?} => {:?}",
+                input.pos,
+                input_tensor.to_data().as_slice::<f32>(),
+                output_tensor.to_data().as_slice::<f32>(),
+                action
+            );
+            action
         } else {
             RlAction::random()
         }
