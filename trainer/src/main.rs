@@ -37,7 +37,7 @@ type SwarmAction = Vec<RlAction>;
 const EPISODES: usize = 200;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.96;
+const EPS_DECAY: f64 = 0.97;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.05;
 
@@ -226,6 +226,7 @@ fn train(
                 };
 
                 env.reset();
+                memory.clear();
                 episode_done = true;
 
                 println!(" [time: {:.0}s] {}", start_time.elapsed().as_secs(), stat);

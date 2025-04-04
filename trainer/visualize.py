@@ -49,7 +49,7 @@ def live_plot(file_path: str):
             axes[2, 1].set_title("Simulation Time")
             axes[2, 1].set_xlabel("Episode")
 
-            plt.pause(1)  # Update interval
+        plt.pause(1)  # Update interval
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
