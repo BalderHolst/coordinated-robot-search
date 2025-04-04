@@ -4,6 +4,7 @@ use burn::{
     module::{Param, ParamId},
     nn::{Linear, LinearConfig},
     prelude::*,
+    record,
     tensor::activation,
 };
 
@@ -20,7 +21,25 @@ pub enum BotModel<B: Backend> {
 impl<B: Backend> BotModel<B> {
     pub fn new_model() -> Self {
         let config = ModelConfig::new();
-        BotModel::Model(config.init(&Default::default()))
+        let mut model = config.init(&Default::default());
+
+        if let Ok(path) = std::env::var("MODEL_PATH") {
+            model = model
+                .load_file(
+                    &path,
+                    &record::DefaultRecorder::default(),
+                    &Default::default(),
+                )
+                .unwrap_or_else(|_| {
+                    panic!("Failed to load model from path: {}", path);
+                });
+
+            println!("Model loaded from path: {}", path);
+        } else {
+            println!("[WARNING] MODEL_PATH not set, using random model");
+        }
+
+        BotModel::Model(model)
     }
 
     pub fn new_controlled(action: RlAction) -> Self {

@@ -68,7 +68,7 @@ pub struct TrainingConfig {
 fn main() {
     let args = Cli::parse();
 
-    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_simple.ron");
+    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_empty.ron");
     let world = world_from_path(&world_path).unwrap();
 
     let model_config = ModelConfig::new();
