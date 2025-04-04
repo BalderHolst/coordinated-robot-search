@@ -20,6 +20,7 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
     ("full", behaviors::full),
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
+    ("no-pathing", behaviors::no_pathing),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -44,6 +45,13 @@ const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
 const ROBOT_SPACING: f32 = 4.0;
+
+#[derive(Clone, Debug, Default)]
+pub enum RobotMode {
+    #[default]
+    Exploring,
+    Pathing,
+}
 
 #[derive(Clone, Default)]
 pub struct SearchRobot {
@@ -89,6 +97,8 @@ pub struct SearchRobot {
     /// Debug object and their names. Used for visualization.
     /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
+
+    pub robot_mode: RobotMode,
 }
 
 impl Robot for SearchRobot {
@@ -385,6 +395,17 @@ impl SearchRobot {
             DebugType::Grid(self.proximity_grid.clone()),
         );
     }
+
+    fn show_path(&mut self) {
+        let soup = &mut self.debug_soup;
+
+        let mut positions = vec![self.pos];
+        for (pos, _angle) in self.others.values() {
+            positions.push(*pos);
+        }
+
+        soup.add("Planner", "Global Path", DebugType::GlobalLine(positions));
+    }
 }
 
 /// Calculate the gradient of the heat map around the robot
@@ -483,6 +504,8 @@ fn search(
     target += forward_bias;
     contributions(robot, &mut target);
 
+    robot.show_path();
+
     robot.debug("", "Target", DebugType::Vector(target));
 
     robot.postbox.clean();
@@ -502,9 +525,12 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
             },
-            |robot, target| {
-                *target += robot.search_gradient();
-                *target += robot.proximity_gradient();
+            |robot, target| match robot.robot_mode {
+                RobotMode::Exploring => {
+                    *target += robot.search_gradient();
+                    *target += robot.proximity_gradient();
+                }
+                RobotMode::Pathing => todo!(),
             },
         )
     }
@@ -534,6 +560,21 @@ mod behaviors {
             },
             |robot, target| {
                 *target += robot.search_gradient();
+            },
+        )
+    }
+
+    pub fn no_pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+            },
+            |robot, target| {
+                *target += robot.search_gradient();
+                *target += robot.proximity_gradient();
             },
         )
     }

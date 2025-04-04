@@ -144,6 +144,9 @@ pub enum DebugType {
     /// A line with coordinates relative to the robot's position
     RobotLine(Vec<Vec2>),
 
+    /// Line with coordinates relative to the global map
+    GlobalLine(Vec<Pos2>),
+
     NumberPoints(Vec<(Pos2, f32)>),
     Number(f32),
 

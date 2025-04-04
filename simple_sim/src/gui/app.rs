@@ -519,6 +519,14 @@ impl App {
                             .collect();
                         painter.line(points, PathStroke::new(self.cam.scaled(0.01), color));
                     }
+                    DebugType::GlobalLine(positions) => {
+                        let positions = positions
+                            .iter()
+                            .map(|p| self.cam.world_to_viewport(*p))
+                            .collect();
+
+                        painter.line(positions, PathStroke::new(self.cam.scaled(0.01), color));
+                    }
                     DebugType::Grid(grid) => {
                         let (min, max) = self.world.bounds();
                         let min = self.cam.world_to_viewport(min);
