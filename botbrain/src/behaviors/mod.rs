@@ -1,10 +1,10 @@
 //! This module contains the robot behaviors.
 
 mod avoid_obstacles;
+mod common;
 mod dumb;
 pub mod rl;
 mod search;
-mod common;
 
 use std::time::Duration;
 
