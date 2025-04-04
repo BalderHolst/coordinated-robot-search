@@ -15,7 +15,7 @@ def load_training_data(file_path: str):
 def live_plot(file_path: str):
     plt.ion()
     fig, axes = plt.subplots(3, 2, figsize=(10, 12))
-    fig.subplots_adjust(hspace=1.0, wspace=0.3)
+    fig.subplots_adjust(hspace=0.4, wspace=0.3)
 
     while True:
         df = load_training_data(file_path)
