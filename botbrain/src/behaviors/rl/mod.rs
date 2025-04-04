@@ -3,6 +3,7 @@ pub mod state;
 
 use std::{collections::HashMap, time::Duration};
 
+use burn::tensor::Tensor;
 use emath::Pos2;
 use state::{RlAction, RlState};
 
@@ -146,12 +147,28 @@ impl Robot for RlRobot {
 impl RlRobot {
     /// Get the state used as input to the neural network
     pub fn state(&self) -> RlState {
-        RlState::new(self.pos, self.angle, self.lidar.clone())
+        let pos = Pos2 {
+            x: self.pos.x / self.search_grid.width(),
+            y: self.pos.y / self.search_grid.height(),
+        };
+        RlState::new(pos, self.angle, self.lidar.clone())
     }
 
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
-        let input = self.state().to_tensor::<MyBackend>();
+        // let input = self.state().to_tensor::<MyBackend>();
+
+        let Some(shortest_ray) = self
+            .lidar
+            .points()
+            .map(|p| (p.angle, p.distance))
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+        else {
+            return;
+        };
+
+        let input = Tensor::from_floats([shortest_ray.0, shortest_ray.1], &Default::default());
+
         let action = self.model.action(input);
         self.control = action.control();
     }
@@ -188,6 +205,39 @@ impl RlRobot {
             return;
         }
         self.debug("", "Search Grid", DebugType::Grid(self.search_grid.clone()));
+
+        let raw_lidar = self.lidar.points().map(|p| (p.angle, p.distance)).collect();
+        self.debug("", "Actual Lidar", DebugType::RobotRays(raw_lidar));
+
+        let interpolated_lidar = self.state().lidar_rays().to_vec();
+
+        if let Some(shortest_ray) = interpolated_lidar
+            .iter()
+            .min_by(|a, b| a.1.total_cmp(&b.1))
+            .cloned()
+        {
+            self.debug(
+                "",
+                "Shortest Lidar Angle",
+                DebugType::Number(shortest_ray.0),
+            );
+            self.debug(
+                "",
+                "Shortest Lidar Distance",
+                DebugType::Number(shortest_ray.1),
+            );
+            self.debug(
+                "",
+                "Shortest Ray",
+                DebugType::RobotRays(vec![(shortest_ray.0, shortest_ray.1)]),
+            );
+        }
+
+        self.debug(
+            "",
+            "Interpolated Lidar",
+            DebugType::RobotRays(interpolated_lidar),
+        );
     }
 }
 

@@ -24,14 +24,23 @@ impl RlState {
         Self { pos, angle, lidar }
     }
 
-    pub fn lidar_data<const RAYS: usize>(&self) -> [f32; RAYS] {
-        let mut data = [0.0; RAYS];
+    /// Returns the interpolated lidar data in a list of `(angle, distance)` pairs
+    pub fn lidar_rays(&self) -> [(f32, f32); LIDAR_RAYS] {
+        let mut data = [(0.0, 0.0); LIDAR_RAYS];
 
-        for (i, d) in data.iter_mut().enumerate() {
-            let angle = i as f32 * 2.0 * PI / RAYS as f32;
-            *d = self.lidar.interpolate(angle);
+        for (i, (a, d)) in data.iter_mut().enumerate() {
+            *a = i as f32 * 2.0 * PI / LIDAR_RAYS as f32;
+            *d = self.lidar.interpolate(*a);
         }
 
+        data
+    }
+
+    pub fn lidar_data(&self) -> [f32; LIDAR_RAYS] {
+        let mut data = [0.0; LIDAR_RAYS];
+        for (i, (_, d)) in self.lidar_rays().iter().enumerate() {
+            data[i] = *d;
+        }
         data
     }
 
@@ -42,7 +51,7 @@ impl RlState {
     pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
         let device = Default::default();
 
-        let lidar_data = self.lidar_data::<LIDAR_RAYS>();
+        let lidar_data = self.lidar_data();
         let pose_data = self.pose_data();
 
         let lidar_tensor = Tensor::from_floats(lidar_data, &device);
