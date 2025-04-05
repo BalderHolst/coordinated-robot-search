@@ -4,7 +4,7 @@ use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-// #[serde(untagged)]
+#[serde(untagged)] // FIX: Figure out why this crashes in ros_agent
 pub enum Shape {
     Circle(Circle),
     Cone(Cone),
