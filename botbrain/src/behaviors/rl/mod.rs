@@ -20,7 +20,7 @@ const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
 /// The frequency at which the robot reacts to the environment
-pub const REACT_HZ: f32 = 3.0;
+pub const REACT_HZ: f32 = 2.0;
 
 type MyBackend = burn::backend::Wgpu;
 

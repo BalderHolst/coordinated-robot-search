@@ -1,6 +1,7 @@
 mod enviornment;
 mod memory;
 
+use std::f32::consts::PI;
 use std::io::Write;
 use std::path::PathBuf;
 use std::{fmt, fs};
@@ -13,7 +14,8 @@ use botbrain::behaviors::{
 };
 use botbrain::burn::optim::{Adam, Optimizer};
 use botbrain::burn::tensor::backend::AutodiffBackend;
-use botbrain::{burn, Pos2, RobotPose};
+use botbrain::shapes::Circle;
+use botbrain::{burn, params, Pos2, RobotPose};
 
 use burn::backend::{Autodiff, Wgpu};
 use burn::config::Config;
@@ -25,6 +27,7 @@ use burn::tensor::{Int, Tensor};
 use clap::Parser;
 use enviornment::Enviornment;
 use memory::Memory;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use simple_sim::world::world_from_path;
 use simple_sim::world::World;
@@ -34,14 +37,14 @@ type MyBackend = Autodiff<Wgpu>;
 type SwarmState = Vec<RlState>;
 type SwarmAction = Vec<RlAction>;
 
-const EPISODES: usize = 200;
+const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.97;
+const EPS_DECAY: f64 = 0.993;
 const EPS_START: f64 = 0.9;
-const EPS_END: f64 = 0.05;
+const EPS_END: f64 = 0.10;
 
-const UPDATE_TARGET_FREQ: usize = 100;
+const UPDATE_TARGET_FREQ: usize = 400;
 
 #[derive(Parser)]
 struct Cli {
@@ -51,11 +54,11 @@ struct Cli {
 
 #[derive(Config)]
 pub struct TrainingConfig {
-    #[config(default = 32)]
+    #[config(default = 64)]
     pub batch_size: usize,
-    #[config(default = 0.01)]
+    #[config(default = 0.002)]
     pub lr: f64,
-    #[config(default = 0.95)]
+    #[config(default = 0.995)]
     pub gamma: f64,
     #[config(default = 0.005)]
     pub tau: f64,
@@ -68,7 +71,7 @@ pub struct TrainingConfig {
 fn main() {
     let args = Cli::parse();
 
-    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_empty.ron");
+    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_simple.ron");
     let world = world_from_path(&world_path).unwrap();
 
     let model_config = ModelConfig::new();
@@ -92,12 +95,7 @@ fn main() {
             .unwrap();
     }
 
-    let poses = vec![RobotPose {
-        pos: Pos2::new(0.0, 0.0),
-        angle: 0.0,
-    }];
-
-    train(poses, world, model, train_config, EPISODES, args.model);
+    train(1, world, model, train_config, EPISODES, args.model);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,8 +125,35 @@ impl fmt::Display for EpisodeStats {
     }
 }
 
+const ROBOT_SPACE: f32 = params::DIAMETER * 2.0;
+fn random_pose(world: &World) -> RobotPose {
+    let mut rng = rand::rng();
+    let (min, max) = world.bounds();
+    'outer: loop {
+        let pos = Pos2 {
+            x: rng.random_range(min.x..=max.x),
+            y: rng.random_range(min.y..=max.y),
+        };
+
+        for cell_pos in world.iter_circle(&Circle {
+            center: pos,
+            radius: ROBOT_SPACE,
+        }) {
+            let cell = world.get(cell_pos);
+            if !matches!(cell, Some(simple_sim::world::Cell::Empty)) {
+                continue 'outer;
+            }
+        }
+
+        return RobotPose {
+            pos,
+            angle: rng.random_range(-PI..=PI),
+        };
+    }
+}
+
 fn train(
-    init_poses: Vec<RobotPose>,
+    robots: usize,
     world: World,
     mut target_net: Model<MyBackend>,
     config: TrainingConfig,
@@ -140,12 +165,11 @@ fn train(
     let stem = model_file.file_stem().unwrap().to_str().unwrap();
     let config_file = model_file.with_file_name(format!("{}-config.json", stem));
 
-    serde_json::to_writer(
-        fs::File::create(config_file.clone()).unwrap(),
-        &config,
-    ).unwrap();
+    serde_json::to_writer(fs::File::create(config_file.clone()).unwrap(), &config).unwrap();
 
     let behavior = Behavior::parse("rl").unwrap().with_name("training");
+
+    let init_poses = (0..robots).map(|_| random_pose(&world)).collect::<Vec<_>>();
 
     let mut env = Enviornment::new(world, behavior, init_poses, MAX_STEPS);
 
@@ -171,11 +195,9 @@ fn train(
 
         let mut step: usize = 0;
 
-        print!("[{}/{}]", episode + 1, num_episodes);
         _ = std::io::stdout().flush();
 
         while !episode_done {
-
             // Get environment state
             let states = env.states();
 
@@ -225,10 +247,13 @@ fn train(
                     avg_loss: total_avg_loss / step as f32,
                 };
 
-                env.reset();
-                memory.clear();
+                let poses = (0..robots)
+                    .map(|_| random_pose(&env.sim().world()))
+                    .collect::<Vec<_>>();
+                env.reset(poses);
                 episode_done = true;
 
+                print!("\n[{}/{}]", episode + 1, num_episodes);
                 println!(" [time: {:.0}s] {}", start_time.elapsed().as_secs(), stat);
 
                 stats.push(stat);
@@ -236,7 +261,6 @@ fn train(
             {
                 // State is incremented automatically by the simulator
             }
-
         }
 
         eps = f64::max(EPS_END, eps * EPS_DECAY);
@@ -292,6 +316,7 @@ fn train_model<B: AutodiffBackend, const CAP: usize>(
         for j in 0..swarm_state.len() {
             let robot_state = &swarm_state[j];
             let next_robot_state = &next_swarm_state[j];
+
             let robot_action = Tensor::<B, 1, Int>::from([usize::from(swarm_action[j])]);
 
             let next_state_tensor = next_robot_state.to_tensor::<B>();

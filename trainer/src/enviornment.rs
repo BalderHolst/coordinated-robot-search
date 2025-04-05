@@ -5,16 +5,17 @@ use botbrain::{
             RlRobot, REACT_HZ,
         },
         Behavior,
-    },
-    Robot, RobotPose,
+    }, params::RADIUS, Robot, RobotPose
 };
 use simple_sim::{
     sim::{SimArgs, Simulator},
     world::World,
 };
 
-const MAX_INACTIVE_SECS: f32 = 10.0;
-const INACTIVE_REWARD: f32 = -10.0;
+const MAX_INACTIVE_SECS: f32 = 20.0;
+
+const INACTIVE_REWARD: f32 = -20.0;
+const COLLISION_REWARD: f32 = -100.0;
 
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
@@ -22,7 +23,6 @@ pub struct Enviornment {
     step: usize,
     max_steps: usize,
     sim_args: SimArgs,
-    init_poses: Vec<RobotPose>,
     sim: Simulator,
     last_coverage_increase: f32,
 }
@@ -45,7 +45,7 @@ impl Enviornment {
         init_poses: Vec<RobotPose>,
         max_steps: usize,
     ) -> Self {
-        let robots = poses_to_robots(init_poses.clone());
+        let robots = poses_to_robots(init_poses);
 
         let sim_args = SimArgs { world, behavior };
         let sim = Simulator::with_robots(sim_args.clone(), robots);
@@ -53,15 +53,14 @@ impl Enviornment {
         Enviornment {
             sim,
             sim_args,
-            init_poses,
             max_steps,
             step: 0,
             last_coverage_increase: 0.0,
         }
     }
 
-    pub fn reset(&mut self) {
-        let robots = poses_to_robots(self.init_poses.clone());
+    pub fn reset(&mut self, poses: Vec<RobotPose>) {
+        let robots = poses_to_robots(poses);
         self.sim = Simulator::with_robots(self.sim_args.clone(), robots);
     }
 
@@ -107,6 +106,7 @@ impl Enviornment {
         }
 
         if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
+            println!("Inactive for too long!");
             return Snapshot {
                 state: self.states(),
                 reward: INACTIVE_REWARD,
@@ -115,6 +115,23 @@ impl Enviornment {
         }
 
         let reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
+
+        for robot in self.sim.robots() {
+            let robot = robot.any().downcast_ref::<RlRobot>().unwrap();
+            let shortest = robot
+                .lidar
+                .points()
+                .fold(f32::MAX, |acc, p| acc.min(p.distance));
+            if shortest < RADIUS + 0.1 {
+                println!("COLLISION!!!");
+                return Snapshot {
+                    state: self.states(),
+                    reward: COLLISION_REWARD,
+                    done: true,
+                };
+            }
+        }
+
 
         let state = self.states();
 

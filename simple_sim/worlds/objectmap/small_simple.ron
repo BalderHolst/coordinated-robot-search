@@ -1,6 +1,6 @@
 ObjectDescription(
-    width: 10,
-    height: 10,
+    width: 15,
+    height: 15,
     scale: 0.10,
     obstacles: [
         WideLine(WideLine(
