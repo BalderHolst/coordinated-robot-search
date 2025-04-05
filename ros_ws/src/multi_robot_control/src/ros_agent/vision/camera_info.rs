@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 /// Struct for storing camera info
 pub struct CameraInfo {
     /// Horizontal field of view in radians

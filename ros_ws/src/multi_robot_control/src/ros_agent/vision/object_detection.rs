@@ -1,11 +1,11 @@
-use crate::camera_info::CameraInfo;
-
 use opencv::{
     core::{CV_8UC1, CV_8UC3, Point2f, Point2i, Scalar, Vec3f, Vec4d, Vector},
     highgui,
     imgproc::{self, LineTypes},
     prelude::*,
 };
+
+use crate::vision::camera_info::CameraInfo;
 
 /// Target color of the search object
 const TARGET_COLOR: [f32; 3] = [30.0, 255.0, 255.0];
@@ -25,7 +25,7 @@ struct Circle {
     color: Vec3f,
 }
 
-pub struct Vision {
+pub struct ObjectDetection {
     camera: CameraInfo,
 
     // For continous use (No reallocation)
@@ -34,7 +34,7 @@ pub struct Vision {
     masked_circles: Mat,
 }
 
-impl Vision {
+impl ObjectDetection {
     /// Contructer that uses Camera to initialize the vision Mat's
     pub fn new(camera: CameraInfo) -> Self {
         let mask = Mat::new_rows_cols_with_default(
@@ -207,7 +207,11 @@ impl Vision {
         .expect("cvt_color failed");
         highgui::imshow("circles", &temp_img).unwrap();
 
-        self.convert_to_cam_data(circles)
+        if circles.is_empty() {
+            Err("No circles found".to_string())
+        } else {
+            self.convert_to_cam_data(circles)
+        }
     }
 
     fn compute_probability(diff: f32, tolerance: f32, weight: f32) -> f32 {
