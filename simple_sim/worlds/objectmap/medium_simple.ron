@@ -1,11 +1,11 @@
 ObjectDescription(
-    width: 80,
-    height: 80,
-    scale: 0.10,
-    search_items: [
-        Circle(
-            center: Pos2(x: 30, y: 30),
-            radius: 0.2,
-        ),
-    ],
+  width: 80,
+  height: 80,
+  scale: 0.10,
+  search_items: [
+    Circle(
+      center: Pos2(x: 30, y: 30),
+      radius: 0.2,
+    ),
+  ],
 )
