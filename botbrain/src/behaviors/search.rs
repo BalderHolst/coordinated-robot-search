@@ -34,6 +34,8 @@ const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
+/// The threshold at which the robot will switch from exploring to pathing
+const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.05;
 
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
@@ -44,9 +46,12 @@ const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
+const COSTMAP_GRID_SCALE: f32 = 1.00;
+const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 2.0;
+
 const ROBOT_SPACING: f32 = 4.0;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub enum RobotMode {
     #[default]
     Exploring,
@@ -90,6 +95,12 @@ pub struct SearchRobot {
 
     /// The time of the last proximity grid update
     pub last_proximity_grid_update: Duration,
+
+    /// Grid containing the costmap for path planning
+    pub costmap_grid: ScaledGrid<f32>,
+
+    /// The time of the last costmap grid update
+    pub last_costmap_grid_update: Duration,
 
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
@@ -280,6 +291,17 @@ impl SearchRobot {
             }
         }
     }
+
+    fn update_costmap_grid(&mut self, time: Duration) {
+        // Don't update the costmap grid too often
+        if (time - self.last_costmap_grid_update).as_secs_f32() < COSTMAP_GRID_UPDATE_INTERVAL {
+            return;
+        }
+        self.last_costmap_grid_update = time;
+
+        self.costmap_grid.fill(0.0);
+        // println!("Updating costmap grid");
+    }
 }
 
 impl SearchRobot {
@@ -294,6 +316,12 @@ impl SearchRobot {
         );
         self.debug("Gradient", "Search Cells", DebugType::NumberPoints(cells));
         self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
+
+        let g_len = g.length();
+        if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD && g_len != 0.0 {
+            println!("Switching to pathing");
+            self.robot_mode = RobotMode::Pathing;
+        }
         g
     }
 
@@ -394,6 +422,20 @@ impl SearchRobot {
             "Proximity Grid",
             DebugType::Grid(self.proximity_grid.clone()),
         );
+
+        soup.add(
+            "Grids",
+            "Costmap Grid",
+            DebugType::Grid(self.costmap_grid.clone()),
+        );
+
+        if self.robot_mode == RobotMode::Pathing {
+            self.show_path();
+        }
+    }
+
+    fn path_planning(&mut self) -> Vec2 {
+        Vec2 { x: 1.0, y: 1.0 }
     }
 
     fn show_path(&mut self) {
@@ -504,8 +546,6 @@ fn search(
     target += forward_bias;
     contributions(robot, &mut target);
 
-    robot.show_path();
-
     robot.debug("", "Target", DebugType::Vector(target));
 
     robot.postbox.clean();
@@ -524,13 +564,19 @@ mod behaviors {
             |robot, time| {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
+                // if robot.robot_mode == RobotMode::Pathing {
+                robot.update_costmap_grid(time);
+                // }
             },
             |robot, target| match robot.robot_mode {
                 RobotMode::Exploring => {
                     *target += robot.search_gradient();
                     *target += robot.proximity_gradient();
                 }
-                RobotMode::Pathing => todo!(),
+                RobotMode::Pathing => {
+                    // No += since we want full control
+                    *target = robot.path_planning();
+                }
             },
         )
     }
