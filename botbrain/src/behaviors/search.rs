@@ -46,8 +46,10 @@ const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
-const COSTMAP_GRID_SCALE: f32 = 1.00;
+const COSTMAP_GRID_SCALE: f32 = 1.0;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 2.0;
+
+const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
 
 const ROBOT_SPACING: f32 = 4.0;
 
@@ -102,6 +104,9 @@ pub struct SearchRobot {
     /// The time of the last costmap grid update
     pub last_costmap_grid_update: Duration,
 
+    /// The goal of the path planner
+    pub path_planner_goal: Option<Pos2>,
+
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
 
@@ -124,6 +129,7 @@ impl Robot for SearchRobot {
     fn set_world_size(&mut self, size: Vec2) {
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
+        self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
     }
 
     fn get_postbox(&self) -> &super::Postbox {
@@ -300,6 +306,15 @@ impl SearchRobot {
         self.last_costmap_grid_update = time;
 
         self.costmap_grid.fill(0.0);
+        self.search_grid.iter().for_each(|(x, y, cell)| {
+            // Negative if don't want to go there, positive if want to go there
+            // Non-zero cells are explored therefore we won't go there
+            let cell = if *cell != 0.0 { -1.0 } else { 1.0 };
+            self.costmap_grid.set(Pos2 { x, y }, cell);
+        });
+        // TODO: Update costmap from search grid
+        // TODO: Update costmap from obstacles (but botbrain doesn't have the map?), costmap from lidar then??
+
         // println!("Updating costmap grid");
     }
 }
@@ -383,13 +398,20 @@ impl SearchRobot {
         lidar_contribution
     }
 
-    pub fn control_towards(&self, target: Vec2) -> Control {
-        let angle_error = normalize_angle(self.angle - target.angle());
-        let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
-        let speed = 1.0 - t;
-        let steer = t * normalize_angle(target.angle() - self.angle);
+    pub fn control_towards(&self, target: Option<Vec2>) -> Control {
+        if let Some(target) = target {
+            let angle_error = normalize_angle(self.angle - target.angle());
+            let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
+            let speed = 1.0 - t;
+            let steer = t * normalize_angle(target.angle() - self.angle);
 
-        Control { speed, steer }
+            Control { speed, steer }
+        } else {
+            Control {
+                speed: 0.0,
+                steer: 0.0,
+            }
+        }
     }
 
     fn visualize(&mut self) {
@@ -429,13 +451,37 @@ impl SearchRobot {
             DebugType::Grid(self.costmap_grid.clone()),
         );
 
-        if self.robot_mode == RobotMode::Pathing {
-            self.show_path();
-        }
+        // if self.robot_mode == RobotMode::Pathing {
+        self.show_path();
+        // }
     }
 
-    fn path_planning(&mut self) -> Vec2 {
-        Vec2 { x: 1.0, y: 1.0 }
+    fn path_planning(&mut self) -> Option<Vec2> {
+        if let Some(goal) = self.path_planner_goal {
+            let diff = goal - self.pos;
+            if diff.length() < PATH_PLANNER_GOAL_TOLERANCE {
+                self.path_planner_goal = None;
+                self.robot_mode = RobotMode::Exploring;
+            }
+        }
+
+        // TODO: Don't move if we reach the edge of the proximity grid
+
+        if !self.others.is_empty() {
+            // Only limit robot movement if there are other robots in the proximity grid
+            match self.proximity_grid.get(self.pos) {
+                Some(cell) if *cell == 0.0 => {
+                    // If we are not in the proximity grid, we can't move towards the goal
+                    return None;
+                }
+                None => {
+                    println!("Robot position not in proximity grid: {:?}", self.pos);
+                }
+                _ => {}
+            }
+        }
+        // Mock vector for now
+        Some(Vec2 { x: 1.0, y: 1.0 })
     }
 
     fn show_path(&mut self) {
@@ -530,7 +576,7 @@ fn search(
     robot: &mut RobotRef,
     time: Duration,
     update: fn(&mut SearchRobot, time: Duration),
-    contributions: fn(&mut SearchRobot, &mut Vec2),
+    contributions: fn(&mut SearchRobot, &Vec2) -> Option<Vec2>,
 ) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
 
@@ -544,9 +590,9 @@ fn search(
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
-    contributions(robot, &mut target);
+    let target = contributions(robot, &target);
 
-    robot.debug("", "Target", DebugType::Vector(target));
+    robot.debug("", "Target", DebugType::Vector(target.unwrap_or_default()));
 
     robot.postbox.clean();
 
@@ -570,12 +616,14 @@ mod behaviors {
             },
             |robot, target| match robot.robot_mode {
                 RobotMode::Exploring => {
-                    *target += robot.search_gradient();
-                    *target += robot.proximity_gradient();
+                    let mut target = *target;
+                    target += robot.search_gradient();
+                    target += robot.proximity_gradient();
+                    Some(target)
                 }
                 RobotMode::Pathing => {
                     // No += since we want full control
-                    *target = robot.path_planning();
+                    robot.path_planning()
                 }
             },
         )
@@ -590,8 +638,10 @@ mod behaviors {
                 robot.update_proximity_grid_naive(time);
             },
             |robot, target| {
-                *target += robot.search_gradient();
-                *target += robot.proximity_gradient();
+                let mut target = *target;
+                target += robot.search_gradient();
+                target += robot.proximity_gradient();
+                Some(target)
             },
         )
     }
@@ -605,7 +655,9 @@ mod behaviors {
                 robot.update_proximity_grid(time);
             },
             |robot, target| {
-                *target += robot.search_gradient();
+                let mut target = *target;
+                target += robot.search_gradient();
+                Some(target)
             },
         )
     }
@@ -619,8 +671,10 @@ mod behaviors {
                 robot.update_proximity_grid(time);
             },
             |robot, target| {
-                *target += robot.search_gradient();
-                *target += robot.proximity_gradient();
+                let mut target = *target;
+                target += robot.search_gradient();
+                target += robot.proximity_gradient();
+                Some(target)
             },
         )
     }
