@@ -306,15 +306,14 @@ impl SearchRobot {
         self.last_costmap_grid_update = time;
 
         self.costmap_grid.fill(0.0);
-        self.search_grid.iter().for_each(|(x, y, cell)| {
+
+        self.search_grid.iter().for_each(|(x, y, &cell)| {
             // Negative if don't want to go there, positive if want to go there
             // Non-zero cells are explored therefore we won't go there
-            let cell = if *cell != 0.0 { -1.0 } else { 1.0 };
+            let cell = if cell != 0.0 { -1.0 } else { 1.0 };
             self.costmap_grid.set(Pos2 { x, y }, cell);
         });
-        // TODO: Update costmap from search grid
         // TODO: Update costmap from obstacles (but botbrain doesn't have the map?), costmap from lidar then??
-
         // println!("Updating costmap grid");
     }
 }
@@ -464,8 +463,6 @@ impl SearchRobot {
                 self.robot_mode = RobotMode::Exploring;
             }
         }
-
-        // TODO: Don't move if we reach the edge of the proximity grid
 
         if !self.others.is_empty() {
             // Only limit robot movement if there are other robots in the proximity grid
