@@ -298,6 +298,7 @@ pub trait Robot {
     /// Set the id of the robot
     fn set_id(&mut self, id: RobotId);
 
+    // TODO: Add map as input to the robot?
     /// Set the size of the world
     fn set_world_size(&mut self, size: Vec2);
 

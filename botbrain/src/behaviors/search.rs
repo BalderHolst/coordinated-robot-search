@@ -11,9 +11,13 @@ use emath::{Pos2, Vec2};
 use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
-    cast_robot, common, debug, params, scaled_grid::ScaledGrid, shapes::Circle,
-    utils::normalize_angle, BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType,
-    Postbox, Robot, RobotId, RobotPose, RobotRef,
+    cast_robot, common, debug,
+    params::{self, LIDAR_RANGE},
+    scaled_grid::ScaledGrid,
+    shapes::Circle,
+    utils::normalize_angle,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, Postbox, Robot,
+    RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -47,7 +51,7 @@ const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
 const COSTMAP_GRID_SCALE: f32 = 1.0;
-const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 2.0;
+const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
 const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
 
@@ -106,6 +110,9 @@ pub struct SearchRobot {
 
     /// The goal of the path planner
     pub path_planner_goal: Option<Pos2>,
+
+    /// The path planned by the robot
+    pub path_planner_path: Vec<Pos2>,
 
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
@@ -313,8 +320,28 @@ impl SearchRobot {
             let cell = if cell != 0.0 { -1.0 } else { 1.0 };
             self.costmap_grid.set(Pos2 { x, y }, cell);
         });
-        // TODO: Update costmap from obstacles (but botbrain doesn't have the map?), costmap from lidar then??
-        // println!("Updating costmap grid");
+
+        // TODO: Update costmap from obstacles (but botbrain doesn't have the map?), costmap from only lidar then??
+        self.lidar
+            .clone()
+            .points()
+            .filter_map(|&LidarPoint { angle, distance }| {
+                // Make small circle if distance is under max distance
+                if distance < LIDAR_RANGE {
+                    let point = self.pos + Vec2::angled(angle + self.angle) * distance;
+                    Some(Circle {
+                        center: point,
+                        radius: 2.0,
+                    })
+                } else {
+                    None
+                }
+            })
+            .for_each(|circle| {
+                self.costmap_grid
+                    // Negative if don't want to go there, positive if want to go there
+                    .set_circle(circle.center, circle.radius, -1.0);
+            });
     }
 }
 
@@ -364,6 +391,7 @@ impl SearchRobot {
 
     /// Calculate the lidar contribution to the control
     fn lidar(&mut self) -> Vec2 {
+        println!("Lidar");
         let mut lidar_contribution = Vec2::ZERO;
         {
             let mut total_weight: f32 = 0.0;
@@ -482,14 +510,14 @@ impl SearchRobot {
     }
 
     fn show_path(&mut self) {
-        let soup = &mut self.debug_soup;
-
-        let mut positions = vec![self.pos];
-        for (pos, _angle) in self.others.values() {
-            positions.push(*pos);
+        if self.path_planner_goal.is_some() {
+            let soup = &mut self.debug_soup;
+            soup.add(
+                "Planner",
+                "Global Path",
+                DebugType::GlobalLine(self.path_planner_path.clone()),
+            );
         }
-
-        soup.add("Planner", "Global Path", DebugType::GlobalLine(positions));
     }
 }
 
