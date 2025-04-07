@@ -60,14 +60,16 @@ impl<const CAP: usize> Memory<CAP> {
     }
 
     pub fn batch(&self, range: Range<usize>) -> MemoryBatch {
-        range.map(|i| {
-            let state = self.states.get(i).unwrap().clone();
-            let next_state = self.next_states.get(i).unwrap().clone();
-            let action = self.actions.get(i).unwrap().clone();
-            let reward = self.rewards.get(i).unwrap().clone();
-            let done = self.dones.get(i).unwrap().clone();
-            (state, next_state, action, reward, done)
-        }).collect()
+        range
+            .map(|i| {
+                let state = self.states.get(i).unwrap().clone();
+                let next_state = self.next_states.get(i).unwrap().clone();
+                let action = self.actions.get(i).unwrap().clone();
+                let reward = self.rewards.get(i).unwrap().clone();
+                let done = self.dones.get(i).unwrap().clone();
+                (state, next_state, action, reward, done)
+            })
+            .collect()
     }
 
     pub fn random_batch(&self, size: usize) -> MemoryBatch {

@@ -5,7 +5,9 @@ use botbrain::{
             RlRobot, REACT_HZ,
         },
         Behavior,
-    }, params::RADIUS, Robot, RobotPose
+    },
+    params::RADIUS,
+    Robot, RobotPose,
 };
 use simple_sim::{
     sim::{SimArgs, Simulator},
@@ -91,30 +93,30 @@ impl Enviornment {
                 r.model.set_action(a);
             });
 
-        // TODO: Maybe store the last coverage instead of recalculating it here
-        let before_coverage = self.sim.state.diagnostics.coverage();
+        // // TODO: Maybe store the last coverage instead of recalculating it here
+        // let before_coverage = self.sim.state.diagnostics.coverage();
 
         // Step internal simulator
         self.sim.step_duration(1.0 / REACT_HZ);
 
-        // Get reward
-        // TODO: Maybe refine reward
-        let after_coverage = self.sim.state.diagnostics.coverage();
+        // // TODO: Maybe refine reward
+        // let after_coverage = self.sim.state.diagnostics.coverage();
 
-        if after_coverage > before_coverage {
-            self.last_coverage_increase = self.sim.state.time.as_secs_f32();
-        }
+        // if after_coverage > before_coverage {
+        //     self.last_coverage_increase = self.sim.state.time.as_secs_f32();
+        // }
 
-        if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
-            println!("Inactive for too long!");
-            return Snapshot {
-                state: self.states(),
-                reward: INACTIVE_REWARD,
-                done: true,
-            };
-        }
+        // if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
+        //     println!("Inactive for too long!");
+        //     return Snapshot {
+        //         state: self.states(),
+        //         reward: INACTIVE_REWARD,
+        //         done: true,
+        //     };
+        // }
 
-        let reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
+        // let reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
+        let reward = 0.1;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot>().unwrap();
@@ -132,16 +134,15 @@ impl Enviornment {
             }
         }
 
-
         let state = self.states();
 
         // TODO: Add terminal state at 100% coverage
-        let done = self.step >= self.max_steps || after_coverage >= 0.95;
+        // let done = self.step >= self.max_steps || after_coverage >= 0.95;
 
         Snapshot {
             state,
             reward,
-            done,
+            done: false,
         }
     }
 }

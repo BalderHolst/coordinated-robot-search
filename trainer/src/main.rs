@@ -40,11 +40,11 @@ type SwarmAction = Vec<RlAction>;
 const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.993;
+const EPS_DECAY: f64 = 0.990;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.10;
 
-const UPDATE_TARGET_FREQ: usize = 400;
+const UPDATE_TARGET_FREQ: usize = 200;
 
 #[derive(Parser)]
 struct Cli {
@@ -107,6 +107,7 @@ struct EpisodeStats {
     steps: usize,
     sim_time: f32,
     avg_loss: f32,
+    actions: Vec<usize>,
 }
 
 impl fmt::Display for EpisodeStats {
@@ -188,6 +189,8 @@ fn train(
     let mut eps = EPS_START;
 
     for episode in 0..num_episodes {
+        let mut action_stats = vec![0; RlAction::SIZE];
+
         let mut episode_done = false;
         let mut episode_reward: f32 = 0.0;
 
@@ -205,6 +208,10 @@ fn train(
                 .iter()
                 .map(|state| target_net.react_with_exploration(state.clone(), eps))
                 .collect::<Vec<_>>();
+
+            for action in &actions {
+                action_stats[usize::from(*action)] += 1;
+            }
 
             let snapshot = env.step(actions.clone());
 
@@ -245,6 +252,7 @@ fn train(
                     coverage: env.sim().state.diagnostics.coverage(),
                     sim_time: env.sim().state.time.as_secs_f32(),
                     avg_loss: total_avg_loss / step as f32,
+                    actions: action_stats.clone(),
                 };
 
                 let poses = (0..robots)
@@ -320,7 +328,9 @@ fn train_model<B: AutodiffBackend, const CAP: usize>(
             let robot_action = Tensor::<B, 1, Int>::from([usize::from(swarm_action[j])]);
 
             let next_state_tensor = next_robot_state.to_tensor::<B>();
+
             let next_q_values = policy_model.forward(next_state_tensor).detach();
+
             let target = reward.clone() + next_q_values.max().mul_scalar(config.gamma);
 
             let q_values = target_model.forward(robot_state.to_tensor::<B>());

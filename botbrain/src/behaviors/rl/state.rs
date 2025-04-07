@@ -49,15 +49,30 @@ impl RlState {
     }
 
     pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
-        let device = Default::default();
+        // let device = Default::default();
 
-        let lidar_data = self.lidar_data();
-        let pose_data = self.pose_data();
+        // let lidar_data = self.lidar_data();
+        // let pose_data = self.pose_data();
 
-        let lidar_tensor = Tensor::from_floats(lidar_data, &device);
-        let pose_tensor = Tensor::from_floats(pose_data, &device);
+        // let lidar_tensor = Tensor::from_floats(lidar_data, &device);
+        // let pose_tensor = Tensor::from_floats(pose_data, &device);
 
-        Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
+        // Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
+
+        // get shortest ray and its angle
+
+        let Some(shortest_ray) = self
+            .lidar
+            .points()
+            .min_by(|a, b| a.distance.total_cmp(&b.distance))
+        else {
+            return Tensor::from_floats([0.0, 0.0], &Default::default());
+        };
+
+        Tensor::from_floats(
+            [shortest_ray.angle, shortest_ray.distance],
+            &Default::default(),
+        )
     }
 }
 
@@ -87,11 +102,10 @@ impl From<RlAction> for usize {
 }
 
 impl RlAction {
-    const SPEEDS: [f32; 3] = [0.2, 0.5, 1.0];
-    const STEERS: [f32; 5] = [-1.0, -0.5, 0.0, 0.5, 1.0];
+    const CONTROLS: [(f32, f32); 3] = [(0.5, -0.5), (1.0, 0.0), (0.5, 0.5)];
 
     /// The number of discrete actions
-    const SIZE: usize = Self::SPEEDS.len() * Self::STEERS.len();
+    pub const SIZE: usize = Self::CONTROLS.len();
 
     /// The maximum steering command
     const MAX_STEER: f32 = 1.0;
@@ -102,10 +116,7 @@ impl RlAction {
 
     pub fn control(&self) -> Control {
         let Self(i) = self;
-
-        let speed = Self::SPEEDS[i / Self::STEERS.len()];
-        let steer = Self::STEERS[i % Self::STEERS.len()];
-
+        let (speed, steer) = Self::CONTROLS[*i];
         Control { speed, steer }
     }
 }

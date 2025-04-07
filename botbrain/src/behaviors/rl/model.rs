@@ -93,9 +93,9 @@ pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f3
 
 impl<B: Backend> Model<B> {
     pub fn forward(&self, input: Tensor<B, 1>) -> Tensor<B, 1> {
-        let x = activation::relu(self.linear1.forward(input));
-        let x = activation::relu(self.linear2.forward(x));
-        activation::relu(self.linear3.forward(x))
+        let x = activation::sigmoid(self.linear1.forward(input));
+        let x = activation::sigmoid(self.linear2.forward(x));
+        activation::sigmoid(self.linear3.forward(x))
     }
 
     pub fn soft_update(this: Self, that: &Self, tau: f32) -> Self {
@@ -127,22 +127,28 @@ impl<B: Backend> Model<B> {
 
 #[derive(Debug, Config)]
 pub struct ModelConfig {
-    #[config(default = 13)]
+    #[config(default = 2)]
     pub input_size: usize,
-    #[config(default = 15)]
+    #[config(default = 3)]
     pub output_size: usize,
-    #[config(default = 10)]
+    #[config(default = 5)]
     pub hidden_size1: usize,
-    #[config(default = 10)]
+    #[config(default = 5)]
     pub hidden_size2: usize,
 }
 
 impl ModelConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
-            linear1: LinearConfig::new(self.input_size, self.hidden_size1).init(device),
-            linear2: LinearConfig::new(self.hidden_size1, self.hidden_size2).init(device),
-            linear3: LinearConfig::new(self.hidden_size2, self.output_size).init(device),
+            linear1: LinearConfig::new(self.input_size, self.hidden_size1)
+                .with_bias(true)
+                .init(device),
+            linear2: LinearConfig::new(self.hidden_size1, self.hidden_size2)
+                .with_bias(true)
+                .init(device),
+            linear3: LinearConfig::new(self.hidden_size2, self.output_size)
+                .with_bias(true)
+                .init(device),
         }
     }
 }

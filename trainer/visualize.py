@@ -1,5 +1,6 @@
 import polars as pl
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import json
 import sys
 
@@ -14,42 +15,82 @@ def load_training_data(file_path: str):
 
 def live_plot(file_path: str):
     plt.ion()
-    fig, axes = plt.subplots(3, 2, figsize=(10, 12))
-    fig.subplots_adjust(hspace=0.4, wspace=0.3)
+    fig = plt.figure(figsize=(12, 16))
+    gs = gridspec.GridSpec(4, 2, figure=fig)
 
-    while True:
-        df = load_training_data(file_path)
+    # 6 metrics (3x2) + 1 wide stacked area chart
+    axes = [fig.add_subplot(gs[i // 2, i % 2]) for i in range(6)]
+    action_ax = fig.add_subplot(gs[3, :])
 
-        if not df.is_empty():
-            for ax in axes.flatten():
-                ax.clear()
+    try:
+        while True:
+            df = load_training_data(file_path)
 
-            # Assigning each subplot to a metric
-            axes[0, 0].plot(df["episode"], df["reward"], color='tab:blue')
-            axes[0, 0].set_title("Reward")
-            axes[0, 0].set_xlabel("Episode")
+            if not df.is_empty():
+                for ax in axes:
+                    ax.clear()
+                action_ax.clear()
 
-            axes[0, 1].plot(df["episode"], df["avg_loss"], color='tab:red')
-            axes[0, 1].set_title("Average Loss")
-            axes[0, 1].set_xlabel("Episode")
+                # Standard plots
+                axes[0].plot(df["episode"], df["reward"], color='tab:blue')
+                axes[0].set_title("Reward")
+                axes[0].set_xlabel("Episode")
 
-            axes[1, 0].plot(df["episode"], df["eps"], color='tab:orange')
-            axes[1, 0].set_title("Epsilon")
-            axes[1, 0].set_xlabel("Episode")
+                axes[1].plot(df["episode"], df["avg_loss"], color='tab:red')
+                axes[1].set_title("Average Loss")
+                axes[1].set_xlabel("Episode")
 
-            axes[1, 1].plot(df["episode"], df["coverage"], color='tab:green')
-            axes[1, 1].set_title("Coverage")
-            axes[1, 1].set_xlabel("Episode")
+                axes[2].plot(df["episode"], df["eps"], color='tab:orange')
+                axes[2].set_title("Epsilon")
+                axes[2].set_xlabel("Episode")
 
-            axes[2, 0].plot(df["episode"], df["steps"], color='tab:purple')
-            axes[2, 0].set_title("Steps per Episode")
-            axes[2, 0].set_xlabel("Episode")
+                axes[3].plot(df["episode"], df["coverage"], color='tab:green')
+                axes[3].set_title("Coverage")
+                axes[3].set_xlabel("Episode")
 
-            axes[2, 1].plot(df["episode"], df["sim_time"], color='tab:brown')
-            axes[2, 1].set_title("Simulation Time")
-            axes[2, 1].set_xlabel("Episode")
+                axes[4].plot(df["episode"], df["steps"], color='tab:purple')
+                axes[4].set_title("Steps per Episode")
+                axes[4].set_xlabel("Episode")
 
-        plt.pause(1)  # Update interval
+                axes[5].plot(df["episode"], df["sim_time"], color='tab:brown')
+                axes[5].set_title("Simulation Time")
+                axes[5].set_xlabel("Episode")
+
+                # Stacked area chart: Action percentage distribution
+                episodes = df["episode"].to_list()
+                num_episodes = len(df)
+
+                # Determine the max number of actions seen
+                max_actions = max(len(actions) for actions in df["actions"])
+
+                # Build 2D list: actions_percentages[action_id][episode_index]
+                actions_percentages = [[0] * num_episodes for _ in range(max_actions)]
+
+                for i, action_counts in enumerate(df["actions"]):
+                    total = sum(action_counts)
+                    if total == 0:
+                        continue
+                    for action_id, count in enumerate(action_counts):
+                        actions_percentages[action_id][i] = (count / total) * 100
+
+                colors = plt.cm.tab20.colors  # Up to 20 distinct colors
+
+                action_ax.stackplot(
+                    episodes,
+                    actions_percentages,
+                    labels=[f"Action {i}" for i in range(max_actions)],
+                    colors=colors[:max_actions],
+                    alpha=0.8
+                )
+
+                action_ax.set_title("Action Distribution per Episode (Stacked Area)")
+                action_ax.set_xlabel("Episode")
+                action_ax.set_ylim(0, 100)
+                action_ax.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='small')
+
+            plt.pause(1)
+    except KeyboardInterrupt:
+        print("Stopped live plotting.")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
