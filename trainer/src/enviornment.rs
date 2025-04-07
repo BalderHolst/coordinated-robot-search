@@ -18,11 +18,11 @@ use simple_sim::{
     world::World,
 };
 
-const MAX_INACTIVE_SECS: f32 = 20.0;
+const MAX_INACTIVE_SECS: f32 = 5.0;
 
 const INACTIVE_REWARD: f32 = -20.0;
-const COLLISION_REWARD: f32 = -100.0;
 
+const COLLISION_REWARD: f32 = -1.0;
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment {
@@ -80,6 +80,9 @@ impl Enviornment {
         let sim_args = SimArgs { world, behavior };
         let sim = Simulator::with_robots(sim_args.clone(), robots);
 
+        // Set MODEL_PATH variable
+        std::env::set_var("MODEL_PATH", "");
+
         Enviornment {
             num_robots,
             sim,
@@ -123,30 +126,28 @@ impl Enviornment {
                 r.model.set_action(a);
             });
 
-        // // TODO: Maybe store the last coverage instead of recalculating it here
-        // let before_coverage = self.sim.state.diagnostics.coverage();
+        // TODO: Maybe store the last coverage instead of recalculating it here
+        let before_coverage = self.sim.state.diagnostics.coverage();
 
         // Step internal simulator
         self.sim.step_duration(1.0 / REACT_HZ);
 
-        // // TODO: Maybe refine reward
-        // let after_coverage = self.sim.state.diagnostics.coverage();
+        let after_coverage = self.sim.state.diagnostics.coverage();
 
-        // if after_coverage > before_coverage {
-        //     self.last_coverage_increase = self.sim.state.time.as_secs_f32();
-        // }
+        if after_coverage > before_coverage {
+            self.last_coverage_increase = self.sim.state.time.as_secs_f32();
+        }
 
-        // if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
-        //     println!("Inactive for too long!");
-        //     return Snapshot {
-        //         state: self.states(),
-        //         reward: INACTIVE_REWARD,
-        //         done: true,
-        //     };
-        // }
+        if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
+            println!("Inactive for too long!");
+            return Snapshot {
+                state: self.states(),
+                reward: INACTIVE_REWARD,
+                done: true,
+            };
+        }
 
-        // let reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
-        let reward = 0.1;
+        let mut reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot>().unwrap();
@@ -156,23 +157,18 @@ impl Enviornment {
                 .fold(f32::MAX, |acc, p| acc.min(p.distance));
             if shortest < RADIUS + 0.1 {
                 println!("COLLISION!!!");
-                return Snapshot {
-                    state: self.states(),
-                    reward: COLLISION_REWARD,
-                    done: true,
-                };
+                reward += COLLISION_REWARD;
             }
         }
 
         let state = self.states();
 
-        // TODO: Add terminal state at 100% coverage
-        // let done = self.step >= self.max_steps || after_coverage >= 0.95;
+        let done = after_coverage >= 0.95;
 
         Snapshot {
             state,
             reward,
-            done: false,
+            done,
         }
     }
 }

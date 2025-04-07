@@ -12,7 +12,7 @@ use crate::{
     CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
 };
 
-use super::{cast_robot, common, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{cast_robot, common, normalize_angle, BehaviorFn, BehaviorOutput, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
@@ -151,7 +151,7 @@ impl RlRobot {
             x: 2.0 * self.pos.x / self.search_grid.width(),
             y: 2.0 * self.pos.y / self.search_grid.height(),
         };
-        RlState::new(pos, self.angle, self.lidar.clone())
+        RlState::new(pos, normalize_angle(self.angle), self.lidar.clone())
     }
 
     /// React to the environment and return a control signal

@@ -6,8 +6,6 @@ use rand::Rng;
 
 use crate::{Control, LidarData};
 
-pub const LIDAR_RAYS: usize = 10;
-
 #[derive(Debug, Clone)]
 pub struct RlState {
     pub pos: Pos2,
@@ -20,61 +18,49 @@ pub struct RlState {
 }
 
 impl RlState {
-    pub const SIZE: usize = 2;
+    const LIDAR_RAYS: usize = 10;
+    const POSE_SIZE: usize = 3;
+
+    pub const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE;
 
     pub fn new(pos: Pos2, angle: f32, lidar: LidarData) -> Self {
         Self { pos, angle, lidar }
     }
 
     /// Returns the interpolated lidar data in a list of `(angle, distance)` pairs
-    pub fn lidar_rays(&self) -> [(f32, f32); LIDAR_RAYS] {
-        let mut data = [(0.0, 0.0); LIDAR_RAYS];
+    pub fn lidar_rays(&self) -> [(f32, f32); Self::LIDAR_RAYS] {
+        let mut data = [(0.0, 0.0); Self::LIDAR_RAYS];
 
         for (i, (a, d)) in data.iter_mut().enumerate() {
-            *a = i as f32 * 2.0 * PI / LIDAR_RAYS as f32;
+            *a = i as f32 * 2.0 * PI / Self::LIDAR_RAYS as f32;
             *d = self.lidar.interpolate(*a);
         }
 
         data
     }
 
-    pub fn lidar_data(&self) -> [f32; LIDAR_RAYS] {
-        let mut data = [0.0; LIDAR_RAYS];
+    pub fn lidar_data(&self) -> [f32; Self::LIDAR_RAYS] {
+        let mut data = [0.0; Self::LIDAR_RAYS];
         for (i, (_, d)) in self.lidar_rays().iter().enumerate() {
             data[i] = *d;
         }
         data
     }
 
-    pub fn pose_data(&self) -> [f32; 3] {
+    pub fn pose_data(&self) -> [f32; Self::POSE_SIZE] {
         [self.pos.x, self.pos.y, self.angle]
     }
 
     pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
-        // let device = Default::default();
+        let device = Default::default();
 
-        // let lidar_data = self.lidar_data();
-        // let pose_data = self.pose_data();
+        let lidar_data = self.lidar_data();
+        let pose_data = self.pose_data();
 
-        // let lidar_tensor = Tensor::from_floats(lidar_data, &device);
-        // let pose_tensor = Tensor::from_floats(pose_data, &device);
+        let lidar_tensor = Tensor::from_floats(lidar_data, &device);
+        let pose_tensor = Tensor::from_floats(pose_data, &device);
 
-        // Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
-
-        // get shortest ray and its angle
-
-        let Some(shortest_ray) = self
-            .lidar
-            .points()
-            .min_by(|a, b| a.distance.total_cmp(&b.distance))
-        else {
-            return Tensor::from_floats([0.0, 0.0], &Default::default());
-        };
-
-        Tensor::from_floats(
-            [shortest_ray.angle, shortest_ray.distance],
-            &Default::default(),
-        )
+        Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
     }
 }
 
@@ -110,7 +96,8 @@ impl From<RlAction> for usize {
 }
 
 impl RlAction {
-    const CONTROLS: [(f32, f32); 3] = [(0.5, -0.5), (1.0, 0.0), (0.5, 0.5)];
+    const CONTROLS: [(f32, f32); 5] =
+        [(0.0, -1.0), (0.5, -0.5), (1.0, 0.0), (0.5, 0.5), (0.0, 1.0)];
 
     /// The number of discrete actions
     pub const SIZE: usize = Self::CONTROLS.len();

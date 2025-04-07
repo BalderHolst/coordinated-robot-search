@@ -24,17 +24,18 @@ impl<B: Backend> BotModel<B> {
         let mut model = config.init(&Default::default());
 
         if let Ok(path) = std::env::var("MODEL_PATH") {
-            model = model
-                .load_file(
-                    &path,
-                    &record::DefaultRecorder::default(),
-                    &Default::default(),
-                )
-                .unwrap_or_else(|_| {
-                    panic!("Failed to load model from path: {}", path);
-                });
-
-            println!("Model loaded from path: {}", path);
+            if !path.is_empty() {
+                model = model
+                    .load_file(
+                        &path,
+                        &record::DefaultRecorder::default(),
+                        &Default::default(),
+                    )
+                    .unwrap_or_else(|_| {
+                        panic!("Failed to load model from path: {}", path);
+                    });
+                println!("Model loaded from path: {}", path);
+            }
         } else {
             println!("[WARNING] MODEL_PATH not set, using random model");
         }
@@ -114,15 +115,7 @@ impl<B: Backend> Model<B> {
         if rand::random::<f64>() > epsilon {
             let input_tensor = input.to_tensor::<B>();
             let output_tensor = self.forward(input_tensor.clone().unsqueeze());
-            let action = output_tensor.clone().into();
-            println!(
-                "[pos: {:?}]: {:?} => {:?} => {:?}",
-                input.pos,
-                input_tensor.to_data().as_slice::<f32>(),
-                output_tensor.to_data().as_slice::<f32>(),
-                action
-            );
-            action
+            output_tensor.clone().into()
         } else {
             RlAction::random()
         }
@@ -131,9 +124,9 @@ impl<B: Backend> Model<B> {
 
 #[derive(Debug, Config)]
 pub struct ModelConfig {
-    #[config(default = 5)]
+    #[config(default = 10)]
     pub hidden_size1: usize,
-    #[config(default = 5)]
+    #[config(default = 10)]
     pub hidden_size2: usize,
 }
 

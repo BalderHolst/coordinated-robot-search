@@ -16,9 +16,11 @@ def load_training_data(file_path: str):
 def live_plot(file_path: str):
     plt.ion()
     fig = plt.figure(figsize=(12, 16))
+
+    fig.subplots_adjust(hspace=1)
+
     gs = gridspec.GridSpec(4, 2, figure=fig)
 
-    # 6 metrics (3x2) + 1 wide stacked area chart
     axes = [fig.add_subplot(gs[i // 2, i % 2]) for i in range(6)]
     action_ax = fig.add_subplot(gs[3, :])
 

@@ -37,8 +37,9 @@ type SwarmAction = Vec<RlAction>;
 
 const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
-const MAX_STEPS: usize = (60.0 * REACT_HZ) as usize;
-const EPS_DECAY: f64 = 0.99;
+const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
+
+const EPS_HALF: f64 = 3000.0;
 const EPS_START: f64 = 0.9;
 const EPS_END: f64 = 0.10;
 
@@ -135,6 +136,8 @@ fn train<B: AutodiffBackend>(
 
     let mut env = Enviornment::new(world, robots);
 
+    let mut step: usize = 0;
+
     let mut target_net = model.clone();
     let mut policy_net = model.clone();
 
@@ -143,8 +146,6 @@ fn train<B: AutodiffBackend>(
     let mut optimizer = AdamWConfig::new()
         .with_grad_clipping(config.clip_grad.clone())
         .init();
-
-    let mut eps = EPS_START;
 
     for episode in 0..num_episodes {
         let mut episode_done = false;
@@ -155,7 +156,13 @@ fn train<B: AutodiffBackend>(
         let mut total_loss: f32 = 0.0;
         let mut action_stats = vec![0; RlAction::SIZE];
 
+        let mut eps = 0.0;
+        let eps_base = f64::powf(2.0, 1.0 / EPS_HALF);
+
         while !episode_done {
+
+            eps = (EPS_START - EPS_END) * f64::powf(eps_base, -(step as f64)) + EPS_END;
+
             let action = policy_net.react_with_exploration(&state, eps);
             action_stats[usize::from(action)] += 1;
 
@@ -185,6 +192,8 @@ fn train<B: AutodiffBackend>(
             } else {
                 state = snapshot.state[0].clone();
             }
+
+            step += 1;
         }
 
         let stat = EpisodeStats {
@@ -201,7 +210,6 @@ fn train<B: AutodiffBackend>(
 
         stats.push(stat);
 
-        eps = f64::max(EPS_END, eps * EPS_DECAY);
         env.reset();
 
         // Save model
