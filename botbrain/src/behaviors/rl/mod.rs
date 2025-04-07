@@ -12,10 +12,11 @@ use crate::{
     CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
 };
 
-use super::{cast_robot, common, normalize_angle, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{cast_robot, common, normalize_angle, params, BehaviorFn, BehaviorOutput, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
+const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
@@ -45,6 +46,8 @@ pub struct RlRobot {
 
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
+
+    pub search_gradient: Vec2,
 
     /// The time of the last search grid update
     pub last_search_grid_update: Duration,
@@ -79,6 +82,7 @@ impl Default for RlRobot {
             postbox: Default::default(),
             search_grid: Default::default(),
             last_search_grid_update: Default::default(),
+            search_gradient: Default::default(),
             others: Default::default(),
             debug_soup: DebugSoup::new_active(),
             model: model::BotModel::new_model(),
@@ -151,7 +155,12 @@ impl RlRobot {
             x: 2.0 * self.pos.x / self.search_grid.width(),
             y: 2.0 * self.pos.y / self.search_grid.height(),
         };
-        RlState::new(pos, normalize_angle(self.angle), self.lidar.clone())
+        RlState::new(
+            pos,
+            normalize_angle(self.angle),
+            self.lidar.clone(),
+            self.search_gradient,
+        )
     }
 
     /// React to the environment and return a control signal
@@ -227,6 +236,23 @@ impl RlRobot {
             DebugType::RobotRays(interpolated_lidar),
         );
     }
+
+    fn update_search_gradient(&mut self) {
+        let (g, _) = common::gradient(
+            self.pos,
+            self.angle,
+            SEARCH_GRADIENT_RANGE,
+            params::DIAMETER * 2.0,
+            self.lidar.clone(),
+            &self.search_grid,
+        );
+        self.debug("Search Gradient", "Vector", DebugType::Vector(g));
+        self.debug("Search Gradient", "x", DebugType::Number(g.x));
+        self.debug("Search Gradient", "y", DebugType::Number(g.y));
+        self.debug("Search Gradient", "length", DebugType::Number(g.length()));
+        self.debug("Search Gradient", "angle", DebugType::Number(g.angle()));
+        self.search_gradient = g;
+    }
 }
 
 fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
@@ -235,6 +261,7 @@ fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
     robot.visualize();
 
     robot.update_search_grid(time);
+    robot.update_search_gradient();
 
     // Only update the control signal at a fixed rate
     if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ

@@ -1,30 +1,36 @@
 use std::f32::consts::PI;
 
 use burn::{prelude::Backend, tensor::Tensor};
-use emath::Pos2;
+use emath::{Pos2, Vec2};
 use rand::Rng;
 
 use crate::{Control, LidarData};
 
 #[derive(Debug, Clone)]
 pub struct RlState {
-    pub pos: Pos2,
-    pub angle: f32,
-    pub lidar: LidarData,
+    pos: Pos2,
+    angle: f32,
+    lidar: LidarData,
+    search_gradient: Vec2,
     // group_center: Pos2,
     // group_spread: Vec2,
-    // search_gradient: Vec2,
     // global_gradient: Vec2,
 }
 
 impl RlState {
-    const LIDAR_RAYS: usize = 10;
+    const LIDAR_RAYS: usize = 12;
     const POSE_SIZE: usize = 3;
+    const SEARCH_GRADIENT_SIZE: usize = 2;
 
-    pub const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE;
+    pub const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE + Self::SEARCH_GRADIENT_SIZE;
 
-    pub fn new(pos: Pos2, angle: f32, lidar: LidarData) -> Self {
-        Self { pos, angle, lidar }
+    pub fn new(pos: Pos2, angle: f32, lidar: LidarData, search_gradient: Vec2) -> Self {
+        Self {
+            pos,
+            angle,
+            lidar,
+            search_gradient,
+        }
     }
 
     /// Returns the interpolated lidar data in a list of `(angle, distance)` pairs
@@ -51,16 +57,20 @@ impl RlState {
         [self.pos.x, self.pos.y, self.angle]
     }
 
+    pub fn search_gradient_data(&self) -> [f32; Self::SEARCH_GRADIENT_SIZE] {
+        [self.search_gradient.x, self.search_gradient.y]
+    }
+
     pub fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
         let device = Default::default();
-
-        let lidar_data = self.lidar_data();
-        let pose_data = self.pose_data();
-
-        let lidar_tensor = Tensor::from_floats(lidar_data, &device);
-        let pose_tensor = Tensor::from_floats(pose_data, &device);
-
-        Tensor::cat(vec![pose_tensor, lidar_tensor], 0)
+        Tensor::cat(
+            vec![
+                Tensor::from_floats(self.lidar_data(), &device),
+                Tensor::from_floats(self.pose_data(), &device),
+                Tensor::from_floats(self.search_gradient_data(), &device),
+            ],
+            0,
+        )
     }
 }
 
@@ -96,14 +106,11 @@ impl From<RlAction> for usize {
 }
 
 impl RlAction {
-    const CONTROLS: [(f32, f32); 5] =
-        [(0.0, -1.0), (0.5, -0.5), (1.0, 0.0), (0.5, 0.5), (0.0, 1.0)];
-
     /// The number of discrete actions
-    pub const SIZE: usize = Self::CONTROLS.len();
+    pub const SIZE: usize = Self::STEERS.len() * Self::SPEEDS.len();
 
-    /// The maximum steering command
-    const MAX_STEER: f32 = 1.0;
+    const STEERS: [f32; 5] = [-1.0, -0.5, 0.0, 0.5, 1.0];
+    const SPEEDS: [f32; 3] = [0.1, 0.5, 1.0];
 
     pub fn random() -> Self {
         rand::rng().random_range(0..Self::SIZE).into()
@@ -111,7 +118,8 @@ impl RlAction {
 
     pub fn control(&self) -> Control {
         let Self(i) = self;
-        let (speed, steer) = Self::CONTROLS[*i];
+        let speed = Self::SPEEDS[i % Self::SPEEDS.len()];
+        let steer = Self::STEERS[i / Self::SPEEDS.len()];
         Control { speed, steer }
     }
 }

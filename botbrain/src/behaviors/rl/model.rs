@@ -124,7 +124,7 @@ impl<B: Backend> Model<B> {
 
 #[derive(Debug, Config)]
 pub struct ModelConfig {
-    #[config(default = 10)]
+    #[config(default = 20)]
     pub hidden_size1: usize,
     #[config(default = 10)]
     pub hidden_size2: usize,

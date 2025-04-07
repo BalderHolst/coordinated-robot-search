@@ -88,7 +88,6 @@ def live_plot(file_path: str):
                 action_ax.set_title("Action Distribution per Episode (Stacked Area)")
                 action_ax.set_xlabel("Episode")
                 action_ax.set_ylim(0, 100)
-                action_ax.legend(loc='upper left', bbox_to_anchor=(1.01, 1), fontsize='small')
 
             plt.pause(1)
     except KeyboardInterrupt:

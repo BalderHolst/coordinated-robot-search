@@ -39,8 +39,7 @@ const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
 const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
 
-const EPS_HALF: f64 = 3000.0;
-const EPS_START: f64 = 0.9;
+const EPS_HALF: f64 = 6000.0;
 const EPS_END: f64 = 0.10;
 
 #[derive(Parser)]
@@ -161,7 +160,7 @@ fn train<B: AutodiffBackend>(
 
         while !episode_done {
 
-            eps = (EPS_START - EPS_END) * f64::powf(eps_base, -(step as f64)) + EPS_END;
+            eps = (1.0 - EPS_END) * f64::powf(eps_base, -(step as f64)) + EPS_END;
 
             let action = policy_net.react_with_exploration(&state, eps);
             action_stats[usize::from(action)] += 1;

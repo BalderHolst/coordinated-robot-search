@@ -18,11 +18,9 @@ use simple_sim::{
     world::World,
 };
 
-const MAX_INACTIVE_SECS: f32 = 5.0;
+const MAX_INACTIVE_SECS: f32 = 20.0;
 
-const INACTIVE_REWARD: f32 = -20.0;
-
-const COLLISION_REWARD: f32 = -1.0;
+const COLLISION_REWARD: f32 = -5.0;
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment {
@@ -117,6 +115,9 @@ impl Enviornment {
     pub fn step(&mut self, actions: Vec<RlAction>) -> Snapshot {
         assert_eq!(actions.len(), self.sim.robots().len());
 
+        let mut reward = 0.0;
+        let mut done = false;
+
         self.sim
             .robots_mut()
             .iter_mut()
@@ -140,14 +141,10 @@ impl Enviornment {
 
         if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
             println!("Inactive for too long!");
-            return Snapshot {
-                state: self.states(),
-                reward: INACTIVE_REWARD,
-                done: true,
-            };
+            done = true;
         }
 
-        let mut reward = (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
+        reward += (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot>().unwrap();
@@ -163,7 +160,7 @@ impl Enviornment {
 
         let state = self.states();
 
-        let done = after_coverage >= 0.95;
+        done |= after_coverage >= 0.95;
 
         Snapshot {
             state,
