@@ -48,7 +48,7 @@ impl<B: Backend> BotModel<B> {
 
     pub fn action(&self, input: Tensor<B, 1>) -> RlAction {
         match self {
-            BotModel::Model(model) => model.forward(input).into(),
+            BotModel::Model(model) => model.forward(input.unsqueeze()).into(),
             BotModel::Controlled(action) => *action,
         }
     }
@@ -72,7 +72,7 @@ pub struct Model<B: Backend> {
 fn soft_update_tensor<const N: usize, B: Backend>(
     this: &Param<Tensor<B, N>>,
     that: &Param<Tensor<B, N>>,
-    tau: f32,
+    tau: f64,
 ) -> Param<Tensor<B, N>> {
     let that_weight = that.val();
     let this_weight = this.val();
@@ -81,7 +81,7 @@ fn soft_update_tensor<const N: usize, B: Backend>(
     Param::initialized(ParamId::new(), new_weight)
 }
 
-pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f32) -> Linear<B> {
+pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f64) -> Linear<B> {
     let weight = soft_update_tensor(&this.weight, &that.weight, tau);
     let bias = match (&this.bias, &that.bias) {
         (Some(this_bias), Some(that_bias)) => Some(soft_update_tensor(this_bias, that_bias, tau)),
@@ -92,13 +92,17 @@ pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f3
 }
 
 impl<B: Backend> Model<B> {
-    pub fn forward(&self, input: Tensor<B, 1>) -> Tensor<B, 1> {
-        let x = activation::sigmoid(self.linear1.forward(input));
-        let x = activation::sigmoid(self.linear2.forward(x));
-        activation::sigmoid(self.linear3.forward(x))
+    pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
+        let x = activation::relu(self.linear1.forward(input));
+        let x = activation::relu(self.linear2.forward(x));
+        activation::relu(self.linear3.forward(x))
     }
 
-    pub fn soft_update(this: Self, that: &Self, tau: f32) -> Self {
+    pub fn consume(self) -> (Linear<B>, Linear<B>, Linear<B>) {
+        (self.linear1, self.linear2, self.linear3)
+    }
+
+    pub fn soft_update(this: Self, that: &Self, tau: f64) -> Self {
         Self {
             linear1: soft_update_linear(this.linear1, &that.linear1, tau),
             linear2: soft_update_linear(this.linear2, &that.linear2, tau),
@@ -106,10 +110,10 @@ impl<B: Backend> Model<B> {
         }
     }
 
-    pub fn react_with_exploration(&self, input: RlState, epsilon: f64) -> RlAction {
+    pub fn react_with_exploration(&self, input: &RlState, epsilon: f64) -> RlAction {
         if rand::random::<f64>() > epsilon {
             let input_tensor = input.to_tensor::<B>();
-            let output_tensor = self.forward(input_tensor.clone());
+            let output_tensor = self.forward(input_tensor.clone().unsqueeze());
             let action = output_tensor.clone().into();
             println!(
                 "[pos: {:?}]: {:?} => {:?} => {:?}",
@@ -127,10 +131,6 @@ impl<B: Backend> Model<B> {
 
 #[derive(Debug, Config)]
 pub struct ModelConfig {
-    #[config(default = 2)]
-    pub input_size: usize,
-    #[config(default = 3)]
-    pub output_size: usize,
     #[config(default = 5)]
     pub hidden_size1: usize,
     #[config(default = 5)]
@@ -140,15 +140,9 @@ pub struct ModelConfig {
 impl ModelConfig {
     pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
         Model {
-            linear1: LinearConfig::new(self.input_size, self.hidden_size1)
-                .with_bias(true)
-                .init(device),
-            linear2: LinearConfig::new(self.hidden_size1, self.hidden_size2)
-                .with_bias(true)
-                .init(device),
-            linear3: LinearConfig::new(self.hidden_size2, self.output_size)
-                .with_bias(true)
-                .init(device),
+            linear1: LinearConfig::new(RlState::SIZE, self.hidden_size1).init(device),
+            linear2: LinearConfig::new(self.hidden_size1, self.hidden_size2).init(device),
+            linear3: LinearConfig::new(self.hidden_size2, RlAction::SIZE).init(device),
         }
     }
 }

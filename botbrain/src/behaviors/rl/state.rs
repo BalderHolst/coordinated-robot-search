@@ -20,6 +20,8 @@ pub struct RlState {
 }
 
 impl RlState {
+    pub const SIZE: usize = 2;
+
     pub fn new(pos: Pos2, angle: f32, lidar: LidarData) -> Self {
         Self { pos, angle, lidar }
     }
@@ -78,6 +80,12 @@ impl RlState {
 
 #[derive(Debug, Clone, Copy)]
 pub struct RlAction(usize);
+
+impl<B: Backend> From<Tensor<B, 2>> for RlAction {
+    fn from(tensor: Tensor<B, 2>) -> Self {
+        (tensor.argmax(1).to_data().as_slice::<i32>().unwrap()[0] as usize).into()
+    }
+}
 
 impl<B: Backend> From<Tensor<B, 1>> for RlAction {
     fn from(tensor: Tensor<B, 1>) -> Self {

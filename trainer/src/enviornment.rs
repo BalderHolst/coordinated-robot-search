@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use botbrain::{
     behaviors::{
         rl::{
@@ -7,8 +9,10 @@ use botbrain::{
         Behavior,
     },
     params::RADIUS,
-    Robot, RobotPose,
+    shapes::Circle,
+    Pos2, Robot, RobotPose,
 };
+use rand::Rng;
 use simple_sim::{
     sim::{SimArgs, Simulator},
     world::World,
@@ -22,11 +26,37 @@ const COLLISION_REWARD: f32 = -100.0;
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment {
-    step: usize,
-    max_steps: usize,
+    num_robots: usize,
     sim_args: SimArgs,
     sim: Simulator,
     last_coverage_increase: f32,
+}
+
+const ROBOT_SPACE: f32 = 4.0;
+fn random_pose(world: &World) -> RobotPose {
+    let mut rng = rand::rng();
+    let (min, max) = world.bounds();
+    'outer: loop {
+        let pos = Pos2 {
+            x: rng.random_range(min.x..=max.x),
+            y: rng.random_range(min.y..=max.y),
+        };
+
+        for cell_pos in world.iter_circle(&Circle {
+            center: pos,
+            radius: ROBOT_SPACE,
+        }) {
+            let cell = world.get(cell_pos);
+            if !matches!(cell, Some(simple_sim::world::Cell::Empty)) {
+                continue 'outer;
+            }
+        }
+
+        return RobotPose {
+            pos,
+            angle: rng.random_range(-PI..=PI),
+        };
+    }
 }
 
 fn poses_to_robots(poses: Vec<RobotPose>) -> Vec<(RobotPose, Box<dyn Robot>)> {
@@ -41,27 +71,27 @@ fn poses_to_robots(poses: Vec<RobotPose>) -> Vec<(RobotPose, Box<dyn Robot>)> {
 }
 
 impl Enviornment {
-    pub fn new(
-        world: World,
-        behavior: Behavior,
-        init_poses: Vec<RobotPose>,
-        max_steps: usize,
-    ) -> Self {
-        let robots = poses_to_robots(init_poses);
+    pub fn new(world: World, num_robots: usize) -> Self {
+        let behavior = Behavior::parse("rl").unwrap().with_name("training");
+
+        let poses: Vec<RobotPose> = (0..num_robots).map(|_| random_pose(&world)).collect();
+        let robots = poses_to_robots(poses);
 
         let sim_args = SimArgs { world, behavior };
         let sim = Simulator::with_robots(sim_args.clone(), robots);
 
         Enviornment {
+            num_robots,
             sim,
             sim_args,
-            max_steps,
-            step: 0,
             last_coverage_increase: 0.0,
         }
     }
 
-    pub fn reset(&mut self, poses: Vec<RobotPose>) {
+    pub fn reset(&mut self) {
+        let poses: Vec<RobotPose> = (0..self.num_robots)
+            .map(|_| random_pose(&self.sim_args.world))
+            .collect();
         let robots = poses_to_robots(poses);
         self.sim = Simulator::with_robots(self.sim_args.clone(), robots);
     }

@@ -1,80 +1,112 @@
-use std::ops::Range;
-
-use rand;
+use botbrain::behaviors::rl::state::{RlAction, RlState};
+use burn::tensor::backend::Backend;
+use burn::tensor::{BasicOps, Tensor, TensorKind};
+use rand::Rng;
 use ringbuffer::{ConstGenericRingBuffer, RingBuffer};
+use std::marker::PhantomData;
 
-use crate::{SwarmAction, SwarmState};
+pub type MemoryIndices = Vec<usize>;
 
-type MemoryBatch = (
-    Vec<SwarmState>,
-    Vec<SwarmState>,
-    Vec<SwarmAction>,
-    Vec<f32>,
-    Vec<bool>,
-);
-
-pub struct Memory<const CAP: usize> {
-    states: ConstGenericRingBuffer<SwarmState, CAP>,
-    next_states: ConstGenericRingBuffer<SwarmState, CAP>,
-    actions: ConstGenericRingBuffer<SwarmAction, CAP>,
-    rewards: ConstGenericRingBuffer<f32, CAP>,
-    dones: ConstGenericRingBuffer<bool, CAP>,
-}
-
-impl<const CAP: usize> Memory<CAP> {
-    pub fn new() -> Self {
-        Self {
-            states: ConstGenericRingBuffer::new(),
-            next_states: ConstGenericRingBuffer::new(),
-            actions: ConstGenericRingBuffer::new(),
-            rewards: ConstGenericRingBuffer::new(),
-            dones: ConstGenericRingBuffer::new(),
+pub fn sample_indices(indices: MemoryIndices, size: usize) -> MemoryIndices {
+    let mut rng = rand::rng();
+    let mut sample = Vec::<usize>::new();
+    for _ in 0..size {
+        unsafe {
+            let index = rng.random_range(0..indices.len());
+            sample.push(*indices.get_unchecked(index));
         }
     }
 
+    sample
+}
+
+pub fn get_batch<B: Backend, const CAP: usize, T, K: TensorKind<B> + BasicOps<B>>(
+    data: &ConstGenericRingBuffer<T, CAP>,
+    indices: &MemoryIndices,
+    converter: impl Fn(&T) -> Tensor<B, 1, K>,
+) -> Tensor<B, 2, K> {
+    Tensor::cat(
+        indices
+            .iter()
+            .filter_map(|i| data.get(*i))
+            .map(converter)
+            .collect::<Vec<_>>(),
+        0,
+    )
+    .reshape([indices.len() as i32, -1])
+}
+
+pub struct Memory<B: Backend, const CAP: usize> {
+    state: ConstGenericRingBuffer<RlState, CAP>,
+    next_state: ConstGenericRingBuffer<RlState, CAP>,
+    action: ConstGenericRingBuffer<RlAction, CAP>,
+    reward: ConstGenericRingBuffer<f32, CAP>,
+    done: ConstGenericRingBuffer<bool, CAP>,
+    backend: PhantomData<B>,
+}
+
+impl<B: Backend, const CAP: usize> Default for Memory<B, CAP> {
+    fn default() -> Self {
+        Self {
+            state: ConstGenericRingBuffer::new(),
+            next_state: ConstGenericRingBuffer::new(),
+            action: ConstGenericRingBuffer::new(),
+            reward: ConstGenericRingBuffer::new(),
+            done: ConstGenericRingBuffer::new(),
+            backend: PhantomData,
+        }
+    }
+}
+
+impl<B: Backend, const CAP: usize> Memory<B, CAP> {
     pub fn push(
         &mut self,
-        state: SwarmState,
-        next_state: SwarmState,
-        action: SwarmAction,
+        state: RlState,
+        next_state: RlState,
+        action: RlAction,
         reward: f32,
         done: bool,
     ) {
-        self.states.push(state);
-        self.next_states.push(next_state);
-        self.actions.push(action);
-        self.rewards.push(reward);
-        self.dones.push(done);
+        self.state.push(state);
+        self.next_state.push(next_state);
+        self.action.push(action);
+        self.reward.push(reward);
+        self.done.push(done);
+    }
+
+    pub fn states(&self) -> &ConstGenericRingBuffer<RlState, CAP> {
+        &self.state
+    }
+
+    pub fn next_states(&self) -> &ConstGenericRingBuffer<RlState, CAP> {
+        &self.next_state
+    }
+
+    pub fn actions(&self) -> &ConstGenericRingBuffer<RlAction, CAP> {
+        &self.action
+    }
+
+    pub fn rewards(&self) -> &ConstGenericRingBuffer<f32, CAP> {
+        &self.reward
+    }
+
+    pub fn dones(&self) -> &ConstGenericRingBuffer<bool, CAP> {
+        &self.done
     }
 
     pub fn len(&self) -> usize {
-        self.states.len()
+        self.state.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.state.is_empty()
     }
 
     pub fn clear(&mut self) {
-        self.states.clear();
-        self.next_states.clear();
-        self.actions.clear();
-        self.rewards.clear();
-        self.dones.clear();
-    }
-
-    pub fn batch(&self, range: Range<usize>) -> MemoryBatch {
-        range
-            .map(|i| {
-                let state = self.states.get(i).unwrap().clone();
-                let next_state = self.next_states.get(i).unwrap().clone();
-                let action = self.actions.get(i).unwrap().clone();
-                let reward = self.rewards.get(i).unwrap().clone();
-                let done = self.dones.get(i).unwrap().clone();
-                (state, next_state, action, reward, done)
-            })
-            .collect()
-    }
-
-    pub fn random_batch(&self, size: usize) -> MemoryBatch {
-        let start = rand::random_range(0..self.len() - size);
-        let end = start + size;
-        self.batch(start..end)
+        self.state.clear();
+        self.next_state.clear();
+        self.action.clear();
+        self.reward.clear();
+        self.done.clear();
     }
 }
