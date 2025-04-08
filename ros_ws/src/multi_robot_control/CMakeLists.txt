@@ -38,6 +38,7 @@ endif()
 set(PROGRAMS_LIST
   tf_topic_combiner
   ros_agent
+  ros_agent_stats
   ros_agent_msg_printer
 )
 

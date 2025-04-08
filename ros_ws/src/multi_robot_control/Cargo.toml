@@ -18,6 +18,10 @@ name = "ros_agent"
 path = "./src/ros_agent/main.rs"
 
 [[bin]]
+name = "ros_agent_stats"
+path = "./src/ros_agent_stats/main.rs"
+
+[[bin]]
 name = "ros_agent_msg_printer"
 path = "./src/ros_agent_msg_printer/main.rs"
 
