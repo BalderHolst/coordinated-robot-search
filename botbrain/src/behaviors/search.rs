@@ -14,7 +14,7 @@ use super::{
     cast_robot, common, debug,
     params::{self, LIDAR_RANGE},
     scaled_grid::ScaledGrid,
-    shapes::Circle,
+    shapes::{Circle, Line},
     utils::normalize_angle,
     BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, Postbox, Robot,
     RobotId, RobotPose, RobotRef,
@@ -50,8 +50,12 @@ const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
-const COSTMAP_GRID_SCALE: f32 = 1.0;
+const COSTMAP_GRID_SCALE: f32 = 0.5;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
+
+const COSTMAP_OCCUPIED: f32 = -3.0;
+const COSTMAP_SEARCHED: f32 = -1.0;
+const COSTMAP_UNKNOWN: f32 = 1.0;
 
 const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
 
@@ -317,7 +321,11 @@ impl SearchRobot {
         self.search_grid.iter().for_each(|(x, y, &cell)| {
             // Negative if don't want to go there, positive if want to go there
             // Non-zero cells are explored therefore we won't go there
-            let cell = if cell != 0.0 { -1.0 } else { 1.0 };
+            let cell = if cell != 0.0 {
+                COSTMAP_SEARCHED
+            } else {
+                COSTMAP_UNKNOWN
+            };
             self.costmap_grid.set(Pos2 { x, y }, cell);
         });
 
@@ -331,7 +339,7 @@ impl SearchRobot {
                     let point = self.pos + Vec2::angled(angle + self.angle) * distance;
                     Some(Circle {
                         center: point,
-                        radius: 2.0,
+                        radius: 1.0, // The circle as made where the lidar hits
                     })
                 } else {
                     None
@@ -340,7 +348,7 @@ impl SearchRobot {
             .for_each(|circle| {
                 self.costmap_grid
                     // Negative if don't want to go there, positive if want to go there
-                    .set_circle(circle.center, circle.radius, -1.0);
+                    .set_circle(circle.center, circle.radius, COSTMAP_OCCUPIED);
             });
     }
 }
@@ -359,8 +367,8 @@ impl SearchRobot {
         self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
 
         let g_len = g.length();
-        if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD && g_len != 0.0 {
-            println!("Switching to pathing");
+        if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+            println!("Switching to pathing: gradient: {}", g_len);
             self.robot_mode = RobotMode::Pathing;
         }
         g
@@ -484,14 +492,22 @@ impl SearchRobot {
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
+        // Logic to find goal or change to exploring mode when reached
         if let Some(goal) = self.path_planner_goal {
             let diff = goal - self.pos;
             if diff.length() < PATH_PLANNER_GOAL_TOLERANCE {
                 self.path_planner_goal = None;
+                println!("Goal reached, switching to exploring mode");
                 self.robot_mode = RobotMode::Exploring;
+                return None;
             }
+        } else {
+            // Set a goal
+            let goal = self.find_area_of_interest();
+            self.path_planner_goal = Some(goal);
         }
 
+        // Don't stop pathing if there are no other robots in world
         if !self.others.is_empty() {
             // Only limit robot movement if there are other robots in the proximity grid
             match self.proximity_grid.get(self.pos) {
@@ -505,8 +521,110 @@ impl SearchRobot {
                 _ => {}
             }
         }
-        // Mock vector for now
-        Some(Vec2 { x: 1.0, y: 1.0 })
+
+        // Follow path or reevaluate path or goal?
+        if self.find_path().is_ok() {
+            // TODO: Waypoint following
+            let control_vec = self.follow_path();
+            // println!("Control vec: {}", control_vec);
+            Some(control_vec)
+        } else {
+            // TODO: Determine best way to proceed
+            // New goal or path?
+
+            println!("What: {:?}", self.robot_mode);
+            // Mock vector for now
+            Some(Vec2 { x: 0.0, y: 0.0 })
+        }
+    }
+
+    fn find_area_of_interest(&mut self) -> Pos2 {
+        // TODO: Find a good way to choose the goal
+        self.pos + Vec2::new(10.0, -10.0)
+    }
+
+    fn follow_path(&self) -> Vec2 {
+        // Find the two positions we are between
+        let (mut closest_point, mut closest_idx) = (self.path_planner_path[0], 0);
+        let mut second_closest_point = self.path_planner_path[1];
+        let mut second_closest_idx = 1;
+
+        for (idx, &point) in self.path_planner_path.iter().enumerate().skip(2) {
+            let distance = (point - self.pos).length();
+            let closest_distance = (closest_point - self.pos).length();
+
+            if distance < closest_distance {
+                second_closest_point = closest_point;
+                second_closest_idx = closest_idx;
+                closest_point = point;
+                closest_idx = idx;
+            } else if distance < (second_closest_point - self.pos).length()
+                && point != closest_point
+            {
+                second_closest_point = point;
+                second_closest_idx = idx;
+            }
+        }
+
+        // println!(
+        //     "Following path from {} at idx: {} to {} at idx: {}",
+        //     closest_point, closest_idx, second_closest_point, second_closest_idx
+        // );
+
+        // There should always be at least two points
+        assert!(closest_idx != second_closest_idx);
+
+        if second_closest_idx > closest_idx {
+            (second_closest_point - closest_point).normalized()
+        } else {
+            (closest_point - second_closest_point).normalized()
+        }
+    }
+
+    fn find_straight_path(&self) -> Result<Vec<Pos2>, ()> {
+        if let Some(goal) = self.path_planner_goal {
+            let line = Line {
+                start: self.pos,
+                end: goal,
+            };
+            // Check if all cells in the line to the goal are free
+            let res = self.costmap_grid.iter_line(&line).all(|pos| {
+                if let Some(&cell) = self.costmap_grid.get(pos) {
+                    cell != COSTMAP_OCCUPIED
+                } else {
+                    false
+                }
+            });
+
+            if res {
+                Ok(vec![self.pos, goal])
+            } else {
+                Err(())
+            }
+        } else {
+            Err(())
+        }
+    }
+
+    fn find_rrt_path(&self) -> Result<Vec<Pos2>, ()> {
+        if let Some(goal) = self.path_planner_goal {
+            // TODO: Use rrt to find path to goal
+            Ok(vec![self.pos, Pos2::new(0.0, 0.0), goal])
+        } else {
+            Err(())
+        }
+    }
+
+    fn find_path(&mut self) -> Result<(), ()> {
+        if let Ok(path) = self.find_straight_path() {
+            self.path_planner_path = path;
+            Ok(())
+        } else if let Ok(path) = self.find_rrt_path() {
+            self.path_planner_path = path;
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 
     fn show_path(&mut self) {
@@ -635,9 +753,9 @@ mod behaviors {
             |robot, time| {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
-                // if robot.robot_mode == RobotMode::Pathing {
-                robot.update_costmap_grid(time);
-                // }
+                if robot.robot_mode == RobotMode::Pathing {
+                    robot.update_costmap_grid(time);
+                }
             },
             |robot, target| match robot.robot_mode {
                 RobotMode::Exploring => {

@@ -5,6 +5,7 @@ use std::{any::Any, collections::HashSet};
 pub use burn;
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
+use scaled_grid::ScaledGrid;
 use serde::{Deserialize, Serialize};
 use shapes::{Cone, Shape};
 use utils::normalize_angle;
@@ -298,7 +299,9 @@ pub trait Robot {
     /// Set the id of the robot
     fn set_id(&mut self, id: RobotId);
 
-    // TODO: Add map as input to the robot?
+    // The world the robot is operating in
+    // fn input_world(&mut self, world: ScaledGrid<f32>);
+
     /// Set the size of the world
     fn set_world_size(&mut self, size: Vec2);
 
