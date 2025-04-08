@@ -81,3 +81,21 @@ An advantage of writing everything in Rust is the robustness and correctness of 
 % TODO: Why two simulators?
 % TODO: Shared behavior
 % TODO: Performance differences
+As opposed to a simulator to real world comparison, this project uses a simulator to simulator approach to validating robot behavior. The \texttt{simple\_sim} simulator provides a naive and simple environment useful for testing and validating robot behavior and was developed during this project A Gazebo simulation is used to verify that the simple simulator is approximating the sensor inputs and motor commands in a realistic way that leads to similar results. The Gazebo simulation is always considered most correct. A major advantage of the simple simulator, is that it is very light weight and can easily run at $10$ times real time with deterministic results. \Cref{fig:simulators} shows a screenshots of the simulators.
+
+\begin{figure}[h]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/simple_sim.png}
+        \caption{Simple Simulator}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/gazebo_sim.png}
+        \caption{Gazebo + Ros2 Simulator}
+    \end{subfigure}
+    \caption{Screenshots the simulators. {\color{red} add description what is on the screenshots}}
+    \label{fig:simulators}
+\end{figure}
