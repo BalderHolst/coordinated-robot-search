@@ -397,11 +397,10 @@ impl SearchRobot {
 
     pub fn control_towards(&self, target: Option<Vec2>) -> Control {
         if let Some(target) = target {
-            // FIX: This does some funny things. It does not properly steer
             let angle_error = normalize_angle(self.angle - target.angle());
             let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
             let speed = 1.0 - t;
-            let steer = t * normalize_angle(target.angle() - self.angle);
+            let steer = normalize_angle(target.angle() - self.angle);
 
             Control { speed, steer }
         } else {
