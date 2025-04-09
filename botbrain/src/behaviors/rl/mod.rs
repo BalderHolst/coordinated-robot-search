@@ -2,7 +2,7 @@ mod action;
 pub mod model;
 pub mod state;
 
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, marker::PhantomData, time::Duration};
 
 use action::RlAction;
 use emath::Pos2;
@@ -14,7 +14,7 @@ use crate::{
     CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
 };
 
-use super::{cast_robot, common, normalize_angle, params, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{cast_robot, common, params, BehaviorFn, BehaviorOutput, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
@@ -29,6 +29,8 @@ type MyBackend = burn::backend::Wgpu;
 
 #[derive(Clone)]
 pub struct RlRobot<S: State> {
+    _state: PhantomData<S>,
+
     /// The id of the robot
     pub id: RobotId,
 
@@ -63,7 +65,7 @@ pub struct RlRobot<S: State> {
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<MyBackend, S>,
+    pub model: model::BotModel<MyBackend>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -144,22 +146,13 @@ impl<S: State + 'static> RlRobot<S> {
             model: model::BotModel::new_model(&Default::default()),
             last_control_update: Duration::ZERO,
             control: Default::default(),
+            _state: PhantomData,
         }
     }
 
     /// Get the state used as input to the neural network
-    pub fn state(&self) -> RlState {
-        // Map the robot position to the range [-1, 1]
-        let pos = Pos2 {
-            x: 2.0 * self.pos.x / self.search_grid.width(),
-            y: 2.0 * self.pos.y / self.search_grid.height(),
-        };
-        RlState::new(
-            pos,
-            normalize_angle(self.angle),
-            self.lidar.clone(),
-            self.search_gradient,
-        )
+    pub fn state(&self) -> S {
+        S::from(self.clone())
     }
 
     /// React to the environment and return a control signal
@@ -195,7 +188,9 @@ impl<S: State + 'static> RlRobot<S> {
             SEARCH_GRID_UPDATE_INTERVAL,
         );
     }
+}
 
+impl RlRobot<RlState> {
     fn visualize(&mut self) {
         if !self.debug_enabled() {
             return;

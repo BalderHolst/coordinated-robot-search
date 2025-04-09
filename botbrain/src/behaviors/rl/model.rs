@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use burn::{
     module::{Param, ParamId},
     nn::{Linear, LinearConfig},
@@ -12,25 +10,12 @@ use super::state::RlState;
 use super::{action::RlAction, state::State};
 
 #[derive(Clone)]
-pub struct BotModel<B: Backend, S: State> {
-    kind: BotModelKind<B>,
-    _state: PhantomData<S>,
-}
-
-#[derive(Clone)]
-enum BotModelKind<B: Backend> {
+pub enum BotModel<B: Backend> {
     Model(Model<B>),
     Controlled(RlAction),
 }
 
-impl<B: Backend, S: State> BotModel<B, S> {
-    fn new(kind: BotModelKind<B>) -> Self {
-        Self {
-            kind,
-            _state: PhantomData,
-        }
-    }
-
+impl<B: Backend> BotModel<B> {
     pub fn new_model(device: &B::Device) -> Self {
         let mut model = Model::new(device);
 
@@ -47,26 +32,26 @@ impl<B: Backend, S: State> BotModel<B, S> {
             println!("[WARNING] MODEL_PATH not set, using random model");
         }
 
-        Self::new(BotModelKind::Model(model))
+        BotModel::Model(model)
     }
 
     pub fn new_controlled(action: RlAction) -> Self {
-        Self::new(BotModelKind::Controlled(action))
+        BotModel::Controlled(action)
     }
 
     pub fn action(&self, input: Tensor<B, 1>) -> RlAction {
-        match &self.kind {
-            BotModelKind::Model(model) => model.forward(input.unsqueeze()).into(),
-            BotModelKind::Controlled(action) => *action,
+        match &self {
+            BotModel::Model(model) => model.forward(input.unsqueeze()).into(),
+            BotModel::Controlled(action) => *action,
         }
     }
 
     pub fn is_controlled(&self) -> bool {
-        matches!(self.kind, BotModelKind::Controlled(_))
+        matches!(self, BotModel::Controlled(_))
     }
 
     pub fn set_action(&mut self, action: RlAction) {
-        self.kind = BotModelKind::Controlled(action);
+        *self = BotModel::Controlled(action);
     }
 }
 

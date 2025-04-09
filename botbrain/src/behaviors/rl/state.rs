@@ -3,9 +3,11 @@ use std::f32::consts::PI;
 use burn::{prelude::Backend, tensor::Tensor};
 use emath::{Pos2, Vec2};
 
-use crate::LidarData;
+use crate::{utils::normalize_angle, LidarData};
 
-pub trait State: Clone + Send {
+use super::RlRobot;
+
+pub trait State: Clone + Send + From<RlRobot<Self>> {
     const SIZE: usize;
     fn to_tensor<B: Backend>(&self) -> Tensor<B, 1>;
 }
@@ -19,6 +21,22 @@ pub struct RlState {
     // group_center: Pos2,
     // group_spread: Vec2,
     // global_gradient: Vec2,
+}
+
+impl From<RlRobot<Self>> for RlState {
+    fn from(value: RlRobot<Self>) -> Self {
+        // Map the robot position to the range [-1, 1]
+        let pos = Pos2 {
+            x: 2.0 * value.pos.x / value.search_grid.width(),
+            y: 2.0 * value.pos.y / value.search_grid.height(),
+        };
+        RlState::new(
+            pos,
+            normalize_angle(value.angle),
+            value.lidar.clone(),
+            value.search_gradient,
+        )
+    }
 }
 
 impl State for RlState {
