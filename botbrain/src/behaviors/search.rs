@@ -1,7 +1,6 @@
 //! This module contains robot `search` behavior.
 
 use std::{
-    cmp::Ordering,
     collections::{HashMap, HashSet},
     f32::consts::PI,
     time::Duration,
@@ -55,6 +54,7 @@ const COSTMAP_GRID_SCALE: f32 = 0.5;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
 const COSTMAP_OCCUPIED: f32 = -3.0;
+const COSTMAP_DYNAMIC_OBSTACLE: f32 = -1.0;
 const COSTMAP_SEARCHED: f32 = -1.0;
 const COSTMAP_UNKNOWN: f32 = 1.0;
 
@@ -495,7 +495,7 @@ impl SearchRobot {
             .for_each(|circle| {
                 self.costmap_grid
                     // Negative if don't want to go there, positive if want to go there
-                    .set_circle(circle.center, circle.radius, COSTMAP_OCCUPIED);
+                    .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
             });
     }
 
@@ -533,11 +533,12 @@ impl SearchRobot {
         // Follow path or reevaluate path or goal?
         if self.path_planner_path.is_empty() && self.find_path().is_err() {
             // TODO: Determine best way to proceed
-            // New goal or switch mode?
+            // New goal, new path or switch mode?
             println!("What: {:?}", self.robot_mode);
             // Mock vector for now
             Some(Vec2 { x: 0.0, y: 0.0 })
         } else {
+            // Update the path to only contain the points we haven't reached
             if (self.pos - self.path_planner_path[0]).length() < PATH_PLANNER_GOAL_TOLERANCE {
                 self.path_planner_path.remove(0);
             }
@@ -547,6 +548,8 @@ impl SearchRobot {
                 // println!("Control vec: {}", control_vec);
                 Some(control_vec)
             } else {
+                // TODO: Determine best way to proceed
+                // New goal, new path or switch mode?
                 None
             }
         }
@@ -559,7 +562,25 @@ impl SearchRobot {
 
     fn follow_path(&self) -> Result<Vec2, ()> {
         if !self.path_planner_path.is_empty() {
-            Ok((self.path_planner_path[0] - self.pos).normalized())
+            // Check if all cells in the line to the goal are free
+            let line = Line {
+                start: self.pos,
+                end: self.path_planner_path[0],
+            };
+
+            let is_path_clear = self.costmap_grid.iter_line(&line).all(|pos| {
+                if let Some(&cell) = self.costmap_grid.get(pos) {
+                    cell != COSTMAP_OCCUPIED && cell != COSTMAP_DYNAMIC_OBSTACLE
+                } else {
+                    false
+                }
+            });
+
+            if is_path_clear {
+                Ok((self.path_planner_path[0] - self.pos).normalized())
+            } else {
+                Err(())
+            }
         } else {
             Err(())
         }
@@ -574,7 +595,8 @@ impl SearchRobot {
             // Check if all cells in the line to the goal are free
             let res = self.costmap_grid.iter_line(&line).all(|pos| {
                 if let Some(&cell) = self.costmap_grid.get(pos) {
-                    cell != COSTMAP_OCCUPIED
+                    // FIX: Remove COSTMAP_DYNAMIC_OBSTACLE when we have a map and not only lidar
+                    cell != COSTMAP_OCCUPIED && cell != COSTMAP_DYNAMIC_OBSTACLE
                 } else {
                     false
                 }
