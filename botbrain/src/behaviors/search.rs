@@ -397,6 +397,7 @@ impl SearchRobot {
 
     pub fn control_towards(&self, target: Option<Vec2>) -> Control {
         if let Some(target) = target {
+            // FIX: This does some funny things. It does not properly steer
             let angle_error = normalize_angle(self.angle - target.angle());
             let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
             let speed = 1.0 - t;
@@ -558,45 +559,8 @@ impl SearchRobot {
     }
 
     fn follow_path(&self) -> Result<Vec2, ()> {
-        assert!(self.path_planner_path.len() >= 2);
-
-        // Find the closest point on the path to us
-        let min =
-            self.path_planner_path
-                .iter()
-                .enumerate()
-                .min_by(|&(_, point_1), &(_, point_2)| {
-                    if (*point_1 - self.pos).length() > (*point_2 - self.pos).length() {
-                        Ordering::Greater
-                    } else {
-                        Ordering::Less
-                    }
-                });
-
-        if let Some((closest_idx, &closest_point)) = min {
-            // Determine if we are going to or from the closest point
-            if closest_idx == 0 {
-                // We are always leaving the first point if it is the closest
-                // We assert if under 2 elements therefore we can unwrap
-                Ok((self.path_planner_path[1] - self.pos).normalized())
-            } else if closest_idx == self.path_planner_path.len() - 1 {
-                // We are always going to the last point if it is the closest
-                // We assert if under 2 elements therefore we can unwrap
-                Ok((*self.path_planner_path.last().unwrap() - self.pos).normalized())
-            } else {
-                let next_point = self.path_planner_path[closest_idx + 1];
-                let prev_point = self.path_planner_path[closest_idx - 1];
-
-                let to_next = next_point - closest_point;
-                let to_prev = prev_point - closest_point;
-                let to_pos = self.pos - closest_point;
-
-                if to_next.dot(to_pos) > 0.0 {
-                    Ok(to_next.normalized())
-                } else {
-                    Ok(to_prev.normalized())
-                }
-            }
+        if !self.path_planner_path.is_empty() {
+            Ok((self.path_planner_path[0] - self.pos).normalized())
         } else {
             Err(())
         }
@@ -660,11 +624,10 @@ impl SearchRobot {
     fn show_path(&mut self) {
         if self.path_planner_goal.is_some() {
             let soup = &mut self.debug_soup;
-            soup.add(
-                "Planner",
-                "Global Path",
-                DebugType::GlobalLine(self.path_planner_path.clone()),
-            );
+            let mut path = Vec::with_capacity(self.path_planner_path.len() + 1);
+            path.push(self.pos);
+            path.extend(self.path_planner_path.iter().cloned());
+            soup.add("Planner", "Global Path", DebugType::GlobalLine(path));
         }
     }
 }
