@@ -8,7 +8,8 @@ use burn::{
     tensor::activation,
 };
 
-use super::state::{RlAction, RlState};
+use super::action::RlAction;
+use super::state::RlState;
 
 pub type ModelRef<B> = Rc<RefCell<Model<B>>>;
 

@@ -1,10 +1,12 @@
+mod action;
 pub mod model;
 pub mod state;
 
 use std::{collections::HashMap, time::Duration};
 
+use action::RlAction;
 use emath::Pos2;
-use state::{RlAction, RlState};
+use state::RlState;
 
 use crate::{
     debug::{DebugSoup, DebugType},
