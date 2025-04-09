@@ -8,6 +8,8 @@ mod search;
 
 use std::time::Duration;
 
+use rl::state::RlState;
+
 #[cfg(feature = "cli")]
 use {
     clap::ValueEnum,
@@ -50,7 +52,7 @@ impl RobotKind {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
-            RobotKind::Rl => || Box::new(rl::RlRobot::default()),
+            RobotKind::Rl => || Box::new(rl::RlRobot::<RlState>::new()),
         }
     }
 

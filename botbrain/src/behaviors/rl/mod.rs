@@ -6,7 +6,7 @@ use std::{collections::HashMap, time::Duration};
 
 use action::RlAction;
 use emath::Pos2;
-use state::RlState;
+use state::{RlState, State};
 
 use crate::{
     debug::{DebugSoup, DebugType},
@@ -28,7 +28,7 @@ pub const REACT_HZ: f32 = 2.0;
 type MyBackend = burn::backend::Wgpu;
 
 #[derive(Clone)]
-pub struct RlRobot {
+pub struct RlRobot<S: State> {
     /// The id of the robot
     pub id: RobotId,
 
@@ -61,10 +61,9 @@ pub struct RlRobot {
     /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
 
-    /// The neural network used to control the robot. It is protexted
-    /// by a `RwLock` to allow multiple threads to read the model and
+    /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<MyBackend>,
+    pub model: model::BotModel<MyBackend, S>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -73,28 +72,7 @@ pub struct RlRobot {
     pub control: Control,
 }
 
-impl Default for RlRobot {
-    fn default() -> Self {
-        Self {
-            id: Default::default(),
-            pos: Default::default(),
-            angle: Default::default(),
-            cam: Default::default(),
-            lidar: Default::default(),
-            postbox: Default::default(),
-            search_grid: Default::default(),
-            last_search_grid_update: Default::default(),
-            search_gradient: Default::default(),
-            others: Default::default(),
-            debug_soup: DebugSoup::new_active(),
-            model: model::BotModel::new_model(&Default::default()),
-            last_control_update: Default::default(),
-            control: Default::default(),
-        }
-    }
-}
-
-impl Robot for RlRobot {
+impl<S: State + 'static> Robot for RlRobot<S> {
     fn get_id(&self) -> &RobotId {
         &self.id
     }
@@ -149,7 +127,26 @@ impl Robot for RlRobot {
     }
 }
 
-impl RlRobot {
+impl<S: State + 'static> RlRobot<S> {
+    pub fn new() -> Self {
+        Self {
+            id: RobotId(0),
+            pos: Pos2::ZERO,
+            angle: 0.0,
+            cam: CamData::default(),
+            lidar: LidarData::default(),
+            postbox: Default::default(),
+            search_grid: Default::default(),
+            last_search_grid_update: Default::default(),
+            search_gradient: Default::default(),
+            others: Default::default(),
+            debug_soup: DebugSoup::new_active(),
+            model: model::BotModel::new_model(&Default::default()),
+            last_control_update: Duration::ZERO,
+            control: Default::default(),
+        }
+    }
+
     /// Get the state used as input to the neural network
     pub fn state(&self) -> RlState {
         // Map the robot position to the range [-1, 1]
@@ -167,7 +164,7 @@ impl RlRobot {
 
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
-        let input = self.state().to_tensor::<MyBackend>();
+        let input = self.state().to_tensor();
         let action = self.model.action(input);
         self.control = action.control();
     }
@@ -175,7 +172,7 @@ impl RlRobot {
     pub fn new_controlled() -> Self {
         Self {
             model: model::BotModel::new_controlled(RlAction::default()),
-            ..Default::default()
+            ..Self::new()
         }
     }
 
@@ -258,7 +255,7 @@ impl RlRobot {
 }
 
 fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    let robot = cast_robot::<RlRobot>(robot);
+    let robot = cast_robot::<RlRobot<RlState>>(robot);
 
     robot.visualize();
 

@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::marker::PhantomData;
 
 use burn::{
     module::{Param, ParamId},
@@ -8,18 +8,29 @@ use burn::{
     tensor::activation,
 };
 
-use super::action::RlAction;
 use super::state::RlState;
-
-pub type ModelRef<B> = Rc<RefCell<Model<B>>>;
+use super::{action::RlAction, state::State};
 
 #[derive(Clone)]
-pub enum BotModel<B: Backend> {
+pub struct BotModel<B: Backend, S: State> {
+    kind: BotModelKind<B>,
+    _state: PhantomData<S>,
+}
+
+#[derive(Clone)]
+enum BotModelKind<B: Backend> {
     Model(Model<B>),
     Controlled(RlAction),
 }
 
-impl<B: Backend> BotModel<B> {
+impl<B: Backend, S: State> BotModel<B, S> {
+    fn new(kind: BotModelKind<B>) -> Self {
+        Self {
+            kind,
+            _state: PhantomData,
+        }
+    }
+
     pub fn new_model(device: &B::Device) -> Self {
         let mut model = Model::new(device);
 
@@ -36,26 +47,26 @@ impl<B: Backend> BotModel<B> {
             println!("[WARNING] MODEL_PATH not set, using random model");
         }
 
-        BotModel::Model(model)
+        Self::new(BotModelKind::Model(model))
     }
 
     pub fn new_controlled(action: RlAction) -> Self {
-        BotModel::Controlled(action)
+        Self::new(BotModelKind::Controlled(action))
     }
 
     pub fn action(&self, input: Tensor<B, 1>) -> RlAction {
-        match self {
-            BotModel::Model(model) => model.forward(input.unsqueeze()).into(),
-            BotModel::Controlled(action) => *action,
+        match &self.kind {
+            BotModelKind::Model(model) => model.forward(input.unsqueeze()).into(),
+            BotModelKind::Controlled(action) => *action,
         }
     }
 
     pub fn is_controlled(&self) -> bool {
-        matches!(self, BotModel::Controlled(_))
+        matches!(self.kind, BotModelKind::Controlled(_))
     }
 
     pub fn set_action(&mut self, action: RlAction) {
-        *self = BotModel::Controlled(action);
+        self.kind = BotModelKind::Controlled(action);
     }
 }
 
@@ -120,7 +131,7 @@ impl<B: Backend> Model<B> {
 
     pub fn react_with_exploration(&self, input: &RlState, epsilon: f64) -> RlAction {
         if rand::random::<f64>() > epsilon {
-            let input_tensor = input.to_tensor::<B>();
+            let input_tensor = input.to_tensor();
             let output_tensor = self.forward(input_tensor.clone().unsqueeze());
             output_tensor.clone().into()
         } else {
