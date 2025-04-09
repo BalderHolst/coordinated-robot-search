@@ -20,18 +20,13 @@ pub enum BotModel<B: Backend> {
 }
 
 impl<B: Backend> BotModel<B> {
-    pub fn new_model() -> Self {
-        let config = ModelConfig::new();
-        let mut model = config.init(&Default::default());
+    pub fn new_model(device: &B::Device) -> Self {
+        let mut model = Model::new(device);
 
         if let Ok(path) = std::env::var("MODEL_PATH") {
             if !path.is_empty() {
                 model = model
-                    .load_file(
-                        &path,
-                        &record::DefaultRecorder::default(),
-                        &Default::default(),
-                    )
+                    .load_file(&path, &record::DefaultRecorder::default(), device)
                     .unwrap_or_else(|_| {
                         panic!("Failed to load model from path: {}", path);
                     });
@@ -94,6 +89,17 @@ pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f6
 }
 
 impl<B: Backend> Model<B> {
+    const HIDDEN_SIZE_1: usize = 20;
+    const HIDDEN_SIZE_2: usize = 10;
+
+    pub fn new(device: &B::Device) -> Model<B> {
+        Model {
+            linear1: LinearConfig::new(RlState::SIZE, Self::HIDDEN_SIZE_1).init(device),
+            linear2: LinearConfig::new(Self::HIDDEN_SIZE_1, Self::HIDDEN_SIZE_2).init(device),
+            linear3: LinearConfig::new(Self::HIDDEN_SIZE_2, RlAction::SIZE).init(device),
+        }
+    }
+
     pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
         let x = activation::relu(self.linear1.forward(input));
         let x = activation::relu(self.linear2.forward(x));
@@ -119,24 +125,6 @@ impl<B: Backend> Model<B> {
             output_tensor.clone().into()
         } else {
             RlAction::random()
-        }
-    }
-}
-
-#[derive(Debug, Config)]
-pub struct ModelConfig {
-    #[config(default = 20)]
-    pub hidden_size1: usize,
-    #[config(default = 10)]
-    pub hidden_size2: usize,
-}
-
-impl ModelConfig {
-    pub fn init<B: Backend>(&self, device: &B::Device) -> Model<B> {
-        Model {
-            linear1: LinearConfig::new(RlState::SIZE, self.hidden_size1).init(device),
-            linear2: LinearConfig::new(self.hidden_size1, self.hidden_size2).init(device),
-            linear3: LinearConfig::new(self.hidden_size2, RlAction::SIZE).init(device),
         }
     }
 }

@@ -87,7 +87,7 @@ impl Default for RlRobot {
             search_gradient: Default::default(),
             others: Default::default(),
             debug_soup: DebugSoup::new_active(),
-            model: model::BotModel::new_model(),
+            model: model::BotModel::new_model(&Default::default()),
             last_control_update: Default::default(),
             control: Default::default(),
         }
