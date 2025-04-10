@@ -5,15 +5,10 @@ use emath::{Pos2, Vec2};
 
 use crate::{utils::normalize_angle, LidarData};
 
-use super::RlRobot;
-
-pub trait State: Clone + Send + From<RlRobot<Self>> {
-    const SIZE: usize;
-    fn to_tensor<B: Backend>(&self) -> Tensor<B, 1>;
-}
+use super::{RlRobot, State};
 
 #[derive(Debug, Clone)]
-pub struct RlState {
+pub struct SmallState {
     pos: Pos2,
     angle: f32,
     lidar: LidarData,
@@ -23,14 +18,14 @@ pub struct RlState {
     // global_gradient: Vec2,
 }
 
-impl From<RlRobot<Self>> for RlState {
+impl From<RlRobot<Self>> for SmallState {
     fn from(value: RlRobot<Self>) -> Self {
         // Map the robot position to the range [-1, 1]
         let pos = Pos2 {
             x: 2.0 * value.pos.x / value.search_grid.width(),
             y: 2.0 * value.pos.y / value.search_grid.height(),
         };
-        RlState::new(
+        SmallState::new(
             pos,
             normalize_angle(value.angle),
             value.lidar.clone(),
@@ -39,7 +34,7 @@ impl From<RlRobot<Self>> for RlState {
     }
 }
 
-impl State for RlState {
+impl State for SmallState {
     const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE + Self::SEARCH_GRADIENT_SIZE;
 
     fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
@@ -55,7 +50,7 @@ impl State for RlState {
     }
 }
 
-impl RlState {
+impl SmallState {
     const LIDAR_RAYS: usize = 12;
     const POSE_SIZE: usize = 3;
     const SEARCH_GRADIENT_SIZE: usize = 2;

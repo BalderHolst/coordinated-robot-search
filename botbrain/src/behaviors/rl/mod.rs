@@ -6,7 +6,8 @@ use std::{collections::HashMap, marker::PhantomData, time::Duration};
 
 use action::RlAction;
 use emath::Pos2;
-use state::{RlState, State};
+use model::small::SmallNetwork;
+use state::State;
 
 use crate::{
     debug::{DebugSoup, DebugType},
@@ -16,7 +17,7 @@ use crate::{
 
 use super::{cast_robot, common, params, BehaviorFn, BehaviorOutput, RobotRef};
 
-pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
+pub const MENU: &[(&str, BehaviorFn)] = &[("nn", small)];
 
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
@@ -65,7 +66,7 @@ pub struct RlRobot<S: State> {
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<MyBackend>,
+    pub model: model::BotModel<MyBackend, S, SmallNetwork<MyBackend>>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -190,7 +191,7 @@ impl<S: State + 'static> RlRobot<S> {
     }
 }
 
-impl RlRobot<RlState> {
+impl RlRobot<state::SmallState> {
     fn visualize(&mut self) {
         if !self.debug_enabled() {
             return;
@@ -249,8 +250,8 @@ impl RlRobot<RlState> {
     }
 }
 
-fn run_nn(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    let robot = cast_robot::<RlRobot<RlState>>(robot);
+fn small(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    let robot = cast_robot::<RlRobot<state::SmallState>>(robot);
 
     robot.visualize();
 
