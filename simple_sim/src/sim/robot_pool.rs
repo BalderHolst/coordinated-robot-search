@@ -12,7 +12,7 @@ use botbrain::{
     Robot, RobotId,
 };
 
-use crate::world::{convert_to_botbrain_map, World};
+use crate::world::{self, World};
 
 use super::{step::step_agent, RobotState, StepArgs};
 
@@ -39,7 +39,7 @@ impl ThreadCtx {
     fn create_robot(&self, id: RobotId) -> Box<dyn Robot> {
         let mut robot = (self.create_robot_fn)();
         robot.set_id(id);
-        robot.set_world(convert_to_botbrain_map(&self.world));
+        robot.set_world(world::convert_to_botbrain_map(&self.world));
         robot.get_debug_soup_mut().activate();
         robot
     }

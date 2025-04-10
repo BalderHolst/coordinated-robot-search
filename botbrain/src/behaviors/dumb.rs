@@ -1,8 +1,7 @@
 //! Dumb robot with dumb behaviors
 
 use super::{
-    BehaviorFn, CamData, Control, DebugSoup, LidarData, MapCell, Postbox, Robot, RobotId,
-    RobotPose, ScaledGrid,
+    BehaviorFn, CamData, Control, DebugSoup, LidarData, Map, Postbox, Robot, RobotId, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -26,7 +25,7 @@ impl Robot for DumbRobot {
         self.id = id;
     }
 
-    fn set_world(&mut self, _world: ScaledGrid<MapCell>) {}
+    fn set_world(&mut self, _world: Map) {}
 
     fn get_postbox(&self) -> &Postbox {
         &self.postbox

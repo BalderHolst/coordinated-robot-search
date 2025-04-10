@@ -12,7 +12,7 @@ use crate::{
     CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose,
 };
 
-use super::{cast_robot, common, BehaviorFn, BehaviorOutput, MapCell, RobotRef};
+use super::{cast_robot, common, BehaviorFn, BehaviorOutput, Map, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
@@ -96,7 +96,7 @@ impl Robot for RlRobot {
     fn set_id(&mut self, id: RobotId) {
         self.id = id;
     }
-    fn set_world(&mut self, world: ScaledGrid<MapCell>) {
+    fn set_world(&mut self, world: Map) {
         let size = world.size();
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
     }

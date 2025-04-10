@@ -311,7 +311,7 @@ pub trait Robot {
     fn set_id(&mut self, id: RobotId);
 
     // The world the robot is operating in
-    fn set_world(&mut self, world: ScaledGrid<MapCell>);
+    fn set_world(&mut self, world: Map);
 
     /// Get the robot postbox
     fn get_postbox(&self) -> &Postbox;

@@ -16,8 +16,8 @@ use super::{
     scaled_grid::ScaledGrid,
     shapes::{Circle, Line},
     utils::normalize_angle,
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, MapCell,
-    Postbox, Robot, RobotId, RobotPose, RobotRef,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, Map, Postbox,
+    Robot, RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -53,7 +53,7 @@ const PROXIMITY_MAX_LAYERS: usize = 3;
 const COSTMAP_GRID_SCALE: f32 = 0.5;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
-const COSTMAP_OCCUPIED: f32 = -3.0;
+const COSTMAP_OBSTACLE: f32 = -3.0;
 const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
 const COSTMAP_SEARCHED: f32 = -1.0;
 const COSTMAP_UNKNOWN: f32 = 1.0;
@@ -93,7 +93,7 @@ pub struct SearchRobot {
     pub lidar: LidarData,
 
     /// The map navigating in
-    pub map: ScaledGrid<MapCell>,
+    pub map: ScaledGrid<f32>,
 
     /// For sending/receiving messages
     pub postbox: Postbox,
@@ -142,9 +142,9 @@ impl Robot for SearchRobot {
         self.id = id;
     }
 
-    fn set_world(&mut self, world: ScaledGrid<MapCell>) {
+    fn set_world(&mut self, world: Map) {
         let size = world.size();
-        self.map = world;
+        self.map = convert_to_botbrain_map(&world);
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
@@ -449,6 +449,8 @@ impl SearchRobot {
             DebugType::Grid(self.costmap_grid.clone()),
         );
 
+        soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
+
         // if self.robot_mode == RobotMode::Pathing {
         self.show_path();
         // }
@@ -571,7 +573,7 @@ impl SearchRobot {
 
             let is_path_clear = self.costmap_grid.iter_line(&line).all(|pos| {
                 if let Some(&cell) = self.costmap_grid.get(pos) {
-                    cell != COSTMAP_OCCUPIED && cell != COSTMAP_DYNAMIC_OBSTACLE
+                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
                 } else {
                     false
                 }
@@ -597,7 +599,7 @@ impl SearchRobot {
             let res = self.costmap_grid.iter_line(&line).all(|pos| {
                 if let Some(&cell) = self.costmap_grid.get(pos) {
                     // FIX: Remove COSTMAP_DYNAMIC_OBSTACLE when we have a map and not only lidar
-                    cell != COSTMAP_OCCUPIED && cell != COSTMAP_DYNAMIC_OBSTACLE
+                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
                 } else {
                     false
                 }
@@ -756,6 +758,19 @@ fn search(
 
     let msgs = robot.postbox.empty();
     (robot.control_towards(target), msgs)
+}
+
+fn convert_to_botbrain_map(world: &Map) -> ScaledGrid<f32> {
+    let mut map = ScaledGrid::<f32>::new(world.width(), world.height(), world.scale());
+    println!("Converting world to botbrain map");
+    for (x, y, cell) in world.iter() {
+        let val = match cell {
+            super::MapCell::Free => 0.0,
+            super::MapCell::Obstacle => COSTMAP_OBSTACLE,
+        };
+        map.set(Pos2::new(x, y), val);
+    }
+    map
 }
 
 mod behaviors {

@@ -20,7 +20,11 @@ use polars::prelude::*;
 #[cfg(not(feature = "single-thread"))]
 use robot_pool::RobotThreadPool;
 
-use crate::{cli::ScenarioArgs, scenario::Scenario, world::World};
+use crate::{
+    cli::ScenarioArgs,
+    scenario::Scenario,
+    world::{self, World},
+};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -286,7 +290,7 @@ impl Simulator {
         {
             let mut robot = (self.behavior.create_fn())();
             robot.set_id(id);
-            robot.set_world_size(self.world.size());
+            robot.set_world(world::convert_to_botbrain_map(&self.world));
             robot.get_debug_soup_mut().activate();
             robot.input_pose(robot_pose);
             self.robots.push(robot);
@@ -377,7 +381,7 @@ impl Simulator {
                 ..Default::default()
             });
 
-            robot.set_world_size(sim.world.size());
+            robot.set_world(world::convert_to_botbrain_map(&sim.world));
             robot.get_debug_soup_mut().activate();
             robot.input_pose(pose);
             sim.robots.push(robot);

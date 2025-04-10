@@ -3,8 +3,8 @@ use std::{f32::consts::PI, time::Duration};
 use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, MapCell, Postbox, Robot,
-    RobotId, RobotPose, ScaledGrid,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Map, Postbox, Robot,
+    RobotId, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
@@ -26,7 +26,7 @@ impl Robot for AvoidObstaclesRobot {
         self.id = id;
     }
 
-    fn set_world(&mut self, _world: ScaledGrid<MapCell>) {}
+    fn set_world(&mut self, _world: Map) {}
 
     fn get_postbox(&self) -> &Postbox {
         &self.postbox
