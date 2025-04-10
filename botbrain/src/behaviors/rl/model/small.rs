@@ -5,7 +5,7 @@ use burn::{
     tensor::activation,
 };
 
-use crate::behaviors::rl::{action::RlAction, state::State};
+use crate::behaviors::rl::{action::Action, state::State};
 
 use super::Network;
 
@@ -43,12 +43,12 @@ pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f6
     Linear::<B> { weight, bias }
 }
 
-impl<B: Backend, S: State> Network<B, S> for SmallNetwork<B> {
+impl<B: Backend, S: State, A: Action> Network<B, S, A> for SmallNetwork<B> {
     fn init(device: &B::Device) -> Self {
         Self {
             linear1: LinearConfig::new(S::SIZE, Self::HIDDEN_SIZE_1).init(device),
             linear2: LinearConfig::new(Self::HIDDEN_SIZE_1, Self::HIDDEN_SIZE_2).init(device),
-            linear3: LinearConfig::new(Self::HIDDEN_SIZE_2, RlAction::SIZE).init(device),
+            linear3: LinearConfig::new(Self::HIDDEN_SIZE_2, A::SIZE).init(device),
         }
     }
 
@@ -66,14 +66,14 @@ impl<B: Backend, S: State> Network<B, S> for SmallNetwork<B> {
         }
     }
 
-    fn react_with_exploration(&self, input: &S, epsilon: f64) -> RlAction {
+    fn react_with_exploration(&self, input: &S, epsilon: f64) -> A {
         if rand::random::<f64>() > epsilon {
             let input_tensor = input.to_tensor();
             let output_tensor =
-                <Self as Network<B, S>>::forward(self, input_tensor.clone().unsqueeze());
-            output_tensor.clone().into()
+                <Self as Network<B, S, A>>::forward(self, input_tensor.clone().unsqueeze());
+            A::from_tensor(output_tensor)
         } else {
-            RlAction::random()
+            A::random()
         }
     }
 }

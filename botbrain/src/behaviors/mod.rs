@@ -50,7 +50,9 @@ impl RobotKind {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
-            RobotKind::Rl => || Box::new(rl::RlRobot::<rl::state::SmallState>::new()),
+            RobotKind::Rl => {
+                || Box::new(rl::RlRobot::<rl::state::SmallState, rl::action::SquareAction>::new())
+            }
         }
     }
 

@@ -2,10 +2,11 @@ mod small;
 
 use burn::{prelude::Backend, tensor::Tensor};
 
-use super::RlRobot;
+use super::{action::Action, RlRobot};
 
-pub trait State: Clone + Send + From<RlRobot<Self>> {
+pub trait State: Clone + Send + 'static {
     const SIZE: usize;
+    fn from_robot<A: Action>(robot: &RlRobot<Self, A>) -> Self;
     fn to_tensor<B: Backend>(&self) -> Tensor<B, 1>;
 }
 

@@ -18,22 +18,6 @@ pub struct SmallState {
     // global_gradient: Vec2,
 }
 
-impl From<RlRobot<Self>> for SmallState {
-    fn from(value: RlRobot<Self>) -> Self {
-        // Map the robot position to the range [-1, 1]
-        let pos = Pos2 {
-            x: 2.0 * value.pos.x / value.search_grid.width(),
-            y: 2.0 * value.pos.y / value.search_grid.height(),
-        };
-        SmallState::new(
-            pos,
-            normalize_angle(value.angle),
-            value.lidar.clone(),
-            value.search_gradient,
-        )
-    }
-}
-
 impl State for SmallState {
     const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE + Self::SEARCH_GRADIENT_SIZE;
 
@@ -46,6 +30,20 @@ impl State for SmallState {
                 Tensor::from_floats(self.search_gradient_data(), &device),
             ],
             0,
+        )
+    }
+
+    fn from_robot<A: crate::behaviors::rl::action::Action>(robot: &RlRobot<Self, A>) -> Self {
+        // Map the robot position to the range [-1, 1]
+        let pos = Pos2 {
+            x: 2.0 * robot.pos.x / robot.search_grid.width(),
+            y: 2.0 * robot.pos.y / robot.search_grid.height(),
+        };
+        SmallState::new(
+            pos,
+            normalize_angle(robot.angle),
+            robot.lidar.clone(),
+            robot.search_gradient,
         )
     }
 }

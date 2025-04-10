@@ -4,17 +4,17 @@ use std::marker::PhantomData;
 
 use burn::{prelude::*, record};
 
-use super::{action::RlAction, state::State};
+use super::{action::Action, state::State};
 
 #[derive(Clone)]
-pub enum BotModel<B: Backend, S: State, N: Network<B, S>> {
-    Model(Model<B, S, N>),
-    Controlled(RlAction),
+pub enum BotModel<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
+    Model(Model<B, S, A, N>),
+    Controlled(A),
 }
 
-impl<B: Backend, S: State, N: Network<B, S>> BotModel<B, S, N> {
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> BotModel<B, S, A, N> {
     pub fn new_model(device: &B::Device) -> Self {
-        let mut model: Model<B, S, N> = Model::init(device);
+        let mut model: Model<B, S, A, N> = Model::init(device);
 
         if let Ok(path) = std::env::var("MODEL_PATH") {
             if !path.is_empty() {
@@ -34,14 +34,14 @@ impl<B: Backend, S: State, N: Network<B, S>> BotModel<B, S, N> {
         BotModel::Model(model)
     }
 
-    pub fn new_controlled(action: RlAction) -> Self {
+    pub fn new_controlled(action: A) -> Self {
         BotModel::Controlled(action)
     }
 
-    pub fn action(&self, input: Tensor<B, 1>) -> RlAction {
+    pub fn action(&self, input: Tensor<B, 1>) -> A {
         match &self {
-            BotModel::Model(model) => model.net.forward(input.unsqueeze()).into(),
-            BotModel::Controlled(action) => *action,
+            BotModel::Model(model) => A::from_tensor(model.net.forward(input.unsqueeze())),
+            BotModel::Controlled(action) => action.clone(),
         }
     }
 
@@ -49,7 +49,7 @@ impl<B: Backend, S: State, N: Network<B, S>> BotModel<B, S, N> {
         matches!(self, BotModel::Controlled(_))
     }
 
-    pub fn set_action(&mut self, action: RlAction) {
+    pub fn set_action(&mut self, action: A) {
         *self = BotModel::Controlled(action);
     }
 }
@@ -60,18 +60,20 @@ pub struct ModelConfig<B: Backend, S: State> {
 }
 
 #[derive(Clone)]
-pub struct Model<B: Backend, S: State, N: Network<B, S>> {
+pub struct Model<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     net: N,
     _backend: PhantomData<B>,
     _state: PhantomData<S>,
+    _action: PhantomData<A>,
 }
 
-impl<B: Backend, S: State, N: Network<B, S>> Model<B, S, N> {
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Model<B, S, A, N> {
     fn new(net: N) -> Self {
         Self {
             net,
-            _state: PhantomData,
             _backend: PhantomData,
+            _state: PhantomData,
+            _action: PhantomData,
         }
     }
 
@@ -80,9 +82,9 @@ impl<B: Backend, S: State, N: Network<B, S>> Model<B, S, N> {
     }
 }
 
-pub trait Network<B: Backend, S: State>: Module<B> + Clone {
+pub trait Network<B: Backend, S: State, A: Action>: Module<B> + Clone {
     fn init(device: &B::Device) -> Self;
     fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2>;
     fn soft_update(this: Self, that: &Self, tau: f64) -> Self;
-    fn react_with_exploration(&self, input: &S, epsilon: f64) -> RlAction;
+    fn react_with_exploration(&self, input: &S, epsilon: f64) -> A;
 }

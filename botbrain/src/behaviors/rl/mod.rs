@@ -1,10 +1,10 @@
-mod action;
+pub mod action;
 pub mod model;
 pub mod state;
 
-use std::{collections::HashMap, marker::PhantomData, time::Duration};
+use std::{collections::HashMap, time::Duration};
 
-use action::RlAction;
+use action::Action;
 use emath::Pos2;
 use model::small::SmallNetwork;
 use state::State;
@@ -29,9 +29,7 @@ pub const REACT_HZ: f32 = 2.0;
 type MyBackend = burn::backend::Wgpu;
 
 #[derive(Clone)]
-pub struct RlRobot<S: State> {
-    _state: PhantomData<S>,
-
+pub struct RlRobot<S: State, A: Action> {
     /// The id of the robot
     pub id: RobotId,
 
@@ -66,7 +64,7 @@ pub struct RlRobot<S: State> {
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<MyBackend, S, SmallNetwork<MyBackend>>,
+    pub model: model::BotModel<MyBackend, S, A, SmallNetwork<MyBackend>>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -75,7 +73,7 @@ pub struct RlRobot<S: State> {
     pub control: Control,
 }
 
-impl<S: State + 'static> Robot for RlRobot<S> {
+impl<S: State + 'static, A: Action + 'static> Robot for RlRobot<S, A> {
     fn get_id(&self) -> &RobotId {
         &self.id
     }
@@ -130,7 +128,7 @@ impl<S: State + 'static> Robot for RlRobot<S> {
     }
 }
 
-impl<S: State + 'static> RlRobot<S> {
+impl<S: State, A: Action> RlRobot<S, A> {
     pub fn new() -> Self {
         Self {
             id: RobotId(0),
@@ -147,13 +145,12 @@ impl<S: State + 'static> RlRobot<S> {
             model: model::BotModel::new_model(&Default::default()),
             last_control_update: Duration::ZERO,
             control: Default::default(),
-            _state: PhantomData,
         }
     }
 
     /// Get the state used as input to the neural network
     pub fn state(&self) -> S {
-        S::from(self.clone())
+        S::from_robot(self)
     }
 
     /// React to the environment and return a control signal
@@ -165,7 +162,7 @@ impl<S: State + 'static> RlRobot<S> {
 
     pub fn new_controlled() -> Self {
         Self {
-            model: model::BotModel::new_controlled(RlAction::default()),
+            model: model::BotModel::new_controlled(A::default()),
             ..Self::new()
         }
     }
@@ -191,7 +188,7 @@ impl<S: State + 'static> RlRobot<S> {
     }
 }
 
-impl RlRobot<state::SmallState> {
+impl<A: Action> RlRobot<state::SmallState, A> {
     fn visualize(&mut self) {
         if !self.debug_enabled() {
             return;
@@ -251,7 +248,7 @@ impl RlRobot<state::SmallState> {
 }
 
 fn small(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    let robot = cast_robot::<RlRobot<state::SmallState>>(robot);
+    let robot = cast_robot::<RlRobot<state::SmallState, action::SquareAction>>(robot);
 
     robot.visualize();
 
