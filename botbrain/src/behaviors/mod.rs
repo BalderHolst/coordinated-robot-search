@@ -30,6 +30,7 @@ pub enum RobotKind {
     AvoidObstacles,
     Search,
     SmallRl,
+    MinimalRl,
 }
 
 impl RobotKind {
@@ -39,7 +40,8 @@ impl RobotKind {
             RobotKind::Dumb => dumb::MENU,
             RobotKind::AvoidObstacles => avoid_obstacles::MENU,
             RobotKind::Search => search::MENU,
-            RobotKind::SmallRl => rl::MENU,
+            RobotKind::SmallRl => &[("run", rl::robots::small::run)],
+            RobotKind::MinimalRl => &[("run", rl::robots::minimal::run)],
         }
     }
 
@@ -51,6 +53,7 @@ impl RobotKind {
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
             RobotKind::SmallRl => || Box::new(rl::robots::small::SmallRlRobot::new()),
+            RobotKind::MinimalRl => || Box::new(rl::robots::minimal::MinimalRlRobot::new()),
         }
     }
 
@@ -60,6 +63,7 @@ impl RobotKind {
             RobotKind::AvoidObstacles => "avoid-obstacles",
             RobotKind::Search => "search",
             RobotKind::SmallRl => "small-rl",
+            RobotKind::MinimalRl => "minimal-rl",
         }
     }
 }

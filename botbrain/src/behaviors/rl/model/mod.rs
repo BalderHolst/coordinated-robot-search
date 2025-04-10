@@ -1,8 +1,14 @@
 pub mod small;
+mod tiny;
 
 use std::marker::PhantomData;
 
-use burn::{prelude::*, record};
+use burn::{
+    module::{Param, ParamId},
+    prelude::*,
+    record,
+};
+use nn::Linear;
 
 use super::{action::Action, state::State};
 
@@ -86,5 +92,37 @@ pub trait Network<B: Backend, S: State, A: Action>: Module<B> + Clone {
     fn init(device: &B::Device) -> Self;
     fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2>;
     fn soft_update(this: Self, that: &Self, tau: f64) -> Self;
-    fn react_with_exploration(&self, input: &S, epsilon: f64) -> A;
+
+    fn react_with_exploration(&self, input: &S, epsilon: f64) -> A {
+        if rand::random::<f64>() > epsilon {
+            let input_tensor = input.to_tensor(&Default::default());
+            let output_tensor =
+                <Self as Network<B, S, A>>::forward(self, input_tensor.clone().unsqueeze());
+            A::from_tensor(output_tensor)
+        } else {
+            A::random()
+        }
+    }
+}
+
+fn soft_update_tensor<const N: usize, B: Backend>(
+    this: &Param<Tensor<B, N>>,
+    that: &Param<Tensor<B, N>>,
+    tau: f64,
+) -> Param<Tensor<B, N>> {
+    let that_weight = that.val();
+    let this_weight = this.val();
+    let new_weight = this_weight * (1.0 - tau) + that_weight * tau;
+
+    Param::initialized(ParamId::new(), new_weight)
+}
+
+pub fn soft_update_linear<B: Backend>(this: Linear<B>, that: &Linear<B>, tau: f64) -> Linear<B> {
+    let weight = soft_update_tensor(&this.weight, &that.weight, tau);
+    let bias = match (&this.bias, &that.bias) {
+        (Some(this_bias), Some(that_bias)) => Some(soft_update_tensor(this_bias, that_bias, tau)),
+        _ => None,
+    };
+
+    Linear::<B> { weight, bias }
 }

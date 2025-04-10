@@ -21,13 +21,12 @@ pub struct SmallState {
 impl State for SmallState {
     const SIZE: usize = Self::LIDAR_RAYS + Self::POSE_SIZE + Self::SEARCH_GRADIENT_SIZE;
 
-    fn to_tensor<B: Backend>(&self) -> Tensor<B, 1> {
-        let device = Default::default();
+    fn to_tensor<B: Backend>(&self, device: &B::Device) -> Tensor<B, 1> {
         Tensor::cat(
             vec![
-                Tensor::from_floats(self.lidar_data(), &device),
-                Tensor::from_floats(self.pose_data(), &device),
-                Tensor::from_floats(self.search_gradient_data(), &device),
+                Tensor::from_floats(self.lidar_data(), device),
+                Tensor::from_floats(self.pose_data(), device),
+                Tensor::from_floats(self.search_gradient_data(), device),
             ],
             0,
         )

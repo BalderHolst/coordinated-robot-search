@@ -1,15 +1,14 @@
-use burn::prelude::*;
-use rand::Rng;
-
 use crate::{params, Control};
 
 use super::Action;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Default)]
 pub struct SquareAction<const SPEEDS: usize, const STEERS: usize>(usize);
 
-impl<const SPEEDS: usize, const STEERS: usize> SquareAction<SPEEDS, STEERS> {
-    pub fn control(&self) -> Control {
+impl<const SPEEDS: usize, const STEERS: usize> Action for SquareAction<SPEEDS, STEERS> {
+    const SIZE: usize = STEERS * SPEEDS;
+
+    fn control(&self) -> Control {
         let Self(i) = self;
 
         assert!(*i < Self::SIZE, "Invalid action: {}", i);
@@ -30,31 +29,9 @@ impl<const SPEEDS: usize, const STEERS: usize> SquareAction<SPEEDS, STEERS> {
     }
 }
 
-impl<const SPEEDS: usize, const STEERS: usize> Action for SquareAction<SPEEDS, STEERS> {
-    const SIZE: usize = STEERS * SPEEDS;
-
-    fn random() -> Self {
-        rand::rng().random_range(0..Self::SIZE).into()
-    }
-
-    fn from_tensor<B: Backend>(tensor: Tensor<B, 2>) -> Self {
-        (tensor.argmax(1).to_data().as_slice::<i32>().unwrap()[0] as usize).into()
-    }
-
-    fn control(&self) -> Control {
-        todo!()
-    }
-}
-
 impl<const SPEEDS: usize, const STEERS: usize> From<usize> for SquareAction<SPEEDS, STEERS> {
     fn from(i: usize) -> Self {
         assert!(i < Self::SIZE, "Invalid action: {}", i);
         Self(i)
-    }
-}
-
-impl<const SPEEDS: usize, const STEERS: usize> Default for SquareAction<SPEEDS, STEERS> {
-    fn default() -> Self {
-        (Self::SIZE / 2 + 1).into()
     }
 }

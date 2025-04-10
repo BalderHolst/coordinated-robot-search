@@ -15,9 +15,7 @@ use crate::{
     RobotId, RobotPose, Vec2,
 };
 
-use super::{common, BehaviorFn};
-
-pub const MENU: &[(&str, BehaviorFn)] = &[("nn", robots::small::run)];
+use super::{common, params, DebugType};
 
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
@@ -161,7 +159,7 @@ impl<S: State, A: Action> RlRobot<S, A> {
 
     /// React to the environment and return a control signal
     pub fn react(&mut self) {
-        let input = self.state().to_tensor();
+        let input = self.state().to_tensor(&Default::default());
         let action = self.model.action(input);
         self.control = action.control();
     }
@@ -191,5 +189,32 @@ impl<S: State, A: Action> RlRobot<S, A> {
             &mut self.others,
             SEARCH_GRID_UPDATE_INTERVAL,
         );
+    }
+
+    pub fn update_search_gradient(&mut self) {
+        let (g, _) = common::gradient(
+            self.pos,
+            self.angle,
+            SEARCH_GRADIENT_RANGE,
+            params::DIAMETER * 2.0,
+            self.lidar.clone(),
+            &self.search_grid,
+        );
+        self.debug("Search Gradient", "Vector", DebugType::Vector(g));
+        self.debug("Search Gradient", "x", DebugType::Number(g.x));
+        self.debug("Search Gradient", "y", DebugType::Number(g.y));
+        self.debug("Search Gradient", "length", DebugType::Number(g.length()));
+        self.debug("Search Gradient", "angle", DebugType::Number(g.angle()));
+        self.search_gradient = g;
+    }
+
+    fn visualize(&mut self) {
+        if !self.debug_enabled() {
+            return;
+        }
+        self.debug("", "Search Grid", DebugType::Grid(self.search_grid.clone()));
+
+        let raw_lidar = self.lidar.points().map(|p| (p.angle, p.distance)).collect();
+        self.debug("", "Lidar", DebugType::RobotRays(raw_lidar));
     }
 }
