@@ -16,8 +16,8 @@ use super::{
     scaled_grid::ScaledGrid,
     shapes::{Circle, Line},
     utils::normalize_angle,
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, Postbox, Robot,
-    RobotId, RobotPose, RobotRef,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, MapCell,
+    Postbox, Robot, RobotId, RobotPose, RobotRef,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -93,7 +93,7 @@ pub struct SearchRobot {
     pub lidar: LidarData,
 
     /// The map navigating in
-    pub map: ScaledGrid<f32>,
+    pub map: ScaledGrid<MapCell>,
 
     /// For sending/receiving messages
     pub postbox: Postbox,
@@ -142,8 +142,9 @@ impl Robot for SearchRobot {
         self.id = id;
     }
 
-    fn set_world_size(&mut self, size: Vec2) {
-        // TODO: Change this to input grid of map
+    fn set_world(&mut self, world: ScaledGrid<MapCell>) {
+        let size = world.size();
+        self.map = world;
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);

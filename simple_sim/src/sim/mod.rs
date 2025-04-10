@@ -230,14 +230,14 @@ impl Simulator {
             threads,
             behavior.behavior_fn(),
             behavior.create_fn(),
-            world.size(),
+            world.clone(),
         );
 
         Self {
             state,
             pending_msgs: vec![],
             behavior: behavior.clone(),
-            world: world.clone(),
+            world,
             dt: SIMULATION_DT,
             msg_send_tx,
             msg_send_rx,

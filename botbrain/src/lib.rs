@@ -276,6 +276,17 @@ impl Postbox {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum MapCell {
+    /// The cell is free
+    #[default]
+    Free,
+    /// The cell is occupied by an object
+    Obstacle,
+}
+
+pub type Map = ScaledGrid<MapCell>;
+
 /// The pose of a robot
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RobotPose {
@@ -300,10 +311,7 @@ pub trait Robot {
     fn set_id(&mut self, id: RobotId);
 
     // The world the robot is operating in
-    // fn input_world(&mut self, world: ScaledGrid<f32>);
-
-    /// Set the size of the world
-    fn set_world_size(&mut self, size: Vec2);
+    fn set_world(&mut self, world: ScaledGrid<MapCell>);
 
     /// Get the robot postbox
     fn get_postbox(&self) -> &Postbox;

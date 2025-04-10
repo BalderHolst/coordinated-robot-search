@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use description::{BitmapDescription, ObjectDescription, WorldDescription};
 use eframe::{egui::Color32, epaint::Hsva};
 
-use botbrain::scaled_grid::ScaledGrid;
+use botbrain::{scaled_grid::ScaledGrid, Pos2};
 
 pub type World = ScaledGrid<Cell>;
 
@@ -30,6 +30,25 @@ impl Cell {
             Self::SearchItem => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
         }
     }
+}
+
+impl From<Cell> for botbrain::MapCell {
+    fn from(value: Cell) -> Self {
+        match value {
+            Cell::Empty => botbrain::MapCell::Free,
+            Cell::Wall => botbrain::MapCell::Obstacle,
+            Cell::SearchItem => botbrain::MapCell::Free,
+        }
+    }
+}
+
+pub fn convert_to_botbrain_map(world: &World) -> botbrain::Map {
+    let mut map =
+        ScaledGrid::<botbrain::MapCell>::new(world.width(), world.height(), world.scale());
+    for (x, y, &cell) in world.iter() {
+        map.set(Pos2::new(x, y), cell.into());
+    }
+    map
 }
 
 pub fn world_from_path(path: &PathBuf) -> Result<World, String> {

@@ -9,8 +9,10 @@ use std::{
 
 use botbrain::{
     behaviors::{BehaviorFn, CreateFn},
-    Robot, RobotId, Vec2,
+    Robot, RobotId,
 };
+
+use crate::world::{convert_to_botbrain_map, World};
 
 use super::{step::step_agent, RobotState, StepArgs};
 
@@ -30,14 +32,14 @@ struct ThreadCtx {
     robots: Vec<Box<dyn Robot + 'static>>,
     behavior_fn: BehaviorFn,
     create_robot_fn: CreateFn,
-    world_size: Vec2,
+    world: World,
 }
 
 impl ThreadCtx {
     fn create_robot(&self, id: RobotId) -> Box<dyn Robot> {
         let mut robot = (self.create_robot_fn)();
         robot.set_id(id);
-        robot.set_world_size(self.world_size);
+        robot.set_world(convert_to_botbrain_map(&self.world));
         robot.get_debug_soup_mut().activate();
         robot
     }
@@ -48,7 +50,7 @@ impl RobotThreadPool {
         threads: usize,
         behavior_fn: BehaviorFn,
         create_robot_fn: CreateFn,
-        world_size: Vec2,
+        world: World,
     ) -> RobotThreadPool {
         let (output_tx, output_rx) = mpsc::channel();
 
@@ -57,13 +59,14 @@ impl RobotThreadPool {
                 let (input_tx, input_rx) =
                     mpsc::channel::<Option<WorkerInput>>();
                 let output_tx = output_tx.clone();
+                let world = world.clone();
                 let handle = {
                     thread::spawn(move || {
                         let mut ctx = ThreadCtx {
                             robots: vec![],
                             behavior_fn,
                             create_robot_fn,
-                            world_size,
+                            world,
                         };
                         while let Ok(Some((id, mut state, args))) = input_rx.recv() {
                             let robot =

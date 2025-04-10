@@ -1,10 +1,8 @@
 //! Dumb robot with dumb behaviors
 
-use {
-    super::{
-        BehaviorFn, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId, RobotPose,
-    },
-    emath::Vec2,
+use super::{
+    BehaviorFn, CamData, Control, DebugSoup, LidarData, MapCell, Postbox, Robot, RobotId,
+    RobotPose, ScaledGrid,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -28,7 +26,7 @@ impl Robot for DumbRobot {
         self.id = id;
     }
 
-    fn set_world_size(&mut self, _size: Vec2) {}
+    fn set_world(&mut self, _world: ScaledGrid<MapCell>) {}
 
     fn get_postbox(&self) -> &Postbox {
         &self.postbox

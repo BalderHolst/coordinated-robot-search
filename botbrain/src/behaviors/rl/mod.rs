@@ -9,10 +9,10 @@ use state::{RlAction, RlState};
 use crate::{
     debug::{DebugSoup, DebugType},
     scaled_grid::ScaledGrid,
-    CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
+    CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose,
 };
 
-use super::{cast_robot, common, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{cast_robot, common, BehaviorFn, BehaviorOutput, MapCell, RobotRef};
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("nn", run_nn)];
 
@@ -96,8 +96,8 @@ impl Robot for RlRobot {
     fn set_id(&mut self, id: RobotId) {
         self.id = id;
     }
-
-    fn set_world_size(&mut self, size: Vec2) {
+    fn set_world(&mut self, world: ScaledGrid<MapCell>) {
+        let size = world.size();
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
     }
 
