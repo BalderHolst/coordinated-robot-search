@@ -3,7 +3,11 @@ use std::f32::consts::PI;
 use burn::{prelude::Backend, tensor::Tensor};
 use emath::{Pos2, Vec2};
 
-use crate::{utils::normalize_angle, LidarData};
+use crate::{
+    behaviors::rl::{action::Action, model::Network},
+    utils::normalize_angle,
+    LidarData,
+};
 
 use super::{RlRobot, State};
 
@@ -32,7 +36,9 @@ impl State for SmallState {
         )
     }
 
-    fn from_robot<A: crate::behaviors::rl::action::Action>(robot: &RlRobot<Self, A>) -> Self {
+    fn from_robot<B: Backend, A: Action, N: Network<B, Self, A>>(
+        robot: &RlRobot<B, Self, A, N>,
+    ) -> Self {
         // Map the robot position to the range [-1, 1]
         let pos = Pos2 {
             x: 2.0 * robot.pos.x / robot.search_grid.width(),

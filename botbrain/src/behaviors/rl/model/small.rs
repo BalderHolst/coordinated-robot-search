@@ -1,12 +1,12 @@
 use burn::{
     nn::{Linear, LinearConfig},
     prelude::*,
-    tensor::activation,
+    tensor::{activation, backend::AutodiffBackend},
 };
 
 use crate::behaviors::rl::{action::Action, state::State};
 
-use super::{soft_update_linear, Network};
+use super::{soft_update_linear, AutodiffNetwork, Network};
 
 #[derive(Debug, Module)]
 pub struct SmallNetwork<B: Backend> {
@@ -19,6 +19,8 @@ impl<B: Backend> SmallNetwork<B> {
     const HIDDEN_SIZE_1: usize = 20;
     const HIDDEN_SIZE_2: usize = 10;
 }
+
+impl<B: AutodiffBackend, S: State, A: Action> AutodiffNetwork<B, S, A> for SmallNetwork<B> {}
 
 impl<B: Backend, S: State, A: Action> Network<B, S, A> for SmallNetwork<B> {
     fn init(device: &B::Device) -> Self {

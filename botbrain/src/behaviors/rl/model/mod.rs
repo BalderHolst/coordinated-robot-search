@@ -1,12 +1,13 @@
 pub mod small;
-mod tiny;
+pub mod tiny;
 
 use std::marker::PhantomData;
 
 use burn::{
-    module::{Param, ParamId},
+    module::{AutodiffModule, Param, ParamId},
     prelude::*,
     record,
+    tensor::backend::AutodiffBackend,
 };
 use nn::Linear;
 
@@ -86,9 +87,22 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Model<B, S, A, N> {
     fn init(device: &B::Device) -> Self {
         Self::new(N::init(device))
     }
+
+    pub fn network(&self) -> &N {
+        &self.net
+    }
+
+    pub fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
+        self.net.forward(input)
+    }
 }
 
-pub trait Network<B: Backend, S: State, A: Action>: Module<B> + Clone {
+pub trait AutodiffNetwork<B: AutodiffBackend, S: State, A: Action>:
+    Network<B, S, A> + AutodiffModule<B>
+{
+}
+
+pub trait Network<B: Backend, S: State, A: Action>: Module<B> + Clone + 'static {
     fn init(device: &B::Device) -> Self;
     fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2>;
     fn soft_update(this: Self, that: &Self, tau: f64) -> Self;

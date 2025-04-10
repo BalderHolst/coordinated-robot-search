@@ -369,5 +369,5 @@ fn cast_robot<T: Robot + 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
     robot
         .any_mut()
         .downcast_mut()
-        .expect("We should always be downcasting to the correct")
+        .expect("We should always be downcasting to the correct robot")
 }

@@ -21,6 +21,16 @@ impl From<usize> for MinimalAction {
     }
 }
 
+impl From<MinimalAction> for usize {
+    fn from(action: MinimalAction) -> Self {
+        match action {
+            MinimalAction::Straight => 0,
+            MinimalAction::Left => 1,
+            MinimalAction::Right => 2,
+        }
+    }
+}
+
 impl Action for MinimalAction {
     const SIZE: usize = 3;
     fn control(&self) -> crate::Control {
@@ -30,11 +40,11 @@ impl Action for MinimalAction {
                 steer: 0.0,
             },
             MinimalAction::Left => Control {
-                speed: (params::SPEED_RANGE.start + params::SPEED_RANGE.end) / 2.0,
+                speed: 0.0,
                 steer: params::STEER_RANGE.start,
             },
             MinimalAction::Right => Control {
-                speed: (params::SPEED_RANGE.start + params::SPEED_RANGE.end) / 2.0,
+                speed: 0.0,
                 steer: params::STEER_RANGE.end,
             },
         }

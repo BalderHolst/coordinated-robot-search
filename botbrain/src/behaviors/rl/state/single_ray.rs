@@ -1,7 +1,7 @@
 use burn::prelude::*;
 
 use crate::{
-    behaviors::rl::{action::Action, RlRobot},
+    behaviors::rl::{action::Action, model::Network, RlRobot},
     params, LidarPoint,
 };
 
@@ -13,7 +13,9 @@ pub struct RayState(LidarPoint);
 impl State for RayState {
     const SIZE: usize = 2;
 
-    fn from_robot<A: Action>(robot: &RlRobot<Self, A>) -> Self {
+    fn from_robot<B: Backend, A: Action, N: Network<B, Self, A>>(
+        robot: &RlRobot<B, Self, A, N>,
+    ) -> Self {
         let ray = robot
             .lidar
             .points()

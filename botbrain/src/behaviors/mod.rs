@@ -22,6 +22,8 @@ pub type BehaviorOutput = (Control, Vec<Message>);
 pub type BehaviorFn = fn(&mut Box<dyn Robot>, Time) -> BehaviorOutput;
 pub type CreateFn = fn() -> Box<dyn Robot>;
 
+type MyBackend = burn::backend::Wgpu;
+
 /// The kind of robot. Behaviors can only be run the robot kind they were designed for.
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 #[derive(Clone, Debug)]
@@ -35,13 +37,13 @@ pub enum RobotKind {
 
 impl RobotKind {
     /// Get the menu of behaviors for the robot kind.
-    fn menu(&self) -> &[(&'static str, BehaviorFn)] {
+    pub fn menu(&self) -> &[(&'static str, BehaviorFn)] {
         match self {
             RobotKind::Dumb => dumb::MENU,
             RobotKind::AvoidObstacles => avoid_obstacles::MENU,
             RobotKind::Search => search::MENU,
-            RobotKind::SmallRl => &[("run", rl::robots::small::run)],
-            RobotKind::MinimalRl => &[("run", rl::robots::minimal::run)],
+            RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
+            RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
         }
     }
 
@@ -52,12 +54,14 @@ impl RobotKind {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
-            RobotKind::SmallRl => || Box::new(rl::robots::small::SmallRlRobot::new()),
-            RobotKind::MinimalRl => || Box::new(rl::robots::minimal::MinimalRlRobot::new()),
+            RobotKind::SmallRl => || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new()),
+            RobotKind::MinimalRl => {
+                || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new())
+            }
         }
     }
 
-    fn get_name(&self) -> &'static str {
+    pub fn get_name(&self) -> &'static str {
         match self {
             RobotKind::Dumb => "dumb",
             RobotKind::AvoidObstacles => "avoid-obstacles",

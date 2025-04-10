@@ -1,4 +1,5 @@
-use botbrain::behaviors::rl::state::{RlAction, RlState};
+use botbrain::behaviors::rl::action::Action;
+use botbrain::behaviors::rl::state::State;
 use burn::tensor::backend::Backend;
 use burn::tensor::{BasicOps, Tensor, TensorKind};
 use rand::Rng;
@@ -36,16 +37,16 @@ pub fn get_batch<B: Backend, const CAP: usize, T, K: TensorKind<B> + BasicOps<B>
     .reshape([indices.len() as i32, -1])
 }
 
-pub struct Memory<B: Backend, const CAP: usize> {
-    state: ConstGenericRingBuffer<RlState, CAP>,
-    next_state: ConstGenericRingBuffer<RlState, CAP>,
-    action: ConstGenericRingBuffer<RlAction, CAP>,
+pub struct Memory<B: Backend, S: State, A: Action, const CAP: usize> {
+    state: ConstGenericRingBuffer<S, CAP>,
+    next_state: ConstGenericRingBuffer<S, CAP>,
+    action: ConstGenericRingBuffer<A, CAP>,
     reward: ConstGenericRingBuffer<f32, CAP>,
     done: ConstGenericRingBuffer<bool, CAP>,
     backend: PhantomData<B>,
 }
 
-impl<B: Backend, const CAP: usize> Default for Memory<B, CAP> {
+impl<B: Backend, S: State, A: Action, const CAP: usize> Default for Memory<B, S, A, CAP> {
     fn default() -> Self {
         Self {
             state: ConstGenericRingBuffer::new(),
@@ -58,15 +59,8 @@ impl<B: Backend, const CAP: usize> Default for Memory<B, CAP> {
     }
 }
 
-impl<B: Backend, const CAP: usize> Memory<B, CAP> {
-    pub fn push(
-        &mut self,
-        state: RlState,
-        next_state: RlState,
-        action: RlAction,
-        reward: f32,
-        done: bool,
-    ) {
+impl<B: Backend, S: State, A: Action, const CAP: usize> Memory<B, S, A, CAP> {
+    pub fn push(&mut self, state: S, next_state: S, action: A, reward: f32, done: bool) {
         self.state.push(state);
         self.next_state.push(next_state);
         self.action.push(action);
@@ -74,15 +68,15 @@ impl<B: Backend, const CAP: usize> Memory<B, CAP> {
         self.done.push(done);
     }
 
-    pub fn states(&self) -> &ConstGenericRingBuffer<RlState, CAP> {
+    pub fn states(&self) -> &ConstGenericRingBuffer<S, CAP> {
         &self.state
     }
 
-    pub fn next_states(&self) -> &ConstGenericRingBuffer<RlState, CAP> {
+    pub fn next_states(&self) -> &ConstGenericRingBuffer<S, CAP> {
         &self.next_state
     }
 
-    pub fn actions(&self) -> &ConstGenericRingBuffer<RlAction, CAP> {
+    pub fn actions(&self) -> &ConstGenericRingBuffer<A, CAP> {
         &self.action
     }
 
@@ -98,10 +92,12 @@ impl<B: Backend, const CAP: usize> Memory<B, CAP> {
         self.state.len()
     }
 
+    #[allow(unused)]
     pub fn is_empty(&self) -> bool {
         self.state.is_empty()
     }
 
+    #[allow(unused)]
     pub fn clear(&mut self) {
         self.state.clear();
         self.next_state.clear();

@@ -6,7 +6,7 @@ use rand::Rng;
 
 use crate::Control;
 
-pub trait Action: Clone + Default + Send + From<usize> + 'static {
+pub trait Action: Clone + Default + Send + From<usize> + Into<usize> + 'static {
     const SIZE: usize;
 
     fn random() -> Self {

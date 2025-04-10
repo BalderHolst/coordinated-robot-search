@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use crate::behaviors::rl::model::{self, Network};
 use crate::{behaviors::BehaviorOutput, debug::DebugType, Robot, RobotRef};
 
 use crate::behaviors::rl::{
@@ -9,15 +10,21 @@ use crate::behaviors::rl::{
 
 use super::run_robot;
 
-pub type SmallRlRobot = RlRobot<state::SmallState, action::SquareAction<3, 5>>;
+use burn::prelude::*;
 
-pub fn run(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    run_robot(robot, time, |robot: &mut SmallRlRobot| {
+type St = state::SmallState;
+type Ac = action::SquareAction<3, 5>;
+type Net<B> = model::small::SmallNetwork<B>;
+
+pub type SmallRlRobot<B> = RlRobot<B, St, Ac, Net<B>>;
+
+pub fn run<B: Backend>(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    run_robot(robot, time, |robot: &mut SmallRlRobot<B>| {
         robot.visualize_state();
     })
 }
 
-impl<A: Action> RlRobot<state::SmallState, A> {
+impl<B: Backend, A: Action, N: Network<B, St, A>> RlRobot<B, St, A, N> {
     pub fn visualize_state(&mut self) {
         if !self.debug_enabled() {
             return;

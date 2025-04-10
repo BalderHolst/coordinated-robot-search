@@ -1,14 +1,11 @@
-use std::f32::consts::PI;
+use std::{f32::consts::PI, marker::PhantomData};
 
 use botbrain::{
     behaviors::{
-        rl::{
-            state::{RlAction, RlState},
-            RlRobot, REACT_HZ,
-        },
+        rl::{action::Action, model::Network, state::State, RlRobot, REACT_HZ},
         Behavior,
     },
-    params::RADIUS,
+    params::{self, RADIUS},
     shapes::Circle,
     Pos2, Robot, RobotPose,
 };
@@ -18,82 +15,101 @@ use simple_sim::{
     world::World,
 };
 
+use burn::prelude::*;
+
 const MAX_INACTIVE_SECS: f32 = 20.0;
 
 const COLLISION_REWARD: f32 = -5.0;
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
-pub struct Enviornment {
+pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     num_robots: usize,
     sim_args: SimArgs,
     sim: Simulator,
     last_coverage_increase: f32,
+
+    _backend: PhantomData<B>,
+    _state: PhantomData<S>,
+    _action: PhantomData<A>,
+    _network: PhantomData<N>,
 }
 
-const ROBOT_SPACE: f32 = 4.0;
 fn random_pose(world: &World) -> RobotPose {
     let mut rng = rand::rng();
     let (min, max) = world.bounds();
-    'outer: loop {
-        let pos = Pos2 {
+
+    let mut spawnable = false;
+    let mut pos = Pos2::default();
+
+    while !spawnable {
+        pos = Pos2 {
             x: rng.random_range(min.x..=max.x),
             y: rng.random_range(min.y..=max.y),
         };
 
+        println!("[INFO] Trying to spawn robot at {:?}", pos);
+
+        spawnable = true;
         for cell_pos in world.iter_circle(&Circle {
             center: pos,
-            radius: ROBOT_SPACE,
+            radius: params::RADIUS,
         }) {
             let cell = world.get(cell_pos);
             if !matches!(cell, Some(simple_sim::world::Cell::Empty)) {
-                continue 'outer;
+                spawnable = false;
+                break;
             }
         }
-
-        return RobotPose {
-            pos,
-            angle: rng.random_range(-PI..=PI),
-        };
+    }
+    RobotPose {
+        pos,
+        angle: rng.random_range(-PI..=PI),
     }
 }
 
-fn poses_to_robots(poses: Vec<RobotPose>) -> Vec<(RobotPose, Box<dyn Robot>)> {
-    poses
-        .iter()
-        .map(|pose| {
-            let robot = RlRobot::new_controlled();
-            let robot = Box::new(robot) as Box<dyn Robot>;
-            (pose.clone(), robot)
-        })
-        .collect()
-}
-
-impl Enviornment {
-    pub fn new(world: World, num_robots: usize) -> Self {
-        let behavior = Behavior::parse("rl").unwrap().with_name("training");
-
-        let poses: Vec<RobotPose> = (0..num_robots).map(|_| random_pose(&world)).collect();
-        let robots = poses_to_robots(poses);
-
-        let sim_args = SimArgs { world, behavior };
-        let sim = Simulator::with_robots(sim_args.clone(), robots);
-
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, N> {
+    pub fn new(world: World, num_robots: usize, behavior: Behavior) -> Self {
         // Set MODEL_PATH variable
         std::env::set_var("MODEL_PATH", "");
+
+        let poses: Vec<RobotPose> = (0..num_robots).map(|_| random_pose(&world)).collect();
+
+        let robots = Self::poses_to_robots(poses, &behavior);
+
+        let sim_args = SimArgs { world, behavior };
+
+        let sim = Simulator::with_robots(sim_args.clone(), robots);
 
         Enviornment {
             num_robots,
             sim,
             sim_args,
             last_coverage_increase: 0.0,
+            _backend: PhantomData,
+            _state: PhantomData,
+            _action: PhantomData,
+            _network: PhantomData,
         }
+    }
+
+    fn poses_to_robots(
+        poses: Vec<RobotPose>,
+        behavior: &Behavior,
+    ) -> Vec<(RobotPose, Box<dyn Robot>)> {
+        poses
+            .iter()
+            .map(|pose| {
+                let robot = behavior.create_robot();
+                (pose.clone(), robot)
+            })
+            .collect()
     }
 
     pub fn reset(&mut self) {
         let poses: Vec<RobotPose> = (0..self.num_robots)
             .map(|_| random_pose(&self.sim_args.world))
             .collect();
-        let robots = poses_to_robots(poses);
+        let robots = Self::poses_to_robots(poses, &self.sim.behavior);
         self.sim = Simulator::with_robots(self.sim_args.clone(), robots);
     }
 
@@ -101,18 +117,18 @@ impl Enviornment {
         &self.sim
     }
 
-    pub fn states(&self) -> Vec<RlState> {
+    pub fn states(&self) -> Vec<S> {
         self.sim
             .robots()
             .iter()
             .map(|r| {
-                let r = r.any().downcast_ref::<RlRobot>().unwrap();
+                let r = r.any().downcast_ref::<RlRobot<B, S, A, N>>().unwrap();
                 r.state()
             })
             .collect()
     }
 
-    pub fn step(&mut self, actions: Vec<RlAction>) -> Snapshot {
+    pub fn step(&mut self, actions: Vec<A>) -> Snapshot<S> {
         assert_eq!(actions.len(), self.sim.robots().len());
 
         let mut reward = 0.0;
@@ -123,7 +139,7 @@ impl Enviornment {
             .iter_mut()
             .zip(actions)
             .for_each(|(r, a)| {
-                let r = r.any_mut().downcast_mut::<RlRobot>().unwrap();
+                let r = r.any_mut().downcast_mut::<RlRobot<B, S, A, N>>().unwrap();
                 r.model.set_action(a);
             });
 
@@ -147,7 +163,7 @@ impl Enviornment {
         reward += (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
 
         for robot in self.sim.robots() {
-            let robot = robot.any().downcast_ref::<RlRobot>().unwrap();
+            let robot = robot.any().downcast_ref::<RlRobot<B, S, A, N>>().unwrap();
             let shortest = robot
                 .lidar
                 .points()
@@ -170,8 +186,8 @@ impl Enviornment {
     }
 }
 
-pub struct Snapshot {
-    pub state: Vec<RlState>,
+pub struct Snapshot<S: State> {
+    pub state: Vec<S>,
     pub reward: f32,
     pub done: bool,
 }

@@ -6,8 +6,9 @@ pub mod state;
 use std::{collections::HashMap, time::Duration};
 
 use action::Action;
+use burn::prelude::Backend;
 use emath::Pos2;
-use model::small::SmallNetwork;
+use model::Network;
 use state::State;
 
 use crate::{
@@ -27,7 +28,7 @@ pub const REACT_HZ: f32 = 2.0;
 type MyBackend = burn::backend::Wgpu;
 
 #[derive(Clone)]
-pub struct RlRobot<S: State, A: Action> {
+pub struct RlRobot<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     /// The id of the robot
     pub id: RobotId,
 
@@ -62,7 +63,7 @@ pub struct RlRobot<S: State, A: Action> {
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<MyBackend, S, A, SmallNetwork<MyBackend>>,
+    pub model: model::BotModel<B, S, A, N>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -71,7 +72,7 @@ pub struct RlRobot<S: State, A: Action> {
     pub control: Control,
 }
 
-impl<S: State + 'static, A: Action + 'static> Robot for RlRobot<S, A> {
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, S, A, N> {
     fn get_id(&self) -> &RobotId {
         &self.id
     }
@@ -126,13 +127,13 @@ impl<S: State + 'static, A: Action + 'static> Robot for RlRobot<S, A> {
     }
 }
 
-impl<S: State, A: Action> Default for RlRobot<S, A> {
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B, S, A, N> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<S: State, A: Action> RlRobot<S, A> {
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
     pub fn new() -> Self {
         Self {
             id: RobotId(0),
@@ -150,6 +151,10 @@ impl<S: State, A: Action> RlRobot<S, A> {
             last_control_update: Duration::ZERO,
             control: Default::default(),
         }
+    }
+
+    pub fn new_network(device: &B::Device) -> N {
+        N::init(device)
     }
 
     /// Get the state used as input to the neural network

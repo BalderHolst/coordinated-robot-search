@@ -35,3 +35,9 @@ impl<const SPEEDS: usize, const STEERS: usize> From<usize> for SquareAction<SPEE
         Self(i)
     }
 }
+
+impl<const SPEEDS: usize, const STEERS: usize> From<SquareAction<SPEEDS, STEERS>> for usize {
+    fn from(action: SquareAction<SPEEDS, STEERS>) -> Self {
+        action.0
+    }
+}

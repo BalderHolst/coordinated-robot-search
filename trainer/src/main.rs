@@ -2,50 +2,68 @@ mod enviornment;
 mod memory;
 mod utils;
 
+use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::{fmt, fs};
 
-use botbrain::behaviors::rl::model::Model;
-use botbrain::behaviors::rl::state::{RlAction, RlState};
-use botbrain::behaviors::rl::{model::ModelConfig, REACT_HZ};
-use botbrain::burn::tensor::backend::AutodiffBackend;
+use botbrain::behaviors::rl::action::Action;
+use botbrain::behaviors::rl::model::{AutodiffNetwork, Network};
+use botbrain::behaviors::rl::robots::minimal::MinimalRlRobot;
+use botbrain::behaviors::rl::robots::small::SmallRlRobot;
+use botbrain::behaviors::rl::state::State;
+use botbrain::behaviors::rl::RlRobot;
+use botbrain::behaviors::rl::REACT_HZ;
+use botbrain::behaviors::{Behavior, RobotKind};
 use botbrain::burn;
+use botbrain::burn::tensor::backend::AutodiffBackend;
 
 use burn::backend::{Autodiff, Wgpu};
 use burn::config::Config;
 use burn::grad_clipping::GradientClippingConfig;
-use burn::module::Module;
 use burn::nn::loss::{MseLoss, Reduction};
 use burn::optim::adaptor::OptimizerAdaptor;
 use burn::optim::{AdamW, AdamWConfig};
+use burn::prelude::*;
 
 use clap::Parser;
 use enviornment::Enviornment;
 use memory::{get_batch, sample_indices, Memory};
 use serde::{Deserialize, Serialize};
 use simple_sim::world::world_from_path;
-use simple_sim::world::World;
 use utils::{
     ref_to_action_tensor, ref_to_not_done_tensor, ref_to_reward_tensor, ref_to_state_tensor,
     update_parameters,
 };
 
-type MyBackend = Autodiff<Wgpu>;
+type MyBackend = Wgpu;
 
-type SwarmState = Vec<RlState>;
-type SwarmAction = Vec<RlAction>;
-
-const EPISODES: usize = 1000;
 const MEMORY_SIZE: usize = 4096;
-const MAX_STEPS: usize = (600.0 * REACT_HZ) as usize;
-
-const EPS_HALF: f64 = 6000.0;
-const EPS_END: f64 = 0.10;
 
 #[derive(Parser)]
 struct Cli {
     #[arg(short, long)]
     model: PathBuf,
+
+    #[arg(short, long)]
+    robot: RobotKind,
+
+    #[arg(short, long)]
+    world: PathBuf,
+
+    #[arg(long, default_value_t = (600.0 * REACT_HZ) as usize)]
+    max_steps: usize,
+
+    #[arg(long, default_value_t = 1000)]
+    episodes: usize,
+
+    #[arg(long, default_value_t = 6000.0)]
+    eps_half: f64,
+
+    #[arg(long, default_value_t = 0.05)]
+    eps_end: f64,
+
+    #[arg(short, long, default_value_t = 1)]
+    n_robots: usize,
 }
 
 #[derive(Config)]
@@ -60,38 +78,46 @@ pub struct TrainingConfig {
     pub tau: f64,
 
     pub clip_grad: Option<GradientClippingConfig>,
-
-    pub model: ModelConfig,
 }
 
-fn main() {
+enum RobotModel<B: Backend, DB: AutodiffBackend> {
+    Small((PhantomData<SmallRlRobot<B>>, PhantomData<SmallRlRobot<DB>>)),
+    Minimal(
+        (
+            PhantomData<MinimalRlRobot<B>>,
+            PhantomData<MinimalRlRobot<DB>>,
+        ),
+    ),
+}
+
+impl<B: Backend, DB: AutodiffBackend> RobotModel<B, DB> {
+    fn from_kind(kind: &RobotKind) -> Result<Self, String> {
+        match kind {
+            RobotKind::SmallRl => Ok(RobotModel::Small((PhantomData, PhantomData))),
+            RobotKind::MinimalRl => Ok(RobotModel::Minimal((PhantomData, PhantomData))),
+            other => Err(format!("Only RL robots can be trained. Got: '{}'", other)),
+        }
+    }
+}
+
+fn main() -> Result<(), String> {
     let args = Cli::parse();
 
-    let world_path = PathBuf::from("../simple_sim/worlds/objectmap/small_simple.ron");
-    let world = world_from_path(&world_path).unwrap();
+    let train_config =
+        TrainingConfig::new().with_clip_grad(Some(GradientClippingConfig::Value(100.0)));
 
-    let model_config = ModelConfig::new();
-    let train_config = TrainingConfig::new(model_config)
-        .with_clip_grad(Some(GradientClippingConfig::Value(100.0)));
+    let model = RobotModel::<MyBackend, Autodiff<MyBackend>>::from_kind(&args.robot)?;
 
-    // Setup the model
-    let device = Default::default();
-
-    let mut model = train_config.model.init::<MyBackend>(&device);
-
-    // Load the model if it exists
-    if args.model.exists() {
-        println!("Loading model from '{}'", args.model.display());
-        model = model
-            .load_file(
-                &args.model,
-                &burn::record::DefaultRecorder::default(),
-                &device,
-            )
-            .unwrap();
+    match model {
+        RobotModel::Small((r, dr)) => {
+            train(args.n_robots, train_config, args.episodes, args, r, dr)
+        }
+        RobotModel::Minimal((r, dr)) => {
+            train(args.n_robots, train_config, args.episodes, args, r, dr)
+        }
     }
 
-    train(1, world, model, train_config, EPISODES, args.model);
+    Ok(())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -122,27 +148,71 @@ impl fmt::Display for EpisodeStats {
     }
 }
 
-fn train<B: AutodiffBackend>(
+fn train<
+    B: Backend,
+    S: State,
+    A: Action,
+    N: Network<B, S, A>,
+    DB: AutodiffBackend,
+    DN: AutodiffNetwork<DB, S, A>,
+>(
     robots: usize,
-    world: World,
-    model: Model<B>,
     config: TrainingConfig,
     num_episodes: usize,
-    model_file: PathBuf,
+    args: Cli,
+    _robot_ty: PhantomData<RlRobot<B, S, A, N>>,
+    _diff_robot_ty: PhantomData<RlRobot<DB, S, A, DN>>,
 ) {
+    let model_file = args.model.with_extension("mpk");
+
+    let device = Default::default();
+
+    let mut network = DN::init(&device);
+
+    // Load the model if it exists
+    if model_file.exists() {
+        network = network
+            .clone()
+            .load_file(
+                &model_file,
+                &burn::record::DefaultRecorder::default(),
+                &device,
+            )
+            .unwrap_or_else(|_| {
+                println!("Failed to load model from path: {}", model_file.display());
+                network
+            });
+    }
+    println!("Model loaded from '{}':", model_file.display());
+    println!("{network:?}");
+
+    let Ok(world) = world_from_path(&args.world) else {
+        eprintln!("Failed to load world from path: {}", args.world.display());
+        std::process::exit(1);
+    };
+
+    println!("Loaded world from '{}'", args.world.display());
+
     let stats_file = model_file.with_extension("json");
     let mut stats = Vec::new();
 
-    let mut env = Enviornment::new(world, robots);
+    // Create behavior
+    let behavior = Behavior::parse(args.robot.get_name()).unwrap();
+
+    println!("Using behavior: {}", behavior.name());
+
+    let mut env = Enviornment::<B, S, A, N>::new(world, robots, behavior);
+
+    println!("Loaded environment with {} robots", robots);
 
     let mut step: usize = 0;
 
-    let mut target_net = model.clone();
-    let mut policy_net = model.clone();
+    let mut target_net = network.clone();
+    let mut policy_net = network;
 
-    let mut memory = Memory::<B, MEMORY_SIZE>::default();
+    let mut memory = Memory::<DB, S, A, MEMORY_SIZE>::default();
 
-    let mut optimizer = AdamWConfig::new()
+    let mut optimizer: OptimizerAdaptor<AdamW, DN, DB> = AdamWConfig::new()
         .with_grad_clipping(config.clip_grad.clone())
         .init();
 
@@ -153,19 +223,18 @@ fn train<B: AutodiffBackend>(
         let mut state = env.states()[0].clone();
 
         let mut total_loss: f32 = 0.0;
-        let mut action_stats = vec![0; RlAction::SIZE];
+        let mut action_stats = vec![0; A::SIZE];
 
         let mut eps = 0.0;
-        let eps_base = f64::powf(2.0, 1.0 / EPS_HALF);
+        let eps_base = f64::powf(2.0, 1.0 / args.eps_half);
 
         while !episode_done {
-
-            eps = (1.0 - EPS_END) * f64::powf(eps_base, -(step as f64)) + EPS_END;
+            eps = (1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end;
 
             let action = policy_net.react_with_exploration(&state, eps);
-            action_stats[usize::from(action)] += 1;
+            action_stats[action.clone().into()] += 1;
 
-            let snapshot = env.step(vec![action]);
+            let snapshot = env.step(vec![action.clone()]);
 
             episode_reward += snapshot.reward;
 
@@ -173,20 +242,26 @@ fn train<B: AutodiffBackend>(
                 state.clone(),
                 snapshot.state[0].clone(),
                 action,
-                snapshot.reward.clone(),
+                snapshot.reward,
                 snapshot.done,
             );
 
             if config.batch_size < memory.len() {
                 let loss;
-                (policy_net, target_net, loss) =
-                    train_agent(policy_net, target_net, &mut memory, &mut optimizer, &config);
+                (policy_net, target_net, loss) = train_agent(
+                    policy_net,
+                    target_net,
+                    &memory,
+                    &mut optimizer,
+                    &config,
+                    &device,
+                );
                 total_loss += loss;
             }
 
             episode_duration += 1;
 
-            if snapshot.done || episode_duration >= MAX_STEPS {
+            if snapshot.done || episode_duration >= args.max_steps {
                 episode_done = true;
             } else {
                 state = snapshot.state[0].clone();
@@ -233,19 +308,30 @@ fn train<B: AutodiffBackend>(
     }
 }
 
-fn train_agent<B: AutodiffBackend, const CAP: usize>(
-    mut policy_net: Model<B>,
-    mut target_net: Model<B>,
-    memory: &Memory<B, CAP>,
-    optimizer: &mut OptimizerAdaptor<AdamW, Model<B>, B>,
+fn train_agent<
+    B: AutodiffBackend,
+    S: State,
+    A: Action,
+    N: AutodiffNetwork<B, S, A>,
+    const CAP: usize,
+>(
+    mut policy_net: N,
+    mut target_net: N,
+    memory: &Memory<B, S, A, CAP>,
+    optimizer: &mut OptimizerAdaptor<AdamW, N, B>,
     config: &TrainingConfig,
-) -> (Model<B>, Model<B>, f32) {
+    device: &B::Device,
+) -> (N, N, f32) {
     let sample_indices = sample_indices((0..memory.len()).collect(), config.batch_size);
-    let state_batch = get_batch(memory.states(), &sample_indices, ref_to_state_tensor);
+    let state_batch = get_batch(memory.states(), &sample_indices, |state: &S| {
+        ref_to_state_tensor(state, device)
+    });
     let action_batch = get_batch(memory.actions(), &sample_indices, ref_to_action_tensor);
     let state_action_values = policy_net.forward(state_batch).gather(1, action_batch);
 
-    let next_state_batch = get_batch(memory.next_states(), &sample_indices, ref_to_state_tensor);
+    let next_state_batch = get_batch(memory.next_states(), &sample_indices, |state: &S| {
+        ref_to_state_tensor(state, device)
+    });
     let next_state_values = target_net.forward(next_state_batch).max_dim(1).detach();
 
     let not_done_batch = get_batch(memory.dones(), &sample_indices, ref_to_not_done_tensor);
@@ -262,7 +348,7 @@ fn train_agent<B: AutodiffBackend, const CAP: usize>(
 
     policy_net = update_parameters(loss.clone(), policy_net, optimizer, config.lr);
 
-    target_net = Model::soft_update(target_net, &policy_net, config.tau);
+    target_net = N::soft_update(target_net, &policy_net, config.tau);
 
     let loss = loss.to_data().as_slice::<f32>().unwrap()[0];
 
