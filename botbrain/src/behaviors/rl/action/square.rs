@@ -1,27 +1,37 @@
 use burn::prelude::*;
 use rand::Rng;
 
-use crate::Control;
+use crate::{params, Control};
 
 use super::Action;
 
 #[derive(Debug, Clone, Copy)]
-pub struct SquareAction(usize);
+pub struct SquareAction<const SPEEDS: usize, const STEERS: usize>(usize);
 
-impl SquareAction {
-    const STEERS: [f32; 5] = [-1.0, -0.5, 0.0, 0.5, 1.0];
-    const SPEEDS: [f32; 3] = [0.1, 0.5, 1.0];
-
+impl<const SPEEDS: usize, const STEERS: usize> SquareAction<SPEEDS, STEERS> {
     pub fn control(&self) -> Control {
         let Self(i) = self;
-        let speed = Self::SPEEDS[i % Self::SPEEDS.len()];
-        let steer = Self::STEERS[i / Self::SPEEDS.len()];
+
+        assert!(*i < Self::SIZE, "Invalid action: {}", i);
+
+        // Interpolation variables in range [0, 1]
+        let speed_t = (i % SPEEDS) as f32 / (SPEEDS - 1) as f32;
+        let steer_t = (i / SPEEDS) as f32 / (STEERS - 1) as f32;
+
+        assert!((0.0..=1.0).contains(&speed_t),);
+        assert!((0.0..=1.0).contains(&steer_t),);
+
+        let speed = params::SPEED_RANGE.start
+            + (params::SPEED_RANGE.end - params::SPEED_RANGE.start) * speed_t;
+        let steer = params::STEER_RANGE.start
+            + (params::STEER_RANGE.end - params::STEER_RANGE.start) * steer_t;
+
         Control { speed, steer }
     }
 }
 
-impl Action for SquareAction {
-    const SIZE: usize = Self::STEERS.len() * Self::SPEEDS.len();
+impl<const SPEEDS: usize, const STEERS: usize> Action for SquareAction<SPEEDS, STEERS> {
+    const SIZE: usize = STEERS * SPEEDS;
 
     fn random() -> Self {
         rand::rng().random_range(0..Self::SIZE).into()
@@ -36,14 +46,14 @@ impl Action for SquareAction {
     }
 }
 
-impl From<usize> for SquareAction {
+impl<const SPEEDS: usize, const STEERS: usize> From<usize> for SquareAction<SPEEDS, STEERS> {
     fn from(i: usize) -> Self {
-        assert!(i < SquareAction::SIZE, "Invalid action: {}", i);
+        assert!(i < Self::SIZE, "Invalid action: {}", i);
         Self(i)
     }
 }
 
-impl Default for SquareAction {
+impl<const SPEEDS: usize, const STEERS: usize> Default for SquareAction<SPEEDS, STEERS> {
     fn default() -> Self {
         (Self::SIZE / 2 + 1).into()
     }

@@ -1,5 +1,6 @@
 pub mod action;
 pub mod model;
+pub mod robots;
 pub mod state;
 
 use std::{collections::HashMap, time::Duration};
@@ -10,14 +11,13 @@ use model::small::SmallNetwork;
 use state::State;
 
 use crate::{
-    debug::{DebugSoup, DebugType},
-    scaled_grid::ScaledGrid,
-    CamData, Control, LidarData, Postbox, Robot, RobotId, RobotPose, Vec2,
+    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
+    RobotId, RobotPose, Vec2,
 };
 
-use super::{cast_robot, common, params, BehaviorFn, BehaviorOutput, RobotRef};
+use super::{common, BehaviorFn};
 
-pub const MENU: &[(&str, BehaviorFn)] = &[("nn", small)];
+pub const MENU: &[(&str, BehaviorFn)] = &[("nn", robots::small::run)];
 
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
@@ -128,6 +128,12 @@ impl<S: State + 'static, A: Action + 'static> Robot for RlRobot<S, A> {
     }
 }
 
+impl<S: State, A: Action> Default for RlRobot<S, A> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<S: State, A: Action> RlRobot<S, A> {
     pub fn new() -> Self {
         Self {
@@ -186,85 +192,4 @@ impl<S: State, A: Action> RlRobot<S, A> {
             SEARCH_GRID_UPDATE_INTERVAL,
         );
     }
-}
-
-impl<A: Action> RlRobot<state::SmallState, A> {
-    fn visualize(&mut self) {
-        if !self.debug_enabled() {
-            return;
-        }
-        self.debug("", "Search Grid", DebugType::Grid(self.search_grid.clone()));
-
-        let raw_lidar = self.lidar.points().map(|p| (p.angle, p.distance)).collect();
-        self.debug("", "Actual Lidar", DebugType::RobotRays(raw_lidar));
-
-        let interpolated_lidar = self.state().lidar_rays().to_vec();
-
-        if let Some(shortest_ray) = interpolated_lidar
-            .iter()
-            .min_by(|a, b| a.1.total_cmp(&b.1))
-            .cloned()
-        {
-            self.debug(
-                "",
-                "Shortest Lidar Angle",
-                DebugType::Number(shortest_ray.0),
-            );
-            self.debug(
-                "",
-                "Shortest Lidar Distance",
-                DebugType::Number(shortest_ray.1),
-            );
-            self.debug(
-                "",
-                "Shortest Ray",
-                DebugType::RobotRays(vec![(shortest_ray.0, shortest_ray.1)]),
-            );
-        }
-
-        self.debug(
-            "",
-            "Interpolated Lidar",
-            DebugType::RobotRays(interpolated_lidar),
-        );
-    }
-
-    fn update_search_gradient(&mut self) {
-        let (g, _) = common::gradient(
-            self.pos,
-            self.angle,
-            SEARCH_GRADIENT_RANGE,
-            params::DIAMETER * 2.0,
-            self.lidar.clone(),
-            &self.search_grid,
-        );
-        self.debug("Search Gradient", "Vector", DebugType::Vector(g));
-        self.debug("Search Gradient", "x", DebugType::Number(g.x));
-        self.debug("Search Gradient", "y", DebugType::Number(g.y));
-        self.debug("Search Gradient", "length", DebugType::Number(g.length()));
-        self.debug("Search Gradient", "angle", DebugType::Number(g.angle()));
-        self.search_gradient = g;
-    }
-}
-
-fn small(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    let robot = cast_robot::<RlRobot<state::SmallState, action::SquareAction>>(robot);
-
-    robot.visualize();
-
-    robot.update_search_grid(time);
-    robot.update_search_gradient();
-
-    // Only update the control signal at a fixed rate
-    if (time - robot.last_control_update).as_secs_f32() >= 1.0 / REACT_HZ
-        || robot.model.is_controlled()
-    {
-        robot.last_control_update = time;
-        robot.react();
-    }
-
-    robot.postbox.clean();
-
-    let msgs = robot.postbox.empty();
-    (robot.control.clone(), msgs)
 }
