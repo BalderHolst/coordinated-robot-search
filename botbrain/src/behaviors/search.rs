@@ -54,7 +54,7 @@ const COSTMAP_GRID_SCALE: f32 = 0.5;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
 const COSTMAP_OCCUPIED: f32 = -3.0;
-const COSTMAP_DYNAMIC_OBSTACLE: f32 = -1.0;
+const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
 const COSTMAP_SEARCHED: f32 = -1.0;
 const COSTMAP_UNKNOWN: f32 = 1.0;
 
@@ -522,6 +522,7 @@ impl SearchRobot {
             match self.proximity_grid.get(self.pos) {
                 Some(cell) if *cell == 0.0 => {
                     // If we are not in the proximity grid, we can't move towards the goal
+                    // println!("Out of proximity grid");
                     return None;
                 }
                 None => {
@@ -546,7 +547,6 @@ impl SearchRobot {
 
             // Follow the path
             if let Ok(control_vec) = self.follow_path() {
-                // println!("Control vec: {}", control_vec);
                 Some(control_vec)
             } else {
                 // TODO: Determine best way to proceed
