@@ -11,3 +11,4 @@ function lint()
 
 lint botbrain
 lint simple_sim
+lint trainer

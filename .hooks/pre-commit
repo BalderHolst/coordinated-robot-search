@@ -11,3 +11,4 @@ function check_format()
 
 check_format botbrain
 check_format simple_sim
+check_format trainer

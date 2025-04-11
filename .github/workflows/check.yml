@@ -5,12 +5,13 @@ on:
     paths:
       - botbrain/**
       - simple_sim/**
+      - trainer/**
 jobs:
   fmt:
     strategy:
       fail-fast: false
       matrix:
-        crate: [botbrain, simple_sim]
+        crate: [botbrain, simple_sim, trainer]
     runs-on: ubuntu-latest
     name: ${{ matrix.crate }} / fmt
     steps:
