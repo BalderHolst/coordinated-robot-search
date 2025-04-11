@@ -516,9 +516,9 @@ impl SearchRobot {
 
         // Follow path or reevaluate path or goal?
         if self.path_planner_path.is_empty() {
-            if let Ok(path) = pathing::find_path(
+            if let Some(path) = pathing::find_path(
                 self.pos,
-                self.path_planner_goal.unwrap(),
+                self.path_planner_goal.unwrap(), // Should always be set here
                 &self.costmap_grid,
             ) {
                 self.path_planner_path = path;
