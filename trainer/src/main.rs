@@ -10,7 +10,6 @@ use botbrain::behaviors::rl::action::Action;
 use botbrain::behaviors::rl::model::{AutodiffNetwork, Network};
 use botbrain::behaviors::rl::robots::minimal::MinimalRlRobot;
 use botbrain::behaviors::rl::robots::small::SmallRlRobot;
-use botbrain::behaviors::rl::robots::small_solo::SmallSoloRlRobot;
 use botbrain::behaviors::rl::state::State;
 use botbrain::behaviors::rl::RlRobot;
 use botbrain::behaviors::rl::REACT_HZ;
@@ -81,54 +80,28 @@ pub struct TrainingConfig {
     pub clip_grad: Option<GradientClippingConfig>,
 }
 
-enum RobotModel<B: Backend, DB: AutodiffBackend> {
-    Small((PhantomData<SmallRlRobot<B>>, PhantomData<SmallRlRobot<DB>>)),
-    SmallSolo(
-        (
-            PhantomData<SmallSoloRlRobot<B>>,
-            PhantomData<SmallSoloRlRobot<DB>>,
-        ),
-    ),
-    Minimal(
-        (
-            PhantomData<MinimalRlRobot<B>>,
-            PhantomData<MinimalRlRobot<DB>>,
-        ),
-    ),
-}
-
-impl<B: Backend, DB: AutodiffBackend> RobotModel<B, DB> {
-    fn from_kind(kind: &RobotKind) -> Result<Self, String> {
-        match kind {
-            RobotKind::SmallRl => Ok(RobotModel::Small((PhantomData, PhantomData))),
-            RobotKind::SmallSoloRl => Ok(RobotModel::SmallSolo((PhantomData, PhantomData))),
-            RobotKind::MinimalRl => Ok(RobotModel::Minimal((PhantomData, PhantomData))),
-            RobotKind::Dumb | RobotKind::AvoidObstacles | RobotKind::Search => {
-                Err(format!("Only RL robots can be trained. Got: '{}'", kind))
-            }
-        }
-    }
-}
-
 fn main() -> Result<(), String> {
     let args = Cli::parse();
 
     let train_config =
         TrainingConfig::new().with_clip_grad(Some(GradientClippingConfig::Value(100.0)));
 
-    let model = RobotModel::<MyBackend, Autodiff<MyBackend>>::from_kind(&args.robot)?;
+    type B = MyBackend;
+    type DB = Autodiff<MyBackend>;
 
-    match model {
-        RobotModel::Small((r, dr)) => {
-            train(args.n_robots, train_config, args.episodes, args, r, dr)
+    match args.robot {
+        RobotKind::SmallRl => {
+            type R<B> = PhantomData<SmallRlRobot<B>>;
+            let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
+            train(args.n_robots, train_config, args.episodes, args, r, dr);
         }
-        RobotModel::SmallSolo((r, dr)) => {
-            train(args.n_robots, train_config, args.episodes, args, r, dr)
+        RobotKind::MinimalRl => {
+            type R<B> = PhantomData<MinimalRlRobot<B>>;
+            let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
+            train(args.n_robots, train_config, args.episodes, args, r, dr);
         }
-        RobotModel::Minimal((r, dr)) => {
-            train(args.n_robots, train_config, args.episodes, args, r, dr)
-        }
-    }
+        other => return Err(format!("Only RL robots can be trained. Got: '{}'", other)),
+    };
 
     Ok(())
 }
