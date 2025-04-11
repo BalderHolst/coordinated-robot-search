@@ -4,6 +4,7 @@ use crate::{behaviors::BehaviorOutput, cast_robot, RobotRef};
 
 pub mod minimal;
 pub mod small;
+pub mod small_solo;
 
 use super::{action::Action, model::Network, state::State, RlRobot, REACT_HZ};
 

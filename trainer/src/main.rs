@@ -10,6 +10,7 @@ use botbrain::behaviors::rl::action::Action;
 use botbrain::behaviors::rl::model::{AutodiffNetwork, Network};
 use botbrain::behaviors::rl::robots::minimal::MinimalRlRobot;
 use botbrain::behaviors::rl::robots::small::SmallRlRobot;
+use botbrain::behaviors::rl::robots::small_solo::SmallSoloRlRobot;
 use botbrain::behaviors::rl::state::State;
 use botbrain::behaviors::rl::RlRobot;
 use botbrain::behaviors::rl::REACT_HZ;
@@ -82,6 +83,12 @@ pub struct TrainingConfig {
 
 enum RobotModel<B: Backend, DB: AutodiffBackend> {
     Small((PhantomData<SmallRlRobot<B>>, PhantomData<SmallRlRobot<DB>>)),
+    SmallSolo(
+        (
+            PhantomData<SmallSoloRlRobot<B>>,
+            PhantomData<SmallSoloRlRobot<DB>>,
+        ),
+    ),
     Minimal(
         (
             PhantomData<MinimalRlRobot<B>>,
@@ -94,8 +101,11 @@ impl<B: Backend, DB: AutodiffBackend> RobotModel<B, DB> {
     fn from_kind(kind: &RobotKind) -> Result<Self, String> {
         match kind {
             RobotKind::SmallRl => Ok(RobotModel::Small((PhantomData, PhantomData))),
+            RobotKind::SmallSoloRl => Ok(RobotModel::SmallSolo((PhantomData, PhantomData))),
             RobotKind::MinimalRl => Ok(RobotModel::Minimal((PhantomData, PhantomData))),
-            other => Err(format!("Only RL robots can be trained. Got: '{}'", other)),
+            RobotKind::Dumb | RobotKind::AvoidObstacles | RobotKind::Search => {
+                Err(format!("Only RL robots can be trained. Got: '{}'", kind))
+            }
         }
     }
 }
@@ -110,6 +120,9 @@ fn main() -> Result<(), String> {
 
     match model {
         RobotModel::Small((r, dr)) => {
+            train(args.n_robots, train_config, args.episodes, args, r, dr)
+        }
+        RobotModel::SmallSolo((r, dr)) => {
             train(args.n_robots, train_config, args.episodes, args, r, dr)
         }
         RobotModel::Minimal((r, dr)) => {

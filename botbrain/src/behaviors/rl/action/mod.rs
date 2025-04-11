@@ -14,7 +14,8 @@ pub trait Action: Clone + Default + Send + From<usize> + Into<usize> + 'static {
     }
 
     fn from_tensor<B: Backend>(tensor: Tensor<B, 2>) -> Self {
-        (tensor.argmax(1).to_data().as_slice::<i32>().unwrap()[0] as usize).into()
+        let i = tensor.argmax(1).to_data().as_slice::<i32>().unwrap()[0];
+        (i as usize).into()
     }
 
     fn control(&self) -> Control;

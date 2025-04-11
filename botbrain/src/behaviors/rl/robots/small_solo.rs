@@ -12,14 +12,14 @@ use super::run_robot;
 
 use burn::prelude::*;
 
-type St = state::SmallState;
+type St = state::SmallSoloState;
 type Ac = action::SquareAction<3, 5>;
 type Net<B> = model::small::SmallNetwork<B>;
 
-pub type SmallRlRobot<B> = RlRobot<B, St, Ac, Net<B>>;
+pub type SmallSoloRlRobot<B> = RlRobot<B, St, Ac, Net<B>>;
 
 pub fn run<B: Backend>(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
-    run_robot(robot, time, |robot: &mut SmallRlRobot<B>| {
+    run_robot(robot, time, |robot: &mut SmallSoloRlRobot<B>| {
         robot.visualize_state();
     })
 }
