@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
 
-use futures::{future, StreamExt};
+use futures::{StreamExt, future};
 use r2r::QosProfile;
 use r2r::{self, tf2_msgs};
 use tokio::task;
@@ -45,12 +45,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     }
 
-    let handle = tokio::task::spawn_blocking(move || loop {
-        {
-            arc_node
-                .lock()
-                .unwrap()
-                .spin_once(std::time::Duration::from_millis(100));
+    let handle = tokio::task::spawn_blocking(move || {
+        loop {
+            {
+                arc_node
+                    .lock()
+                    .unwrap()
+                    .spin_once(std::time::Duration::from_millis(100));
+            }
         }
     });
     handle.await?;

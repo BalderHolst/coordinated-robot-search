@@ -1,10 +1,10 @@
-use futures::{executor::LocalPool, task::LocalSpawnExt, StreamExt};
+use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use std::time::Duration;
 
 const DEFAULT_TOPIC: &str = "/search_channel";
 
 use botbrain::MessageKind;
-use r2r::{self, ros_agent_msgs, QosProfile};
+use r2r::{self, QosProfile, ros_agent_msgs};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctx = r2r::Context::create().unwrap();
