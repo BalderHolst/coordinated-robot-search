@@ -6,24 +6,29 @@ use std::marker::PhantomData;
 use std::path::PathBuf;
 use std::{fmt, fs};
 
-use botbrain::behaviors::rl::action::Action;
-use botbrain::behaviors::rl::model::{AutodiffNetwork, Network};
-use botbrain::behaviors::rl::robots::minimal::MinimalRlRobot;
-use botbrain::behaviors::rl::robots::small::SmallRlRobot;
-use botbrain::behaviors::rl::state::State;
-use botbrain::behaviors::rl::RlRobot;
-use botbrain::behaviors::rl::REACT_HZ;
-use botbrain::behaviors::{Behavior, RobotKind};
-use botbrain::burn;
-use botbrain::burn::tensor::backend::AutodiffBackend;
+use botbrain::{
+    behaviors::{
+        rl::{
+            action::Action,
+            model::{AutodiffNetwork, Network},
+            robots::{minimal::MinimalRlRobot, small::SmallRlRobot},
+            state::State,
+            RlRobot, REACT_HZ,
+        },
+        Behavior, RobotKind,
+    },
+    burn,
+};
 
-use burn::backend::{Autodiff, Wgpu};
-use burn::config::Config;
-use burn::grad_clipping::GradientClippingConfig;
-use burn::nn::loss::{MseLoss, Reduction};
-use burn::optim::adaptor::OptimizerAdaptor;
-use burn::optim::{AdamW, AdamWConfig};
-use burn::prelude::*;
+use burn::{
+    backend::{Autodiff, Wgpu},
+    config::Config,
+    grad_clipping::GradientClippingConfig,
+    nn::loss::{MseLoss, Reduction},
+    optim::{adaptor::OptimizerAdaptor, AdamW, AdamWConfig},
+    prelude::*,
+    tensor::backend::AutodiffBackend,
+};
 
 use clap::Parser;
 use enviornment::Enviornment;
@@ -62,8 +67,8 @@ struct Cli {
     #[arg(long, default_value_t = 0.05)]
     eps_end: f64,
 
-    #[arg(short, long, default_value_t = 1)]
-    n_robots: usize,
+    #[arg(short, long, default_value_t = 4)]
+    max_robots: usize,
 }
 
 #[derive(Config)]
@@ -93,12 +98,12 @@ fn main() -> Result<(), String> {
         RobotKind::SmallRl => {
             type R<B> = PhantomData<SmallRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
-            train(args.n_robots, train_config, args.episodes, args, r, dr);
+            train(train_config, args.episodes, args, r, dr);
         }
         RobotKind::MinimalRl => {
             type R<B> = PhantomData<MinimalRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
-            train(args.n_robots, train_config, args.episodes, args, r, dr);
+            train(train_config, args.episodes, args, r, dr);
         }
         other => return Err(format!("Only RL robots can be trained. Got: '{}'", other)),
     };
@@ -134,6 +139,9 @@ impl fmt::Display for EpisodeStats {
     }
 }
 
+type SwarmState<S> = Vec<S>;
+type SwarmAction<A> = Vec<A>;
+
 fn train<
     B: Backend,
     S: State,
@@ -142,7 +150,6 @@ fn train<
     DB: AutodiffBackend,
     DN: AutodiffNetwork<DB, S, A>,
 >(
-    robots: usize,
     config: TrainingConfig,
     num_episodes: usize,
     args: Cli,
@@ -187,9 +194,9 @@ fn train<
 
     println!("Using behavior: {}", behavior.name());
 
-    let mut env = Enviornment::<B, S, A, N>::new(world, robots, behavior);
+    let mut env = Enviornment::<B, S, A, N>::new(world, args.max_robots, behavior);
 
-    println!("Loaded environment with {} robots", robots);
+    println!("Enviornment created with {} robots", env.num_robots());
 
     let mut step: usize = 0;
 
@@ -206,7 +213,7 @@ fn train<
         let mut episode_done = false;
         let mut episode_reward: f32 = 0.0;
         let mut episode_duration = 0_usize;
-        let mut state = env.states()[0].clone();
+        let mut state: SwarmState<S> = env.states().clone();
 
         let mut total_loss: f32 = 0.0;
         let mut action_stats = vec![0; A::SIZE];
@@ -217,20 +224,28 @@ fn train<
         while !episode_done {
             eps = (1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end;
 
-            let action = policy_net.react_with_exploration(&state, eps);
-            action_stats[action.clone().into()] += 1;
+            let action: SwarmAction<A> = state
+                .iter()
+                .map(|s| {
+                    let action = policy_net.react_with_exploration(s, eps);
+                    action_stats[action.clone().into()] += 1;
+                    action
+                })
+                .collect();
 
-            let snapshot = env.step(vec![action.clone()]);
+            let snapshot = env.step(action.clone());
 
             episode_reward += snapshot.reward;
 
-            memory.push(
-                state.clone(),
-                snapshot.state[0].clone(),
-                action,
-                snapshot.reward,
-                snapshot.done,
-            );
+            for ((s, next_s), a) in state.iter().zip(snapshot.state.iter()).zip(action.iter()) {
+                memory.push(
+                    s.clone(),
+                    next_s.clone(),
+                    a.clone(),
+                    snapshot.reward,
+                    snapshot.done,
+                );
+            }
 
             if config.batch_size < memory.len() {
                 let loss;
@@ -250,7 +265,7 @@ fn train<
             if snapshot.done || episode_duration >= args.max_steps {
                 episode_done = true;
             } else {
-                state = snapshot.state[0].clone();
+                state = snapshot.state;
             }
 
             step += 1;
@@ -271,6 +286,8 @@ fn train<
         stats.push(stat);
 
         env.reset();
+
+        println!("Created new enviornment with {} robots.", env.num_robots());
 
         // Save model
         if let Err(e) = policy_net

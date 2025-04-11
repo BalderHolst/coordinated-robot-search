@@ -23,7 +23,7 @@ const COLLISION_REWARD: f32 = -5.0;
 const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
-    num_robots: usize,
+    max_robots: usize,
     sim_args: SimArgs,
     sim: Simulator,
     last_coverage_increase: f32,
@@ -47,7 +47,7 @@ fn random_pose(world: &World) -> RobotPose {
             y: rng.random_range(min.y..=max.y),
         };
 
-        println!("[INFO] Trying to spawn robot at {:?}", pos);
+        print!("[INFO] Trying to spawn robot at {:?}", pos);
 
         spawnable = true;
         for cell_pos in world.iter_circle(&Circle {
@@ -57,10 +57,14 @@ fn random_pose(world: &World) -> RobotPose {
             let cell = world.get(cell_pos);
             if !matches!(cell, Some(simple_sim::world::Cell::Empty)) {
                 spawnable = false;
+                println!();
                 break;
             }
         }
     }
+
+    println!("\t-> SUCCESS!");
+
     RobotPose {
         pos,
         angle: rng.random_range(-PI..=PI),
@@ -68,20 +72,15 @@ fn random_pose(world: &World) -> RobotPose {
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, N> {
-    pub fn new(world: World, num_robots: usize, behavior: Behavior) -> Self {
+    pub fn new(world: World, max_robots: usize, behavior: Behavior) -> Self {
         // Set MODEL_PATH variable
         std::env::set_var("MODEL_PATH", "");
 
-        let poses: Vec<RobotPose> = (0..num_robots).map(|_| random_pose(&world)).collect();
-
-        let robots = Self::poses_to_robots(poses, &behavior);
-
         let sim_args = SimArgs { world, behavior };
+        let sim = Self::create_sim(max_robots, sim_args.clone());
 
-        let sim = Simulator::with_robots(sim_args.clone(), robots);
-
-        Enviornment {
-            num_robots,
+        Self {
+            max_robots,
             sim,
             sim_args,
             last_coverage_increase: 0.0,
@@ -92,25 +91,29 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
         }
     }
 
-    fn poses_to_robots(
-        poses: Vec<RobotPose>,
-        behavior: &Behavior,
-    ) -> Vec<(RobotPose, Box<dyn Robot>)> {
+    pub fn num_robots(&self) -> usize {
+        self.sim.state.robot_states.len()
+    }
+
+    fn create_sim(max_robots: usize, sim_args: SimArgs) -> Simulator {
+        let n = rand::rng().random_range(1..=max_robots);
+        let poses: Vec<RobotPose> = (0..n).map(|_| random_pose(&sim_args.world)).collect();
+        let robots = Self::poses_to_robots(poses);
+        Simulator::with_robots(sim_args.clone(), robots)
+    }
+
+    fn poses_to_robots(poses: Vec<RobotPose>) -> Vec<(RobotPose, Box<dyn Robot>)> {
         poses
             .iter()
             .map(|pose| {
-                let robot = behavior.create_robot();
+                let robot: Box<dyn Robot> = Box::new(RlRobot::<B, S, A, N>::new_controlled());
                 (pose.clone(), robot)
             })
             .collect()
     }
 
     pub fn reset(&mut self) {
-        let poses: Vec<RobotPose> = (0..self.num_robots)
-            .map(|_| random_pose(&self.sim_args.world))
-            .collect();
-        let robots = Self::poses_to_robots(poses, &self.sim.behavior);
-        self.sim = Simulator::with_robots(self.sim_args.clone(), robots);
+        self.sim = Self::create_sim(self.max_robots, self.sim_args.clone());
     }
 
     pub fn sim(&self) -> &Simulator {
@@ -169,7 +172,6 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
                 .points()
                 .fold(f32::MAX, |acc, p| acc.min(p.distance));
             if shortest < RADIUS + 0.1 {
-                println!("COLLISION!!!");
                 reward += COLLISION_REWARD;
             }
         }
