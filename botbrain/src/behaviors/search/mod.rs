@@ -1,5 +1,7 @@
 //! This module contains robot `search` behavior.
 
+use costmap::COSTMAP_GRID_SCALE;
+use pathing::PATH_PLANNER_GOAL_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -12,13 +14,16 @@ use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
     cast_robot, common, debug,
-    params::{self, LIDAR_RANGE},
+    params::{self},
     scaled_grid::ScaledGrid,
     shapes::{Circle, Line},
     utils::normalize_angle,
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, LidarPoint, Map, Postbox,
-    Robot, RobotId, RobotPose, RobotRef,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, Map, Postbox, Robot,
+    RobotId, RobotPose, RobotRef,
 };
+
+mod costmap;
+mod pathing;
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
     ("full", behaviors::full),
@@ -50,15 +55,7 @@ const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
-const COSTMAP_GRID_SCALE: f32 = 0.5;
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
-
-const COSTMAP_OBSTACLE: f32 = -3.0;
-const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
-const COSTMAP_SEARCHED: f32 = -1.0;
-const COSTMAP_UNKNOWN: f32 = 1.0;
-
-const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
 
 const ROBOT_SPACING: f32 = 4.0;
 
@@ -122,6 +119,9 @@ pub struct SearchRobot {
 
     /// The path planned by the robot
     pub path_planner_path: Vec<Pos2>,
+
+    /// The path planned by the robot
+    pub path_fails: u16,
 
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
@@ -451,9 +451,9 @@ impl SearchRobot {
 
         soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
 
-        // if self.robot_mode == RobotMode::Pathing {
-        self.show_path();
-        // }
+        if self.robot_mode == RobotMode::Pathing {
+            self.show_path();
+        }
     }
 }
 
@@ -466,43 +466,23 @@ impl SearchRobot {
         }
         self.last_costmap_grid_update = time;
 
-        self.costmap_grid.fill(0.0);
-
-        self.search_grid.iter().for_each(|(x, y, &cell)| {
-            // Negative if don't want to go there, positive if want to go there
-            // Non-zero cells are explored therefore we won't go there
-            let cell = if cell != 0.0 {
-                COSTMAP_SEARCHED
-            } else {
-                COSTMAP_UNKNOWN
-            };
-            self.costmap_grid.set(Pos2 { x, y }, cell);
-        });
-
-        // TODO: Update costmap from obstacles (but botbrain doesn't have the map?), costmap from only lidar then??
-        self.lidar
-            .clone()
-            .points()
-            .filter_map(|&LidarPoint { angle, distance }| {
-                // Make small circle if distance is under max distance
-                if distance < LIDAR_RANGE {
-                    let point = self.pos + Vec2::angled(angle + self.angle) * distance;
-                    Some(Circle {
-                        center: point,
-                        radius: 1.0, // The circle as made where the lidar hits
-                    })
-                } else {
-                    None
-                }
-            })
-            .for_each(|circle| {
-                self.costmap_grid
-                    // Negative if don't want to go there, positive if want to go there
-                    .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
-            });
+        self.costmap_grid = costmap::make_costmap_grid(
+            self.pos,
+            self.angle,
+            &self.map,
+            &self.search_grid,
+            &self.lidar,
+        )
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
+        if self.path_fails > 20 {
+            self.path_fails = 0;
+            self.path_planner_goal = None;
+            self.path_planner_path = vec![];
+            println!("Pathing failed too many times");
+        }
+
         // Logic to find goal or change to exploring mode when reached
         if let Some(goal) = self.path_planner_goal {
             let diff = goal - self.pos;
@@ -514,7 +494,7 @@ impl SearchRobot {
             }
         } else {
             // Set a goal
-            let goal = self.find_area_of_interest();
+            let goal = pathing::evaluate_frontiers();
             self.path_planner_goal = Some(goal);
         }
 
@@ -535,12 +515,22 @@ impl SearchRobot {
         }
 
         // Follow path or reevaluate path or goal?
-        if self.path_planner_path.is_empty() && self.find_path().is_err() {
-            // TODO: Determine best way to proceed
-            // New goal, new path or switch mode?
-            println!("What: {:?}", self.robot_mode);
-            // Mock vector for now
-            Some(Vec2 { x: 0.0, y: 0.0 })
+        if self.path_planner_path.is_empty() {
+            if let Ok(path) = pathing::find_path(
+                self.pos,
+                self.path_planner_goal.unwrap(),
+                &self.costmap_grid,
+            ) {
+                self.path_planner_path = path;
+                // Start following the path next time
+                None
+            } else {
+                // TODO: Determine best way to proceed
+                // New goal, new path or switch mode?
+                println!("What: {:?}", self.robot_mode);
+                // Nothing
+                None
+            }
         } else {
             // Update the path to only contain the points we haven't reached
             if (self.pos - self.path_planner_path[0]).length() < PATH_PLANNER_GOAL_TOLERANCE {
@@ -553,17 +543,13 @@ impl SearchRobot {
             } else {
                 // TODO: Determine best way to proceed
                 // New goal, new path or switch mode?
+                println!("Path is blocked");
                 None
             }
         }
     }
 
-    fn find_area_of_interest(&mut self) -> Pos2 {
-        // TODO: Find a good way to choose the goal
-        Pos2::new(25.0, -20.0)
-    }
-
-    fn follow_path(&self) -> Result<Vec2, ()> {
+    fn follow_path(&mut self) -> Result<Vec2, ()> {
         if !self.path_planner_path.is_empty() {
             // Check if all cells in the line to the goal are free
             let line = Line {
@@ -571,78 +557,20 @@ impl SearchRobot {
                 end: self.path_planner_path[0],
             };
 
-            let is_path_clear = self.costmap_grid.iter_line(&line).all(|pos| {
-                if let Some(&cell) = self.costmap_grid.get(pos) {
-                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-                } else {
-                    false
+            match costmap::validate_line(line, &self.costmap_grid) {
+                true => {
+                    self.path_fails = 0;
+                    Ok((self.path_planner_path[0] - self.pos).normalized())
                 }
-            });
-
-            if is_path_clear {
-                Ok((self.path_planner_path[0] - self.pos).normalized())
-            } else {
-                Err(())
+                false => {
+                    // Track failures to set new goal or path
+                    self.path_fails += 1;
+                    Err(())
+                }
             }
         } else {
             Err(())
         }
-    }
-
-    fn find_straight_path(&self) -> Result<Vec<Pos2>, ()> {
-        if let Some(goal) = self.path_planner_goal {
-            let line = Line {
-                start: self.pos,
-                end: goal,
-            };
-            // Check if all cells in the line to the goal are free
-            let res = self.costmap_grid.iter_line(&line).all(|pos| {
-                if let Some(&cell) = self.costmap_grid.get(pos) {
-                    // FIX: Remove COSTMAP_DYNAMIC_OBSTACLE when we have a map and not only lidar
-                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-                } else {
-                    false
-                }
-            });
-
-            if res {
-                Ok(vec![self.pos, goal])
-            } else {
-                Err(())
-            }
-        } else {
-            Err(())
-        }
-    }
-
-    fn find_rrt_path(&self) -> Result<Vec<Pos2>, ()> {
-        if let Some(goal) = self.path_planner_goal {
-            // TODO: Use rrt to find path to goal
-            Ok(vec![
-                self.pos,
-                Pos2::new(25.0, 25.0),
-                Pos2::new(-25.0, 25.0),
-                Pos2::new(-25.0, -25.0),
-                Pos2::new(25.0, -25.0),
-                goal,
-            ])
-        } else {
-            Err(())
-        }
-    }
-
-    fn find_path(&mut self) -> Result<(), ()> {
-        self.path_planner_path = self.find_rrt_path().unwrap();
-        Ok(())
-        // if let Ok(path) = self.find_straight_path() {
-        //     self.path_planner_path = path;
-        //     Ok(())
-        // } else if let Ok(path) = self.find_rrt_path() {
-        //     self.path_planner_path = path;
-        //     Ok(())
-        // } else {
-        //     Err(())
-        // }
     }
 
     fn show_path(&mut self) {
@@ -766,7 +694,7 @@ fn convert_to_botbrain_map(world: &Map) -> ScaledGrid<f32> {
     for (x, y, cell) in world.iter() {
         let val = match cell {
             super::MapCell::Free => 0.0,
-            super::MapCell::Obstacle => COSTMAP_OBSTACLE,
+            super::MapCell::Obstacle => costmap::COSTMAP_OBSTACLE,
         };
         map.set(Pos2::new(x, y), val);
     }
