@@ -20,7 +20,6 @@ use burn::prelude::*;
 const MAX_INACTIVE_SECS: f32 = 20.0;
 
 const COLLISION_REWARD: f32 = -5.0;
-const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     max_robots: usize,
@@ -219,7 +218,9 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
             done = true;
         }
 
-        reward += (after_coverage - before_coverage) * COVERAGE_REWARD_MULTIPLIER;
+        let botbrain::Vec2 { x: w, y: h } = self.sim.world().size();
+
+        reward += (after_coverage - before_coverage) * w * h;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot<B, S, A, N>>().unwrap();
