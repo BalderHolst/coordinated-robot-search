@@ -1,6 +1,7 @@
 use app::{App, AppArgs};
+use arrow_array::RecordBatch;
+use arrow_schema::Schema;
 use eframe::egui;
-use polars::frame::DataFrame;
 
 use crate::{
     cli::{GlobArgs, RunArgs},
@@ -29,7 +30,7 @@ pub fn run_scenario(
     sim: Simulator,
     scenario: Scenario,
     args: GlobArgs,
-) -> Result<DataFrame, String> {
+) -> Result<RecordBatch, String> {
     let app_args = AppArgs {
         paused: false,
         target_fps: args.target_fps,
@@ -40,7 +41,7 @@ pub fn run_scenario(
     run(sim, app_args)?;
 
     // TODO: Actually collect data
-    Ok(DataFrame::default())
+    Ok(RecordBatch::new_empty(Schema::empty().into()))
 }
 
 fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {

@@ -8,6 +8,8 @@ use std::{
     time::Instant,
 };
 
+use arrow_array::{Array, Float32Array, Float64Array, RecordBatch};
+use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 use botbrain::{
     self,
     behaviors::{Behavior, Time},
@@ -15,7 +17,6 @@ use botbrain::{
     scaled_grid::ScaledGrid,
     Control, RobotId, RobotPose,
 };
-use polars::prelude::*;
 
 #[cfg(not(feature = "single-thread"))]
 use robot_pool::RobotThreadPool;
@@ -34,6 +35,7 @@ const COVERAGE_GRID_SCALE: f32 = 0.1;
 
 #[derive(Clone, Default)]
 struct RobotData {
+    prefix: String,
     x: Vec<f32>,
     y: Vec<f32>,
     angle: Vec<f32>,
@@ -44,8 +46,14 @@ struct RobotData {
 }
 
 impl RobotData {
-    fn with_capacity(capacity: usize) -> Self {
+    fn new(capacity: usize, prefix: &str) -> Self {
+        let prefix = match prefix.is_empty() {
+            true => "".to_string(),
+            false => format!("{prefix}/"),
+        };
+
         Self {
+            prefix,
             x: Vec::with_capacity(capacity),
             y: Vec::with_capacity(capacity),
             angle: Vec::with_capacity(capacity),
@@ -54,6 +62,19 @@ impl RobotData {
             steer: Vec::with_capacity(capacity),
             speed: Vec::with_capacity(capacity),
         }
+    }
+
+    fn schema(&self) -> Schema {
+        let prefix = &self.prefix;
+        Schema::new(vec![
+            Field::new(format!("{prefix}x"), DataType::Float32, false),
+            Field::new(format!("{prefix}y"), DataType::Float32, false),
+            Field::new(format!("{prefix}angle"), DataType::Float32, false),
+            Field::new(format!("{prefix}vel"), DataType::Float32, false),
+            Field::new(format!("{prefix}avel"), DataType::Float32, false),
+            Field::new(format!("{prefix}steer"), DataType::Float32, false),
+            Field::new(format!("{prefix}speed"), DataType::Float32, false),
+        ])
     }
 
     fn push_state(&mut self, state: &RobotState, control: &Control) {
@@ -66,16 +87,21 @@ impl RobotData {
         self.speed.push(control.speed);
     }
 
-    fn into_cols(self, prefix: &str) -> Vec<Column> {
-        vec![
-            Column::new(format!("{}x", prefix).into(), self.x),
-            Column::new(format!("{}y", prefix).into(), self.y),
-            Column::new(format!("{}angle", prefix).into(), self.angle),
-            Column::new(format!("{}vel", prefix).into(), self.vel),
-            Column::new(format!("{}avel", prefix).into(), self.avel),
-            Column::new(format!("{}steer", prefix).into(), self.steer),
-            Column::new(format!("{}speed", prefix).into(), self.speed),
-        ]
+    fn into_batch(self) -> RecordBatch {
+        let schema = Arc::new(self.schema());
+        RecordBatch::try_new(
+            schema,
+            vec![
+                Arc::<Float32Array>::new(self.x.into()),
+                Arc::<Float32Array>::new(self.y.into()),
+                Arc::<Float32Array>::new(self.angle.into()),
+                Arc::<Float32Array>::new(self.vel.into()),
+                Arc::<Float32Array>::new(self.avel.into()),
+                Arc::<Float32Array>::new(self.steer.into()),
+                Arc::<Float32Array>::new(self.speed.into()),
+            ],
+        )
+        .expect("Failed to create RecordBatch")
     }
 }
 
@@ -83,11 +109,15 @@ pub fn run_scenario_headless(
     mut sim: Simulator,
     scenario: Scenario,
     scenario_args: ScenarioArgs,
-) -> DataFrame {
+) -> RecordBatch {
     let steps = (scenario.duration / SIMULATION_DT).ceil() as usize;
 
     let mut time_data = Vec::with_capacity(steps);
-    let mut robot_data = vec![RobotData::with_capacity(steps); scenario.robots.len()];
+
+    let mut robot_data = (0..scenario.robots.len())
+        .map(|i| RobotData::new(steps, &format!("robot_{}/", i)))
+        .collect::<Vec<_>>();
+
     let mut coverage_data = Vec::with_capacity(steps);
 
     let start_time = Instant::now();
@@ -129,21 +159,31 @@ pub fn run_scenario_headless(
         println!("  pos: {:?}, angle: {:.2}", pos, angle);
     }
 
-    let robot_cols = robot_data
-        .into_iter()
-        .enumerate()
-        .flat_map(|(n, data)| data.into_cols(&format!("robot_{}/", n)))
-        .collect::<Vec<_>>();
+    let mut cols: Vec<Arc<dyn Array>> = vec![];
 
-    let cols = vec![
-        Column::new("time".into(), time_data),
-        Column::new("coverage".into(), coverage_data),
-    ]
-    .into_iter()
-    .chain(robot_cols)
-    .collect::<Vec<_>>();
+    let mut big_schema = SchemaBuilder::new();
 
-    DataFrame::new(cols).unwrap()
+    big_schema.push(Field::new("time", DataType::Float64, false));
+    cols.push(Arc::new(Float64Array::from(time_data)));
+
+    big_schema.push(Field::new("coverage", DataType::Float32, false));
+    cols.push(Arc::new(Float32Array::from(coverage_data)));
+
+    // Add robot data
+    for robot in robot_data {
+        let robot_batch = robot.into_batch();
+        let robot_schema = robot_batch.schema();
+        for field in robot_schema.fields() {
+            big_schema.push(field.clone());
+        }
+        for col in robot_batch.columns() {
+            cols.push(col.clone());
+        }
+    }
+
+    let big_schema = Arc::new(big_schema.finish());
+
+    RecordBatch::try_new(big_schema, cols).expect("Failed to create RecordBatch")
 }
 
 #[derive(Clone, Default)]

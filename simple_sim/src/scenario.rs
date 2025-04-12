@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
+use arrow_array::RecordBatch;
 use botbrain::{behaviors::Behavior, RobotPose};
-use polars::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -80,7 +80,7 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     if let Some(out_path) = scenario_args.output {
         for out_path in out_path.split(':') {
             let out_path = PathBuf::from(out_path);
-            if let Err(e) = save_df(&mut data, &out_path) {
+            if let Err(e) = save_batch(&mut data, &out_path) {
                 eprintln!("Failed to save data to '{}': {}", out_path.display(), e);
             }
         }
@@ -89,26 +89,34 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     Ok(())
 }
 
-fn save_df(df: &mut DataFrame, path: &PathBuf) -> Result<(), String> {
+fn save_batch(batch: &mut RecordBatch, path: &PathBuf) -> Result<(), String> {
     let file = || {
         std::fs::File::create(path)
             .map_err(|e| format!("Failed to create file '{}': {}", path.display(), e))
     };
 
     match path.extension().and_then(|ext| ext.to_str()) {
-        Some("json") => JsonWriter::new(file()?)
-            .finish(df)
-            .map_err(|e| format!("Failed to serialize data to JSON: {}", e)),
-        Some("csv") => CsvWriter::new(file()?)
-            .finish(df)
-            .map_err(|e| format!("Failed to serialize data to CSV: {}", e)),
-        Some("ipc") => IpcWriter::new(file()?)
-            .finish(df)
-            .map_err(|e| format!("Failed to serialize data to IPC: {}", e)),
-        Some("parquet") => match ParquetWriter::new(file()?).finish(df) {
-            Ok(_) => Ok(()),
-            Err(e) => Err(format!("Failed to serialize data to Parquet: {}", e)),
-        },
+        Some("ipc") => {
+            let mut file = file()?;
+            let mut writer = arrow_ipc::writer::FileWriter::try_new(&mut file, &batch.schema())
+                .map_err(|e| {
+                    format!(
+                        "Failed to create IPC writer for file '{}': {}",
+                        path.display(),
+                        e
+                    )
+                })?;
+            writer.write(batch).map_err(|e| {
+                format!("Failed to write batch to file '{}': {}", path.display(), e)
+            })?;
+            writer.finish().map_err(|e| {
+                format!(
+                    "Failed to finish writing batch to file '{}': {}",
+                    path.display(),
+                    e
+                )
+            })
+        }
         Some(other) => Err(format!("Unknown extension: '{}'", other)),
         None => Err(format!(
             "File '{}' has no extension. Could not determine what file to write.",

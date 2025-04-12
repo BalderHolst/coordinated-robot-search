@@ -37,8 +37,23 @@ class Result:
     dataframe: str
     description: str
 
+    @classmethod
+    def from_stem(cls, stem: str) -> "Result":
+        dataframe = os.path.join(data_dir(), f"{stem}.ipc")
+        description = os.path.join(data_dir(), f"{stem}.json")
+
+        if not os.path.exists(dataframe):
+            print(f"Error: {dataframe} does not exist.")
+            exit(1)
+
+        if not os.path.exists(description):
+            print(f"Error: {description} does not exist.")
+            exit(1)
+
+        return cls(dataframe, description)
+
     def df(self) -> pl.DataFrame:
-        return pl.read_parquet(self.dataframe)
+        return pl.read_ipc(self.dataframe)
 
     def desc(self) -> dict:
         with open(self.description) as f:
@@ -71,12 +86,12 @@ def data_dir() -> str: return env_dir("DATA_DIR")
 def plot_dir() -> str: return env_dir("PLOT_DIR")
 def sim_file() -> str: return env_file("SIMULATOR")
 
-def run_sim(name: str, scenario: Scenario | str, headless: bool = True) -> tuple[str, str]:
+def run_sim(name: str, scenario: Scenario | str, headless: bool = True) -> Result:
 
     # Get simulator binary from $SIMULATOR environment variable
     simulator = sim_file()
 
-    output = os.path.join(data_dir(), f"{name}.parquet")
+    output = os.path.join(data_dir(), f"{name}.ipc")
     desc_output = os.path.join(data_dir(), f"{name}.json")
 
     os.makedirs(os.path.dirname(output), exist_ok=True)
@@ -99,7 +114,10 @@ def run_sim(name: str, scenario: Scenario | str, headless: bool = True) -> tuple
 
     return Result(output, desc_output)
 
-def plot_coverage(results: list[Result], output_file: str, title=None):
+def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
+
+    if isinstance(results, Result): results = [results]
+
     for result in results:
         df = result.df()
         desc = result.desc()

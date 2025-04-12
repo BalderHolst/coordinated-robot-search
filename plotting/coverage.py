@@ -4,7 +4,7 @@ import botplot as bp
 from math import ceil, pi
 import random
 
-if __name__ == "__main__":
+def run_and_plot():
     random.seed(42)
 
     results: list[bp.Result] = []
@@ -29,3 +29,10 @@ if __name__ == "__main__":
         results.append(bp.run_sim(f"test/{n}", scenario))
 
     bp.plot_coverage(results, "coverage.png")
+
+
+if __name__ == "__main__":
+
+    result = bp.Result.from_stem("out")
+    bp.plot_coverage(result, "coverage.png")
+

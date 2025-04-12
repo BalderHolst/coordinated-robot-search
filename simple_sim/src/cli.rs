@@ -75,12 +75,11 @@ pub struct ScenarioArgs {
     pub description: Option<PathBuf>,
 
     /// The output file to write the results to. Specify multiple paths by separating them with a ':'.
-    /// Supported formats: JSON, CSV, IPC, Parquet
     #[arg(short, long)]
     pub output: Option<String>,
 
     /// Run the scenario headless
-    #[arg(short, long)]
+    #[arg(long)]
     pub headless: bool,
 
     /// How often to print the simulation time (in seconds)
