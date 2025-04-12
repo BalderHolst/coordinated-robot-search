@@ -14,7 +14,8 @@ use crate::{
     bind_down, bind_pressed,
     cli::GlobArgs,
     sim::{SimState, Simulator},
-    world::{Cell, World},
+    utils,
+    world::{world_to_image, World},
 };
 
 use super::camera::Camera;
@@ -108,19 +109,6 @@ pub struct App {
     cursor_state: CursorState,
     robot_soups: Vec<DebugSoup>,
     behavior_name: String,
-}
-
-fn grid_to_image<C: Clone + Default>(
-    grid: &botbrain::grid::Grid<C>,
-    color: impl Fn(C) -> Color32,
-) -> ColorImage {
-    let mut image = ColorImage::new([grid.width(), grid.height()], Cell::Empty.color());
-    image.pixels.iter_mut().enumerate().for_each(|(i, pixel)| {
-        let (x, y) = (i % grid.width(), i / grid.width());
-        let cell = grid.get(x, y).cloned().unwrap_or_default();
-        *pixel = color(cell);
-    });
-    image
 }
 
 pub struct AppArgs {
@@ -239,7 +227,7 @@ impl App {
             });
         }
 
-        let world_image = grid_to_image(world.grid(), |c| c.color());
+        let world_image = world_to_image(&world);
         let world_image = ImageData::from(world_image);
 
         let texture_manager = &cc.egui_ctx.tex_manager();
@@ -292,7 +280,7 @@ impl App {
             let max = self.cam.world_to_viewport(max);
             let canvas = Rect::from_min_max(min, max);
 
-            let image = grid_to_image(
+            let image = utils::grid_to_image(
                 self.sim_state.diagnostics.coverage_grid.grid(),
                 |c| match c {
                     true => Color32::LIGHT_GREEN.gamma_multiply(0.2),
@@ -544,7 +532,7 @@ impl App {
                             1. - f32::powi(1. - c, 4)
                         }
 
-                        let image = grid_to_image(grid.grid(), |c| {
+                        let image = utils::grid_to_image(grid.grid(), |c| {
                             match c {
                                 c if c > 0.0 => {
                                     WARM_COLOR.lerp_to_gamma(HOT_COLOR, ease_out_quart(c / max))

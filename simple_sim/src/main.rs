@@ -4,6 +4,7 @@ mod cli;
 mod gui;
 mod scenario;
 mod sim;
+mod utils;
 mod world;
 
 fn main() -> Result<(), String> {

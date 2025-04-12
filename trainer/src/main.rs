@@ -5,6 +5,7 @@ use cli::Cli;
 mod cli;
 mod train;
 mod world_gen;
+mod world_to_img;
 
 type B = Wgpu;
 
@@ -17,6 +18,9 @@ fn main() -> Result<(), String> {
         }
         cli::Command::WorldGen(args) => {
             world_gen::world_gen(args)?;
+        }
+        cli::Command::WorldToImg(args) => {
+            world_to_img::world_to_img(args)?;
         }
     }
 

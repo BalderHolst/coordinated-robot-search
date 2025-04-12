@@ -16,6 +16,7 @@ pub struct Cli {
 pub enum Command {
     Train(TrainArgs),
     WorldGen(WorldGenArgs),
+    WorldToImg(WorldToImgArgs),
 }
 
 #[derive(Args)]
@@ -84,10 +85,29 @@ pub struct WorldGenArgs {
     pub min_size: Vec2,
 
     /// Maximum size of the world. Format: "x,y" or "(x,y)"
-    #[arg(long, default_value = "(100.0,100.0)", value_parser = vec2_parser)]
+    #[arg(long, default_value = "(100.0,70.0)", value_parser = vec2_parser)]
     pub max_size: Vec2,
 
     /// Minimum number of obstacles in the world
     #[arg(long, default_value_t = 0.1)]
     pub scale: f32,
+
+    /// Render the worlds to images in the supplied directory
+    #[arg(short, long)]
+    pub render: Option<PathBuf>,
+}
+
+#[derive(Args)]
+pub struct WorldToImgArgs {
+    /// Input file or directory
+    #[arg(short, long)]
+    pub input: PathBuf,
+
+    /// Output file or directory
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    /// Overwrite existing files
+    #[arg(short, long)]
+    pub force: bool,
 }

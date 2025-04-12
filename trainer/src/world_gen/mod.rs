@@ -7,7 +7,7 @@ use botbrain::{
 use rand::Rng;
 use simple_sim::world::description::ObjectDescription;
 
-use crate::cli::WorldGenArgs;
+use crate::cli::{WorldGenArgs, WorldToImgArgs};
 
 pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
     // Check if the min_size is less than max_size
@@ -59,13 +59,23 @@ pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
         println!("\t => {}", path.display());
     }
 
+    // Render the worlds to images
+    if let Some(render_dir) = args.render {
+        let render_args = WorldToImgArgs {
+            input: out_dir,
+            output: render_dir,
+            force: args.force,
+        };
+        crate::world_to_img::world_to_img(render_args)?;
+    }
+
     Ok(())
 }
 
 const OBSTACLE_OCCUPANCY: Range<f32> = 0.01..0.08;
 
 const CIRCLE_RADIUS: Range<f32> = 0.5..2.0;
-const LINE_WIDTH: Range<f32> = 0.2..0.5;
+const LINE_WIDTH: Range<f32> = 0.3..1.0;
 
 fn point_within_range(point: &Pos2, distance: f32) -> Pos2 {
     let p1 = point;

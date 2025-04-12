@@ -4,9 +4,14 @@ mod pgm;
 use std::path::PathBuf;
 
 use description::{BitmapDescription, ObjectDescription, WorldDescription};
-use eframe::{egui::Color32, epaint::Hsva};
+use eframe::{
+    egui::{Color32, ColorImage},
+    epaint::Hsva,
+};
 
 use botbrain::scaled_grid::ScaledGrid;
+
+use crate::utils;
 
 pub type World = ScaledGrid<Cell>;
 
@@ -25,7 +30,7 @@ impl Cell {
 
     pub fn color(&self) -> Color32 {
         match self {
-            Self::Empty => Color32::TRANSPARENT,
+            Self::Empty => Color32::from_gray(40),
             Self::Wall => Hsva::new(0.6, 0.7, 0.5, 1.0).into(),
             Self::SearchItem => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
         }
@@ -66,4 +71,8 @@ pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
     };
 
     Ok(desc.create())
+}
+
+pub fn world_to_image(world: &World) -> ColorImage {
+    utils::grid_to_image(world.grid(), |c| c.color())
 }
