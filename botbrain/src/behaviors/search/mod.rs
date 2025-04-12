@@ -23,6 +23,7 @@ use super::{
 };
 
 mod costmap;
+mod frontiers;
 mod pathing;
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
@@ -461,7 +462,7 @@ impl SearchRobot {
                 (tmp.x as usize, tmp.y as usize)
             };
 
-            if pathing::is_frontier((robot_pos.0, robot_pos.1), &self.costmap_grid) {
+            if frontiers::is_frontier((robot_pos.0, robot_pos.1), &self.costmap_grid) {
                 frontiers.set(Pos2::new(x, y), -10.0);
             } else {
                 frontiers.set(Pos2::new(x, y), 0.0);
@@ -515,7 +516,7 @@ impl SearchRobot {
             }
         } else {
             // Set a goal
-            let goal = pathing::find_frontiers(self.pos, &self.costmap_grid);
+            let goal = frontiers::evaluate_frontiers(self.pos, &self.costmap_grid);
             self.path_planner_goal = Some(goal);
         }
 

@@ -92,6 +92,11 @@ impl<C: Clone + Default> ScaledGrid<C> {
         &self.grid
     }
 
+    /// The underlying grid mutable
+    pub fn grid_mut(&mut self) -> &mut Grid<C> {
+        &mut self.grid
+    }
+
     /// Convert a world position to the underlying grid position
     pub fn world_to_grid(&self, pos: Pos2) -> Pos2 {
         ((pos + self.size() / 2.0) / self.cell_size).floor()

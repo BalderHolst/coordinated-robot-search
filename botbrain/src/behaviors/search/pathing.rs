@@ -7,56 +7,14 @@ use emath::Pos2;
 
 use crate::{behaviors::ScaledGrid, params, shapes::Line};
 
-use super::costmap::{
-    self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE, COSTMAP_SEARCHED, COSTMAP_UNKNOWN,
-};
+use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
 pub(super) const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
-const NEIGHBORS: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+pub(super) const NEIGHBORS: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
 pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
     find_straight_path(robot_pos, goal, costmap_grid)
         .or_else(|| find_a_star_path(robot_pos, goal, costmap_grid))
-}
-
-// TODO: Find frontier regions
-pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> Pos2 {
-    let robot_pos = {
-        let tmp = costmap_grid.world_to_grid(robot_pos);
-        (tmp.x as usize, tmp.y as usize)
-    };
-    Pos2::new(25.0, -20.0)
-}
-
-/// Frontier is a known cell with unknown neighbors
-/// pos is the position of the cell in the underlying grid of the ScaledGrid
-pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool {
-    if let Some(&cell) = costmap_grid.grid().get(pos.0, pos.1) {
-        if cell != COSTMAP_SEARCHED {
-            return false;
-        }
-    } else {
-        return false;
-    }
-
-    NEIGHBORS.iter().any(|(x, y)| {
-        let new_pos = (pos.0 as isize + x, pos.1 as isize + y);
-        if new_pos.0 < 0 || new_pos.1 < 0 {
-            false
-        } else if let Some(&cell) = costmap_grid
-            .grid()
-            .get(new_pos.0 as usize, new_pos.1 as usize)
-        {
-            cell == COSTMAP_UNKNOWN
-        } else {
-            false
-        }
-    })
-}
-
-// TODO: Choose the frontier region to explore
-fn evaluate_frontiers(robot_pos: Pos2, frontiers: Pos2, costmap_grid: &ScaledGrid<f32>) -> Pos2 {
-    todo!()
 }
 
 pub fn find_straight_path(
