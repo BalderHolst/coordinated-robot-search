@@ -67,7 +67,7 @@ struct Cli {
     #[arg(long, default_value_t = 0.05)]
     eps_end: f64,
 
-    #[arg(short, long, default_value_t = 4)]
+    #[arg(long, default_value_t = 4)]
     max_robots: usize,
 }
 

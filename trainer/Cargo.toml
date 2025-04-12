@@ -3,6 +3,14 @@ name = "trainer"
 version = "0.1.0"
 edition = "2021"
 
+[[bin]]
+name = "trainer"
+path = "src/trainer/main.rs"
+
+[[bin]]
+name = "worldgen"
+path = "src/worldgen/main.rs"
+
 [dependencies]
 botbrain = { path = "../botbrain" }
 simple_sim = { path = "../simple_sim", features = ["single-thread"] }
