@@ -449,6 +449,27 @@ impl SearchRobot {
             DebugType::Grid(self.costmap_grid.clone()),
         );
 
+        let mut frontiers = ScaledGrid::<f32>::new(
+            self.costmap_grid.width(),
+            self.costmap_grid.height(),
+            COSTMAP_GRID_SCALE,
+        );
+
+        self.costmap_grid.iter().for_each(|(x, y, _)| {
+            let robot_pos = {
+                let tmp = frontiers.world_to_grid(Pos2::new(x, y));
+                (tmp.x as usize, tmp.y as usize)
+            };
+
+            if pathing::is_frontier((robot_pos.0, robot_pos.1), &self.costmap_grid) {
+                frontiers.set(Pos2::new(x, y), -10.0);
+            } else {
+                frontiers.set(Pos2::new(x, y), 0.0);
+            }
+        });
+
+        soup.add("Grids", "Frontiers", DebugType::Grid(frontiers));
+
         soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
 
         if self.robot_mode == RobotMode::Pathing {
@@ -494,7 +515,7 @@ impl SearchRobot {
             }
         } else {
             // Set a goal
-            let goal = pathing::find_frontiers(&self.costmap_grid);
+            let goal = pathing::find_frontiers(self.pos, &self.costmap_grid);
             self.path_planner_goal = Some(goal);
         }
 
