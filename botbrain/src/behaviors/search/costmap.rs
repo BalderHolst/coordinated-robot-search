@@ -20,8 +20,25 @@ pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
         if let Some(&cell) = costmap_grid.get(pos) {
             cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
         } else {
-            false
+            true
         }
+    })
+}
+
+pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
+    costmap_grid.iter_line(&line).all(|pos| {
+        costmap_grid
+            .iter_circle(&Circle {
+                center: pos,
+                radius: width / 2.0,
+            })
+            .all(|pos| {
+                if let Some(&cell) = costmap_grid.get(pos) {
+                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+                } else {
+                    true
+                }
+            })
     })
 }
 
@@ -55,7 +72,7 @@ pub fn make_costmap_grid(
                 let point = robot_pos + Vec2::angled(angle + robot_angle) * distance;
                 Some(Circle {
                     center: point,
-                    radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH,
+                    radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH / 2.0,
                 })
             } else {
                 None

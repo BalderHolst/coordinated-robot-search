@@ -5,7 +5,7 @@ use std::{
 
 use emath::Pos2;
 
-use crate::{behaviors::ScaledGrid, shapes::Line};
+use crate::{behaviors::ScaledGrid, params, shapes::Line};
 
 use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
@@ -17,13 +17,13 @@ pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) ->
 }
 
 // TODO: Find frontier regions
-pub fn find_frontiers(_costmap_grid: &ScaledGrid<f32>) {
-    todo!()
+pub fn find_frontiers(_costmap_grid: &ScaledGrid<f32>) -> Pos2 {
+    Pos2::new(25.0, -20.0)
 }
 
 // TODO: Choose the frontier region to explore
-pub fn evaluate_frontiers() -> Pos2 {
-    Pos2::new(25.0, -20.0)
+fn evaluate_frontiers() {
+    todo!()
 }
 
 pub fn find_straight_path(
@@ -36,7 +36,8 @@ pub fn find_straight_path(
         end: goal,
     };
     // Check if all cells in the line to the goal are free
-    costmap::validate_line(line, costmap_grid).then(|| vec![robot_pos, goal])
+    costmap::validate_thick_line(line, params::DIAMETER, costmap_grid)
+        .then(|| vec![robot_pos, goal])
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
@@ -63,8 +64,8 @@ impl PartialOrd for Node {
 }
 
 fn heuristic(a: (usize, usize), b: (usize, usize)) -> usize {
-    // Manhattan distance
-    ((a.0 as i32 - b.0 as i32).abs() + (a.1 as i32 - b.1 as i32).abs()) as usize
+    // Euclidean distance
+    (((a.0 as f64 - b.0 as f64).powi(2) + (a.1 as f64 - b.1 as f64).powi(2)).sqrt()) as usize
 }
 
 pub fn find_a_star_path(
@@ -125,8 +126,22 @@ pub fn find_a_star_path(
                 continue;
             }
 
-            let new_pos_value = *costmap_grid.grid().get(new_pos.0, new_pos.1).unwrap();
-            if new_pos_value == COSTMAP_OBSTACLE || new_pos_value == COSTMAP_DYNAMIC_OBSTACLE {
+            let obstacle_in_range = costmap_grid
+                .grid()
+                .iter_circle(
+                    Pos2::new(new_pos.0 as f32, new_pos.1 as f32),
+                    params::DIAMETER * 4.0,
+                )
+                .any(|(x, y)| {
+                    if let Some(&new_pos_value) = costmap_grid.grid().get(x, y) {
+                        new_pos_value == COSTMAP_OBSTACLE
+                            || new_pos_value == COSTMAP_DYNAMIC_OBSTACLE
+                    } else {
+                        false
+                    }
+                });
+
+            if obstacle_in_range {
                 continue; // obstacle
             }
 
@@ -145,9 +160,47 @@ pub fn find_a_star_path(
         }
     }
 
-    final_path.and_then(|path| {
-        path.into_iter()
-            .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
-            .collect()
-    })
+    final_path
+        .and_then(|path| {
+            path.into_iter()
+                .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
+                .collect()
+        })
+        .map(|path| smooth_path(path, costmap_grid))
+}
+
+pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2> {
+    let mut smoothed_path = vec![];
+    let mut prev_pos = path[0];
+    let mut idx = 1;
+    let mut cur_len = 0;
+    // println!("Starting smooth path: {}", path.len());
+    loop {
+        let line = Line {
+            start: prev_pos,
+            end: path[idx],
+        };
+
+        if !costmap::validate_thick_line(line, params::DIAMETER * 5.0, costmap_grid) {
+            if cur_len > 0 {
+                smoothed_path.push(prev_pos);
+                prev_pos = path[idx - 1];
+                cur_len = 0;
+            } else {
+                smoothed_path.push(prev_pos);
+                prev_pos = path[idx];
+                idx += 1;
+            }
+        } else {
+            cur_len += 1;
+            idx += 1;
+        }
+
+        if idx >= path.len() {
+            break;
+        }
+    }
+    smoothed_path.push(prev_pos);
+    smoothed_path.push(path[path.len() - 1]);
+    smoothed_path
 }

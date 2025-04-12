@@ -494,7 +494,7 @@ impl SearchRobot {
             }
         } else {
             // Set a goal
-            let goal = pathing::evaluate_frontiers();
+            let goal = pathing::find_frontiers(&self.costmap_grid);
             self.path_planner_goal = Some(goal);
         }
 
@@ -557,7 +557,7 @@ impl SearchRobot {
                 end: self.path_planner_path[0],
             };
 
-            match costmap::validate_line(line, &self.costmap_grid) {
+            match costmap::validate_thick_line(line, params::DIAMETER, &self.costmap_grid) {
                 true => {
                     self.path_fails = 0;
                     Ok((self.path_planner_path[0] - self.pos).normalized())
