@@ -64,10 +64,11 @@
                 ]))
                 (pkgs.writeShellScriptBin "cargo-fmt-all" ''
                     ROOT=$(git rev-parse --show-toplevel)
-                    CRATES=$(find . -type f -name Cargo.toml)
-                    for crate in $CRATES; do
-                        echo "Formatting $crate"
-                        cargo fmt --all --manifest-path $ROOT/$crate
+                    CRATES=$(find $ROOT -type f -name Cargo.toml)
+                    for abs_path in $CRATES; do
+                        rel_path=$(realpath -s --relative-to="$ROOT" "$abs_path")
+                        echo "Formatting $(dirname $rel_path)"
+                        cargo fmt --all --manifest-path $ROOT/$rel_path
                     done
                 '')
             ];
