@@ -9,13 +9,13 @@ use super::{pgm::PgmImage, World};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ObjectDescription {
-    width: f32,
-    height: f32,
-    scale: f32,
+    pub width: f32,
+    pub height: f32,
+    pub scale: f32,
     #[serde(default)]
-    obstacles: Vec<Shape>,
+    pub obstacles: Vec<Shape>,
     #[serde(default)]
-    search_items: Vec<Shape>,
+    pub search_items: Vec<Shape>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

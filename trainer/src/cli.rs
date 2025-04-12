@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 
-use botbrain::behaviors::{rl::REACT_HZ, RobotKind};
+use botbrain::{
+    behaviors::{rl::REACT_HZ, RobotKind},
+    Vec2,
+};
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser)]
@@ -42,5 +45,49 @@ pub struct TrainArgs {
     pub max_robots: usize,
 }
 
+fn tuple_parser<T: FromStr>(s: &str) -> Result<(T, T), String> {
+    let s = s.trim_start_matches('(').trim_end_matches(')');
+    let parts: Vec<&str> = s.split(',').collect();
+    if parts.len() != 2 {
+        return Err(format!("Expected two comma-separated values, got {}", s));
+    }
+    let x = parts[0]
+        .parse::<T>()
+        .map_err(|_| format!("Invalid value: {}", parts[0]))?;
+    let y = parts[1]
+        .parse::<T>()
+        .map_err(|_| format!("Invalid value: {}", parts[1]))?;
+    Ok((x, y))
+}
+
+fn vec2_parser(s: &str) -> Result<Vec2, String> {
+    let (x, y) = tuple_parser(s)?;
+    Ok(Vec2::new(x, y))
+}
+
 #[derive(Args)]
-pub struct WorldGenArgs {}
+pub struct WorldGenArgs {
+    /// Output directory
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    /// Overwrite existing files
+    #[arg(short, long)]
+    pub force: bool,
+
+    /// Number of worlds to generate
+    #[arg(short, default_value_t = 1)]
+    pub n: usize,
+
+    /// Minimum size of the world. Format: "x,y" or "(x,y)"
+    #[arg(long, default_value = "(20.0,20.0)", value_parser = vec2_parser)]
+    pub min_size: Vec2,
+
+    /// Maximum size of the world. Format: "x,y" or "(x,y)"
+    #[arg(long, default_value = "(100.0,100.0)", value_parser = vec2_parser)]
+    pub max_size: Vec2,
+
+    /// Minimum number of obstacles in the world
+    #[arg(long, default_value_t = 0.1)]
+    pub scale: f32,
+}

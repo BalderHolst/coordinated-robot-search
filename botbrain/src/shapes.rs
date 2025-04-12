@@ -1,5 +1,7 @@
 //! Various shapes
 
+use std::f32::consts::PI;
+
 use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +12,17 @@ pub enum Shape {
     Cone(Cone),
     WideLine(WideLine),
     Line(Line),
+}
+
+impl Shape {
+    pub fn area(&self) -> f32 {
+        match self {
+            Shape::Circle(circle) => PI * circle.radius.powi(2),
+            Shape::Cone(cone) => PI * cone.radius.powi(2) * (cone.fov / 360.0),
+            Shape::WideLine(wline) => wline.width * wline.line.length(),
+            Shape::Line(line) => line.length(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -32,9 +45,14 @@ pub struct Line {
     pub end: Pos2,
 }
 
+impl Line {
+    pub fn length(&self) -> f32 {
+        (self.end - self.start).length()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WideLine {
-    pub start: Pos2,
-    pub end: Pos2,
+    pub line: Line,
     pub width: f32,
 }

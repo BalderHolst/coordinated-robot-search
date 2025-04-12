@@ -160,9 +160,10 @@ impl<C: Clone + Default> ScaledGrid<C> {
         match shape {
             Shape::Circle(Circle { center, radius }) => self.set_circle(*center, *radius, cell),
             Shape::Line(Line { start, end }) => self.set_line(*start, *end, self.cell_size, cell),
-            Shape::WideLine(WideLine { start, end, width }) => {
-                self.set_line(*start, *end, *width, cell)
-            }
+            Shape::WideLine(WideLine {
+                line: Line { start, end },
+                width,
+            }) => self.set_line(*start, *end, *width, cell),
             Shape::Cone(cone) => self.set_cone(cone, cell),
         }
     }
