@@ -59,7 +59,7 @@ fn world_to_img_file(input: &PathBuf, output: PathBuf, force: bool) -> Result<()
     }
 
     if let Some(dir) = output.parent() {
-        _ = fs::create_dir_all(&dir)
+        _ = fs::create_dir_all(dir)
     }
 
     let world = simple_sim::world::world_from_path(input)?;

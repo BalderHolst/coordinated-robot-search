@@ -1,4 +1,4 @@
-use std::{f32::consts::PI, marker::PhantomData};
+use std::{f32::consts::PI, io, marker::PhantomData, path::PathBuf};
 
 use botbrain::{
     behaviors::{
@@ -24,7 +24,8 @@ const COVERAGE_REWARD_MULTIPLIER: f32 = 100.0;
 
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     max_robots: usize,
-    sim_args: SimArgs,
+    behavior: Behavior,
+    world_dir: PathBuf,
     sim: Simulator,
     last_coverage_increase: f32,
 
@@ -72,17 +73,15 @@ fn random_pose(world: &World) -> RobotPose {
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, N> {
-    pub fn new(world: World, max_robots: usize, behavior: Behavior) -> Self {
-        // Set MODEL_PATH variable
-        std::env::set_var("MODEL_PATH", "");
-
-        let sim_args = SimArgs { world, behavior };
-        let sim = Self::create_sim(max_robots, sim_args.clone());
+    pub fn new(world_dir: PathBuf, max_robots: usize, behavior: Behavior) -> Self {
+        std::env::set_var("MODEL_PATH", ""); // Silence empty model warnings
+        let sim = Self::create_sim(max_robots, &world_dir, behavior.clone());
 
         Self {
             max_robots,
             sim,
-            sim_args,
+            behavior,
+            world_dir,
             last_coverage_increase: 0.0,
             _backend: PhantomData,
             _state: PhantomData,
@@ -95,7 +94,64 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
         self.sim.state.robot_states.len()
     }
 
-    fn create_sim(max_robots: usize, sim_args: SimArgs) -> Simulator {
+    fn random_world_file(world_dir: &PathBuf) -> PathBuf {
+        loop {
+            let files: io::Result<_> = (|| {
+                let mut entries = vec![];
+                for file in std::fs::read_dir(world_dir)? {
+                    let file = file?;
+                    let path = file.path();
+                    if matches!(
+                        path.extension().and_then(|s| s.to_str()),
+                        Some("ron") | Some("yaml")
+                    ) {
+                        entries.push(path);
+                    }
+                }
+                Ok(entries)
+            })();
+
+            match files {
+                Ok(files) if !files.is_empty() => {
+                    let idx = rand::rng().random_range(0..files.len());
+                    return files[idx].clone();
+                }
+                Ok(_) => {
+                    eprintln!("No valid world files found in '{}'.", world_dir.display());
+                }
+                Err(e) => {
+                    eprintln!(
+                        "Error reading world directory '{}': {}",
+                        world_dir.display(),
+                        e
+                    );
+                }
+            }
+            eprintln!("\nRetrying in 1 second...");
+            std::thread::sleep(std::time::Duration::from_secs(1));
+        }
+    }
+
+    fn load_random_world(world_dir: &PathBuf) -> World {
+        loop {
+            let path = Self::random_world_file(world_dir);
+            match simple_sim::world::world_from_path(&path) {
+                Ok(w) => {
+                    println!("Loaded world from '{}'", path.display());
+                    return w;
+                }
+                Err(e) => {
+                    eprintln!("Error loading world from '{}': {}", path.display(), e);
+                    eprintln!("\nRetrying in 1 second...");
+                    std::thread::sleep(std::time::Duration::from_secs(1));
+                }
+            };
+        }
+    }
+
+    fn create_sim(max_robots: usize, world_dir: &PathBuf, behavior: Behavior) -> Simulator {
+        let world = Self::load_random_world(world_dir);
+        let sim_args = SimArgs { world, behavior };
         let n = rand::rng().random_range(1..=max_robots);
         let poses: Vec<RobotPose> = (0..n).map(|_| random_pose(&sim_args.world)).collect();
         let robots = Self::poses_to_robots(poses);
@@ -113,7 +169,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
     }
 
     pub fn reset(&mut self) {
-        self.sim = Self::create_sim(self.max_robots, self.sim_args.clone());
+        self.sim = Self::create_sim(self.max_robots, &self.world_dir, self.behavior.clone());
     }
 
     pub fn sim(&self) -> &Simulator {

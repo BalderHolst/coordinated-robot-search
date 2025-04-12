@@ -31,7 +31,6 @@ use burn::{
 use enviornment::Enviornment;
 use memory::{get_batch, sample_indices, Memory};
 use serde::{Deserialize, Serialize};
-use simple_sim::world::world_from_path;
 use utils::{
     ref_to_action_tensor, ref_to_not_done_tensor, ref_to_reward_tensor, ref_to_state_tensor,
     update_parameters,
@@ -144,13 +143,6 @@ fn train<
     println!("Model loaded from '{}':", model_file.display());
     println!("{network:?}");
 
-    let Ok(world) = world_from_path(&args.world) else {
-        eprintln!("Failed to load world from path: {}", args.world.display());
-        std::process::exit(1);
-    };
-
-    println!("Loaded world from '{}'", args.world.display());
-
     let stats_file = model_file.with_extension("json");
     let mut stats = Vec::new();
 
@@ -159,7 +151,7 @@ fn train<
 
     println!("Using behavior: {}", behavior.name());
 
-    let mut env = Enviornment::<B, S, A, N>::new(world, args.max_robots, behavior);
+    let mut env = Enviornment::<B, S, A, N>::new(args.world_dir, args.max_robots, behavior);
 
     println!("Enviornment created with {} robots", env.num_robots());
 

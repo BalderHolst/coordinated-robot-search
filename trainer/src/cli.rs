@@ -28,7 +28,7 @@ pub struct TrainArgs {
     pub robot: RobotKind,
 
     #[arg(short, long)]
-    pub world: PathBuf,
+    pub world_dir: PathBuf,
 
     #[arg(long, default_value_t = (600.0 * REACT_HZ) as usize)]
     pub max_steps: usize,
