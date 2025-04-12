@@ -17,6 +17,9 @@ use simple_sim::{
 
 use burn::prelude::*;
 
+const TERMINATION_COVERAGE: f32 = 0.95;
+const TERMINATION_REWARD: f32 = -500.0;
+
 const MAX_INACTIVE_SECS: f32 = 20.0;
 
 const COLLISION_REWARD: f32 = -5.0;
@@ -27,6 +30,7 @@ pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     world_dir: PathBuf,
     sim: Simulator,
     last_coverage_increase: f32,
+    total_reward: f32,
 
     _backend: PhantomData<B>,
     _state: PhantomData<S>,
@@ -82,6 +86,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
             behavior,
             world_dir,
             last_coverage_increase: 0.0,
+            total_reward: 0.0,
             _backend: PhantomData,
             _state: PhantomData,
             _action: PhantomData,
@@ -168,6 +173,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
     }
 
     pub fn reset(&mut self) {
+        self.total_reward = 0.0;
         self.sim = Self::create_sim(self.max_robots, &self.world_dir, self.behavior.clone());
     }
 
@@ -235,7 +241,10 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
 
         let state = self.states();
 
-        done |= after_coverage >= 0.95;
+        self.total_reward += reward;
+
+        done |= after_coverage >= TERMINATION_COVERAGE;
+        done |= self.total_reward < TERMINATION_REWARD;
 
         Snapshot {
             state,
