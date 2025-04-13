@@ -464,6 +464,7 @@ impl SearchRobot {
 
         if self.robot_mode == RobotMode::Pathing {
             self.show_path();
+            self.show_frontiers();
         }
     }
 }
@@ -484,12 +485,6 @@ impl SearchRobot {
             &self.search_grid,
             &self.lidar,
         );
-
-        self.frontiers_grid.fill(0.0);
-        let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
-        for (x, y) in frontiers {
-            self.frontiers_grid.grid_mut().set(x, y, -10.0);
-        }
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
@@ -510,12 +505,18 @@ impl SearchRobot {
                 return None;
             }
         } else {
-            // Set a goal
-            // let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
-            let frontiers = HashSet::new();
+            // Set a goal using frontiers
 
-            let goal = frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid);
-            self.path_planner_goal = Some(goal);
+            let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+
+            match frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid) {
+                Some(goal) => self.path_planner_goal = Some(goal),
+                None => {
+                    // Should only happen in the beginning
+                    self.robot_mode = RobotMode::Exploring;
+                    return None;
+                }
+            }
         }
 
         // Don't stop pathing if there are no other robots in world
@@ -599,7 +600,54 @@ impl SearchRobot {
             let mut path = Vec::with_capacity(self.path_planner_path.len() + 1);
             path.push(self.pos);
             path.extend(self.path_planner_path.iter().cloned());
-            soup.add("Planner", "Global Path", DebugType::GlobalLine(path));
+            soup.add("Planner", "Goal Path", DebugType::GlobalLine(path));
+        }
+    }
+
+    fn show_frontiers(&mut self) {
+        self.frontiers_grid.fill(0.0);
+        let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+        for (x, y) in &frontiers {
+            self.frontiers_grid.grid_mut().set(*x, *y, -10.0);
+        }
+        let robot_pos = {
+            let tmp = self.frontiers_grid.world_to_grid(self.pos);
+            (tmp.x as usize, tmp.y as usize)
+        };
+        let frontier_regions =
+            frontiers::make_frontier_regions(robot_pos, frontiers, &self.costmap_grid);
+
+        let frontier_regions_index: Vec<(Pos2, f32)> = frontier_regions
+            .iter()
+            .enumerate()
+            .flat_map(|(idx, region)| {
+                region
+                    .iter()
+                    .map(|(x, y)| {
+                        let idx = idx as f32;
+                        let pos = self
+                            .frontiers_grid
+                            .grid_to_world(Pos2::new(*x as f32, *y as f32));
+                        (pos, idx)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        let best =
+            frontiers::evaluate_frontier_regions(robot_pos, frontier_regions, &self.costmap_grid);
+
+        self.get_debug_soup_mut().add(
+            "Planner",
+            "Frontier Regions Index",
+            DebugType::NumberPoints(frontier_regions_index),
+        );
+
+        if let Some(best) = best {
+            let pos = Pos2::new(best.0 as f32, best.1 as f32);
+            let pos = self.frontiers_grid.grid_to_world(pos);
+            self.get_debug_soup_mut()
+                .add("Planner", "Frontier Target", DebugType::Point(pos));
         }
     }
 }

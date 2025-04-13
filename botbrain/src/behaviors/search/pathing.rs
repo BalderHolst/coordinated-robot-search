@@ -64,7 +64,7 @@ impl PartialOrd for Node {
     }
 }
 
-fn heuristic(a: (usize, usize), b: (usize, usize)) -> usize {
+pub fn heuristic(a: (usize, usize), b: (usize, usize)) -> usize {
     // Euclidean distance
     (((a.0 as f64 - b.0 as f64).powi(2) + (a.1 as f64 - b.1 as f64).powi(2)).sqrt()) as usize
 }
