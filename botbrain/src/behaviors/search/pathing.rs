@@ -10,7 +10,17 @@ use crate::{behaviors::ScaledGrid, params, shapes::Line};
 use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
 pub(super) const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
-pub(super) const NEIGHBORS: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+pub(super) const NEIGHBORS_4: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
+pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
+    (0, 1),
+    (1, 0),
+    (0, -1),
+    (-1, 0),
+    (1, 1),
+    (-1, 1),
+    (1, -1),
+    (-1, -1),
+];
 
 pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
     find_straight_path(robot_pos, goal, costmap_grid)
@@ -27,7 +37,7 @@ pub fn find_straight_path(
         end: goal,
     };
     // Check if all cells in the line to the goal are free
-    costmap::validate_thick_line(line, params::DIAMETER, costmap_grid)
+    costmap::validate_thick_line(line, params::DIAMETER * 5.0, costmap_grid)
         .then(|| vec![robot_pos, goal])
 }
 
@@ -100,7 +110,7 @@ pub fn find_a_star_path(
             final_path = Some(path);
         }
 
-        for (dx, dy) in &NEIGHBORS {
+        for (dx, dy) in &NEIGHBORS_4 {
             let new_x = current.position.0 as isize + dx;
             let new_y = current.position.1 as isize + dy;
 

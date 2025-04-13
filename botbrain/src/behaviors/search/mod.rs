@@ -115,6 +115,9 @@ pub struct SearchRobot {
     /// The time of the last costmap grid update
     pub last_costmap_grid_update: Duration,
 
+    /// Frontiers
+    pub frontiers_grid: ScaledGrid<f32>,
+
     /// The goal of the path planner
     pub path_planner_goal: Option<Pos2>,
 
@@ -149,6 +152,7 @@ impl Robot for SearchRobot {
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
+        self.frontiers_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
     }
 
     fn get_postbox(&self) -> &super::Postbox {
@@ -450,26 +454,11 @@ impl SearchRobot {
             DebugType::Grid(self.costmap_grid.clone()),
         );
 
-        let mut frontiers = ScaledGrid::<f32>::new(
-            self.costmap_grid.width(),
-            self.costmap_grid.height(),
-            COSTMAP_GRID_SCALE,
+        soup.add(
+            "Grids",
+            "Frontiers",
+            DebugType::Grid(self.frontiers_grid.clone()),
         );
-
-        self.costmap_grid.iter().for_each(|(x, y, _)| {
-            let robot_pos = {
-                let tmp = frontiers.world_to_grid(Pos2::new(x, y));
-                (tmp.x as usize, tmp.y as usize)
-            };
-
-            if frontiers::is_frontier((robot_pos.0, robot_pos.1), &self.costmap_grid) {
-                frontiers.set(Pos2::new(x, y), -10.0);
-            } else {
-                frontiers.set(Pos2::new(x, y), 0.0);
-            }
-        });
-
-        soup.add("Grids", "Frontiers", DebugType::Grid(frontiers));
 
         soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
 
@@ -494,7 +483,13 @@ impl SearchRobot {
             &self.map,
             &self.search_grid,
             &self.lidar,
-        )
+        );
+
+        self.frontiers_grid.fill(0.0);
+        let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+        for (x, y) in frontiers {
+            self.frontiers_grid.grid_mut().set(x, y, -10.0);
+        }
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
@@ -516,7 +511,10 @@ impl SearchRobot {
             }
         } else {
             // Set a goal
-            let goal = frontiers::evaluate_frontiers(self.pos, &self.costmap_grid);
+            // let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+            let frontiers = HashSet::new();
+
+            let goal = frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid);
             self.path_planner_goal = Some(goal);
         }
 
