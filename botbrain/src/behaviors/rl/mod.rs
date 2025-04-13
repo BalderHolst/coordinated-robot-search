@@ -8,7 +8,7 @@ use std::{collections::HashMap, time::Duration};
 use action::Action;
 use burn::prelude::Backend;
 use emath::Pos2;
-use model::Network;
+use model::{Model, Network, TrainedNetwork};
 use state::State;
 
 use crate::{
@@ -129,12 +129,6 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, 
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B, S, A, N> {
     fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
-    pub fn new() -> Self {
         Self {
             id: RobotId(0),
             pos: Pos2::ZERO,
@@ -147,12 +141,25 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
             search_gradient: Default::default(),
             others: Default::default(),
             debug_soup: DebugSoup::new_active(),
-            model: model::BotModel::new_model(&Default::default()),
+            model: model::BotModel::new_model(Model::<B, S, A, N>::new(N::init(
+                &Default::default(),
+            ))),
             last_control_update: Duration::ZERO,
             control: Default::default(),
         }
     }
+}
 
+impl<B: Backend, S: State, A: Action, N: TrainedNetwork<B, S, A>> RlRobot<B, S, A, N> {
+    pub fn new_trained() -> Self {
+        Self {
+            model: model::BotModel::new_trained_model(&Default::default()),
+            ..Default::default()
+        }
+    }
+}
+
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
     pub fn new_network(device: &B::Device) -> N {
         N::init(device)
     }
@@ -172,7 +179,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
     pub fn new_controlled() -> Self {
         Self {
             model: model::BotModel::new_controlled(A::default()),
-            ..Self::new()
+            ..Default::default()
         }
     }
 

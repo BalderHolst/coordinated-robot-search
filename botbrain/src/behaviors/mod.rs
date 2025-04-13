@@ -56,12 +56,14 @@ impl RobotKind {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
-            RobotKind::SmallRl => || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new()),
+            RobotKind::SmallRl => {
+                || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
+            }
             RobotKind::SmallSoloRl => {
-                || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new())
+                || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
             RobotKind::MinimalRl => {
-                || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new())
+                || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new_trained())
             }
         }
     }

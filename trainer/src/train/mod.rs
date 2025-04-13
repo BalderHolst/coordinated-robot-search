@@ -5,6 +5,7 @@ mod utils;
 use std::marker::PhantomData;
 use std::{fmt, fs};
 
+use botbrain::behaviors::rl;
 use botbrain::{
     behaviors::{
         rl::{
@@ -19,6 +20,7 @@ use botbrain::{
     burn,
 };
 
+use burn::record::BinFileRecorder;
 use burn::{
     config::Config,
     grad_clipping::GradientClippingConfig,
@@ -106,6 +108,8 @@ impl fmt::Display for EpisodeStats {
 type SwarmState<S> = Vec<S>;
 type SwarmAction<A> = Vec<A>;
 
+type Recorder = BinFileRecorder<rl::model::RecorderSettings>;
+
 fn train<
     B: Backend,
     S: State,
@@ -120,7 +124,7 @@ fn train<
     _robot_ty: PhantomData<RlRobot<B, S, A, N>>,
     _diff_robot_ty: PhantomData<RlRobot<DB, S, A, DN>>,
 ) {
-    let model_file = args.model.with_extension("mpk");
+    let model_file = args.model;
 
     let device = Default::default();
 
@@ -128,18 +132,12 @@ fn train<
 
     // Load the model if it exists
     if model_file.exists() {
+        let recorder = Recorder::default();
         network = network
-            .clone()
-            .load_file(
-                &model_file,
-                &burn::record::DefaultRecorder::default(),
-                &device,
-            )
-            .unwrap_or_else(|_| {
-                println!("Failed to load model from path: {}", model_file.display());
-                network
-            });
+            .load_file(&model_file, &recorder, &device)
+            .expect("Failed to load model");
     }
+
     println!("Model loaded from '{}':", model_file.display());
     println!("{network:?}");
 
@@ -249,7 +247,7 @@ fn train<
         // Save model
         if let Err(e) = policy_net
             .clone()
-            .save_file(&model_file, &burn::record::DefaultRecorder::default())
+            .save_file(&model_file, &Recorder::default())
         {
             eprintln!("Failed to save model: {}", e);
         }

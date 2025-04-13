@@ -6,12 +6,14 @@ use std::marker::PhantomData;
 use burn::{
     module::{AutodiffModule, Param, ParamId},
     prelude::*,
-    record,
+    record::{BinBytesRecorder, FullPrecisionSettings, Recorder},
     tensor::backend::AutodiffBackend,
 };
 use nn::Linear;
 
 use super::{action::Action, state::State};
+
+pub type RecorderSettings = FullPrecisionSettings;
 
 #[derive(Clone)]
 pub enum BotModel<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
@@ -19,25 +21,29 @@ pub enum BotModel<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     Controlled(A),
 }
 
-impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> BotModel<B, S, A, N> {
-    pub fn new_model(device: &B::Device) -> Self {
+pub trait TrainedNetwork<B: Backend, S: State, A: Action>: Network<B, S, A> {
+    fn bytes() -> &'static [u8];
+
+    fn load_trained(self, device: &B::Device) -> Self {
+        let bytes = Self::bytes().to_vec();
+        let recorder = BinBytesRecorder::<RecorderSettings>::default();
+        let record = recorder
+            .load(bytes.to_vec(), device)
+            .expect("Failed to load trained model record");
+        self.load_record(record)
+    }
+}
+
+impl<B: Backend, S: State, A: Action, N: TrainedNetwork<B, S, A>> BotModel<B, S, A, N> {
+    pub fn new_trained_model(device: &B::Device) -> Self {
         let mut model: Model<B, S, A, N> = Model::init(device);
+        model.net = model.net.load_trained(device);
+        BotModel::Model(model)
+    }
+}
 
-        if let Ok(path) = std::env::var("MODEL_PATH") {
-            if !path.is_empty() {
-                let net = model
-                    .net
-                    .load_file(&path, &record::DefaultRecorder::default(), device)
-                    .unwrap_or_else(|_| {
-                        panic!("Failed to load model from path: {}", path);
-                    });
-                model = Model::new(net);
-                println!("Model loaded from path: {}", path);
-            }
-        } else {
-            println!("[WARNING] MODEL_PATH not set, using random model");
-        }
-
+impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> BotModel<B, S, A, N> {
+    pub fn new_model(model: Model<B, S, A, N>) -> Self {
         BotModel::Model(model)
     }
 
@@ -75,7 +81,7 @@ pub struct Model<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Model<B, S, A, N> {
-    fn new(net: N) -> Self {
+    pub fn new(net: N) -> Self {
         Self {
             net,
             _backend: PhantomData,
