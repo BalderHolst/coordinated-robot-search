@@ -6,7 +6,7 @@ edition = "2021"
 [features]
 default = []
 cli = ["clap"]
-serde-bin = ["serde-binary"]
+bin-msgs = ["serde-binary"]
 
 [dependencies]
 emath = { version = "0.30.0", features = ["serde"] }

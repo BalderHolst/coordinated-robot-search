@@ -48,10 +48,10 @@ pub enum MessageKind {
     Debug(String),
 }
 
-#[cfg(feature = "serde-bin")]
+#[cfg(feature = "bin-msgs")]
 const ENDIANNESS: serde_binary::binary_stream::Endian = serde_binary::binary_stream::Endian::Little;
 
-#[cfg(feature = "serde-bin")]
+#[cfg(feature = "bin-msgs")]
 impl TryFrom<Vec<u8>> for MessageKind {
     type Error = serde_binary::Error;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
@@ -59,7 +59,7 @@ impl TryFrom<Vec<u8>> for MessageKind {
     }
 }
 
-#[cfg(feature = "serde-bin")]
+#[cfg(feature = "bin-msgs")]
 impl TryFrom<MessageKind> for Vec<u8> {
     type Error = serde_binary::Error;
     fn try_from(value: MessageKind) -> Result<Self, Self::Error> {
