@@ -3,6 +3,7 @@
 mod avoid_obstacles;
 mod common;
 mod dumb;
+#[cfg(feature = "rl")]
 pub mod rl;
 mod search;
 
@@ -22,6 +23,7 @@ pub type BehaviorOutput = (Control, Vec<Message>);
 pub type BehaviorFn = fn(&mut Box<dyn Robot>, Time) -> BehaviorOutput;
 pub type CreateFn = fn() -> Box<dyn Robot>;
 
+#[cfg(feature = "rl")]
 type MyBackend = burn::backend::Wgpu;
 
 /// The kind of robot. Behaviors can only be run the robot kind they were designed for.
@@ -31,8 +33,11 @@ pub enum RobotKind {
     Dumb,
     AvoidObstacles,
     Search,
+    #[cfg(feature = "rl")]
     SmallRl,
+    #[cfg(feature = "rl")]
     SmallSoloRl,
+    #[cfg(feature = "rl")]
     MinimalRl,
 }
 
@@ -43,8 +48,11 @@ impl RobotKind {
             RobotKind::Dumb => dumb::MENU,
             RobotKind::AvoidObstacles => avoid_obstacles::MENU,
             RobotKind::Search => search::MENU,
+            #[cfg(feature = "rl")]
             RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
+            #[cfg(feature = "rl")]
             RobotKind::SmallSoloRl => &[("run", rl::robots::small::run::<MyBackend>)],
+            #[cfg(feature = "rl")]
             RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
         }
     }
@@ -56,12 +64,15 @@ impl RobotKind {
                 || Box::new(avoid_obstacles::AvoidObstaclesRobot::default())
             }
             RobotKind::Search => || Box::new(search::SearchRobot::default()),
+            #[cfg(feature = "rl")]
             RobotKind::SmallRl => {
                 || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
+            #[cfg(feature = "rl")]
             RobotKind::SmallSoloRl => {
                 || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
+            #[cfg(feature = "rl")]
             RobotKind::MinimalRl => {
                 || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new_trained())
             }
@@ -73,8 +84,11 @@ impl RobotKind {
             RobotKind::Dumb => "dumb",
             RobotKind::AvoidObstacles => "avoid-obstacles",
             RobotKind::Search => "search",
+            #[cfg(feature = "rl")]
             RobotKind::SmallRl => "small-rl",
+            #[cfg(feature = "rl")]
             RobotKind::SmallSoloRl => "small-solo-rl",
+            #[cfg(feature = "rl")]
             RobotKind::MinimalRl => "minimal-rl",
         }
     }
