@@ -1,9 +1,24 @@
-\section{Search Algorithms}
+\section{Search Algorithms}search
 This section describes the development of a distributed algorithm which makes it possible for a group of robots to find a search item. These algorithms are implemented in the \texttt{botbrain} library.
 
 This project explores two approaches for controlling the behavior of the robot swarm: A {\color{red} manually developed} algorithm and an algorithm based on reinforcement learning. The following sections will explore the development of these.
 
 \section{{\color{red}Manually Developed Algorithm}}
+
+\subsection{Target Contributions}
+A robot keeps track of a lot of state which should dictate how it moves and explores the environment. Different inputs may indicate that the robot should do different things at the same time. This could be in the situation where the robot knows that there is unexplored area in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area while the obstacle avoidance part of the behavior may {\color{red} tell} the robot to move away from the obstacle. All of these subsystem outputs must be combined to create a behavior which is {\color{red} controlled by all subsystems at the same time}. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. All of these target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should be weight highly, as the robot should try very hard, not to run into obstacles. \Cref{fig:target-contributions} shows an example of this procedure.
+
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.75\textwidth]{figures/target-contribtions.png}
+    \end{center}
+    \caption{Example of the target calculation}
+    \label{fig:target-contributions}
+\end{figure}
+
+
+% TODO: Describe the idea, that different factors contribute to the target vector. The target vector is the sum over all contributions.
+% TODO: Describe how we take gradients on a grid
 
 \subsection{Search Grid}
 
@@ -77,12 +92,45 @@ With this gradient calculation, tho robots will explore the map by getting attra
 \end{figure}
 
 \subsection{Proximity Grid}
+The robot should stay withing communication range of the other robots, to assure this, the robot keeps track of the connectivity {\color{red} across} the whole map using a "Proximity Grid" (See \cref{fig:proximity-grid}).
+
+\begin{figure}[h]
+    \begin{center}
+        \includegraphics[width=0.95\textwidth]{figures/proximity-grid.png}
+    \end{center}
+    \caption{Example of a proximity grid}\label{fig:proximity-grid}
+\end{figure}
+
+The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is halv colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying withing the main network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the calculating. In the situation that the robot is the only link between the main network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
+
+\begin{figure}[h]
+    \begin{center}
+        \begin{subfigure}[b]{0.31\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{figures/proximity-pull1.png}
+            \caption{Proximity grid for a {\color{red} single link} robot}
+            \label{fig:proximity-pull1}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.31\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{figures/proximity-pull2.png}
+            \caption{The single link robot has moved toward the main network and is pulling the stay robots along}
+            \label{fig:proximity-pull2}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.31\textwidth}
+            \centering
+            \includegraphics[width=\textwidth]{figures/proximity-pull3.png}
+            \caption{The stay robots have now been pulled towards the main network.}
+            \label{fig:proximity-pull3}
+        \end{subfigure}
+    \end{center}
+    \caption{Example of a {\color{red} single link} robot pulling stay robots into the network.}\label{fig:proximity-pull}
+\end{figure}
+
+
+
 % TODO: How is this populated
 % TODO: Add a nice figure
-
-\subsection{Target Contributions}
-% TODO: Describe the idea, that different factors contribute to the target vector. The target vector is the sum over all contributions.
-% TODO: Describe how we take gradients on a grid
 
 \subsection{Global Planner}
 % TODO: Why is if useful
