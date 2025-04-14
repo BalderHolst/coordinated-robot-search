@@ -80,13 +80,9 @@ pub struct WorldGenArgs {
     #[arg(short, default_value_t = 1)]
     pub n: usize,
 
-    /// Minimum size of the world. Format: "x,y" or "(x,y)"
-    #[arg(long, default_value = "(20.0,20.0)", value_parser = vec2_parser)]
-    pub min_size: Vec2,
-
-    /// Maximum size of the world. Format: "x,y" or "(x,y)"
-    #[arg(long, default_value = "(100.0,70.0)", value_parser = vec2_parser)]
-    pub max_size: Vec2,
+    /// Size of the worlds. Format: "x,y" or "(x,y)"
+    #[arg(long, default_value = "(40.0,40.0)", value_parser = vec2_parser)]
+    pub size: Vec2,
 
     /// Minimum number of obstacles in the world
     #[arg(long, default_value_t = 0.1)]

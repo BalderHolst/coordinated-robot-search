@@ -10,14 +10,6 @@ use simple_sim::world::description::ObjectDescription;
 use crate::cli::{WorldGenArgs, WorldToImgArgs};
 
 pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
-    // Check if the min_size is less than max_size
-    if args.min_size.x > args.max_size.x || args.min_size.y > args.max_size.y {
-        return Err(format!(
-            "Minimum size must be less than maximum size. Got min: {:?}, max: {:?}",
-            args.min_size, args.max_size
-        ));
-    }
-
     let out_dir = args.output;
 
     // Check for existing files in the output directory
@@ -38,7 +30,7 @@ pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
 
     for i in 0..args.n {
         // Generate the world description
-        let desc = generate_desc(args.min_size, args.max_size, args.scale);
+        let desc = generate_desc(args.size, args.scale);
 
         let path = out_dir.join(format!("world_{}.ron", i));
 
@@ -122,14 +114,9 @@ fn random_obstacle(world_size: Vec2) -> Shape {
     }
 }
 
-fn generate_desc(min_size: Vec2, max_size: Vec2, scale: f32) -> ObjectDescription {
-    let size = Vec2::new(
-        rand::random::<f32>() * (max_size.x - min_size.x) + min_size.x,
-        rand::random::<f32>() * (max_size.y - min_size.y) + min_size.y,
-    );
-
-    let width = size.x.ceil();
-    let height = size.y.ceil();
+fn generate_desc(world_size: Vec2, scale: f32) -> ObjectDescription {
+    let width = world_size.x.ceil();
+    let height = world_size.y.ceil();
 
     let mut desc = ObjectDescription {
         width,
@@ -145,7 +132,7 @@ fn generate_desc(min_size: Vec2, max_size: Vec2, scale: f32) -> ObjectDescriptio
     let target_occupancy = rand::rng().random_range(OBSTACLE_OCCUPANCY);
 
     while obstacle_area / area < target_occupancy {
-        let obstacle = random_obstacle(size);
+        let obstacle = random_obstacle(world_size);
         obstacle_area += obstacle.area();
         desc.obstacles.push(obstacle);
     }
