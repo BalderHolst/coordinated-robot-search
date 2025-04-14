@@ -500,13 +500,13 @@ impl SearchRobot {
             let diff = goal - self.pos;
             if diff.length() < PATH_PLANNER_GOAL_TOLERANCE {
                 self.path_planner_goal = None;
+                self.path_planner_path = vec![];
                 println!("Goal reached, switching to exploring mode");
                 self.robot_mode = RobotMode::Exploring;
                 return None;
             }
         } else {
             // Set a goal using frontiers
-
             let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
 
             match frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid) {
@@ -614,11 +614,14 @@ impl SearchRobot {
             let tmp = self.frontiers_grid.world_to_grid(self.pos);
             (tmp.x as usize, tmp.y as usize)
         };
-        let frontier_regions =
+        let mut frontier_regions =
             frontiers::make_frontier_regions(robot_pos, frontiers, &self.costmap_grid);
+
+        frontier_regions.sort_by_key(|v1| v1.len());
 
         let frontier_regions_index: Vec<(Pos2, f32)> = frontier_regions
             .iter()
+            .rev() // Smallest idx for biggest regions
             .enumerate()
             .flat_map(|(idx, region)| {
                 region

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use core::f32;
 use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
@@ -136,13 +137,17 @@ pub fn make_frontier_regions(
     regions
 }
 
-fn find_frontiers_region_center(frontier_region: &[(usize, usize)]) -> (usize, usize) {
-    let sum = frontier_region.iter().fold((0, 0), |mut acc, pos| {
-        acc.0 += pos.0;
-        acc.1 += pos.1;
-        acc
-    });
-    (sum.0 / frontier_region.len(), sum.1 / frontier_region.len())
+fn find_frontiers_region_closest_pos(
+    robot_pos: (usize, usize),
+    frontier_region: &[(usize, usize)],
+) -> (usize, usize) {
+    frontier_region
+        .iter()
+        .min_by(|&&f1, &&f2| {
+            pathing::heuristic(robot_pos, f1).cmp(&pathing::heuristic(robot_pos, f2))
+        })
+        .unwrap()
+        .to_owned()
 }
 
 pub fn evaluate_frontier_regions(
@@ -150,30 +155,40 @@ pub fn evaluate_frontier_regions(
     frontier_regions: Vec<Vec<(usize, usize)>>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<(usize, usize)> {
-    let best_target = frontier_regions
+    // The furthest frontier region's closest frontier
+    let mut furthest_frontier = f32::NEG_INFINITY;
+    // The biggest frontier region
+    let mut biggest_frontier = 0;
+
+    let closest_region_frontier: Vec<_> = frontier_regions
         .iter()
         // Find the weight of the frontier regions
         .map(|region| {
-            let center = find_frontiers_region_center(region);
-            let huristic = pathing::heuristic(center, robot_pos) as f32;
+            let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
+            let huristic = pathing::heuristic(closest_region_frontier, robot_pos) as f32;
 
-            let size = region.len() as f32;
+            let size = region.len();
 
-            let weight =
-                FRONTIER_REGION_SIZE_WEIGHT * size + FRONTIER_REGION_DISTANCE_WEIGHT * huristic;
+            furthest_frontier = furthest_frontier.max(huristic);
+            biggest_frontier = biggest_frontier.max(region.len());
 
-            (weight, region)
+            (huristic, size, closest_region_frontier)
         })
-        // Finds the best frontier region
-        .max_by(|(w1, _), (w2, _)| w1.partial_cmp(w2).unwrap_or(Ordering::Equal))?
-        .1
-        .iter()
-        // Finds the closest frontier to the robot from the best region
-        .map(|&frontier| (frontier, pathing::heuristic(frontier, robot_pos)))
-        .min_by_key(|(_, h)| *h)?
-        .0;
+        .collect();
 
-    Some(best_target)
+    let best_frontier =
+        closest_region_frontier
+            .into_iter()
+            .max_by(|&(h1, s1, p1), &(h2, s2, p2)| {
+                let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (s1 as f32 / biggest_frontier as f32)
+                    + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - h1 / furthest_frontier);
+                let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (s2 as f32 / biggest_frontier as f32)
+                    + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - h2 / furthest_frontier);
+
+                weight1.partial_cmp(&weight2).unwrap_or(Ordering::Equal)
+            })?;
+
+    Some(best_frontier.2)
 }
 
 pub fn evaluate_frontiers(
