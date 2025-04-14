@@ -189,7 +189,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
             radius,
             angle,
             fov,
-        } = cone.clone();
+        } = *cone;
         let radius = radius / self.cell_size;
         let center = self.world_to_grid(center);
         self.grid.set_cone(center, radius, angle, fov, cell);
@@ -212,7 +212,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
             radius,
             angle,
             fov,
-        } = cone.clone();
+        } = *cone;
         self.iter_circle(&Circle { center, radius })
             .filter(move |point| {
                 let offset = *point - center;

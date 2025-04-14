@@ -223,15 +223,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
-name = "binary-stream"
-version = "3.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f4ef03ef225ea9a0b680a5926a58cb45d8eb56abf23d8a8b5c5dbc61235e2dac"
-dependencies = [
- "thiserror 1.0.69",
-]
-
-[[package]]
 name = "bincode"
 version = "2.0.0-rc.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -311,11 +302,11 @@ dependencies = [
  "bincode",
  "bincode_derive",
  "burn",
+ "bytemuck",
  "clap",
  "emath",
  "rand 0.9.0",
  "serde",
- "serde-binary",
 ]
 
 [[package]]
@@ -1416,6 +1407,7 @@ version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4fe73c1207b864ee40aa0b0c038d6092af1030744678c60188a05c28553515d"
 dependencies = [
+ "bytemuck",
  "serde",
 ]
 
@@ -3806,17 +3798,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e8dfc9d19bdbf6d17e22319da49161d5d0108e4188e8b680aef6299eed22df60"
 dependencies = [
  "serde_derive",
-]
-
-[[package]]
-name = "serde-binary"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b550db407b83ed53a4f76f888bfd7441b685abc2c086e20fb47781a286940506"
-dependencies = [
- "binary-stream",
- "serde",
- "thiserror 1.0.69",
 ]
 
 [[package]]

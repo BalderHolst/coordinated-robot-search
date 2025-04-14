@@ -18,6 +18,7 @@ pub mod shapes;
 mod utils;
 
 /// A unique identifier for a robot
+#[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct RobotId(u32);
 
@@ -34,6 +35,7 @@ impl RobotId {
 }
 
 /// Kinds of messages that can be sent between robots
+#[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum MessageKind {
     ShapeDiff {
@@ -49,25 +51,40 @@ pub enum MessageKind {
 }
 
 #[cfg(feature = "bin-msgs")]
-const ENDIANNESS: serde_binary::binary_stream::Endian = serde_binary::binary_stream::Endian::Little;
+fn bincode_config() -> bincode::config::Configuration {
+    bincode::config::standard()
+        .with_variable_int_encoding()
+        .with_little_endian()
+}
+
+#[cfg(feature = "bin-msgs")]
+impl MessageKind {
+    pub fn encode(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        bincode::encode_to_vec(self, bincode_config())
+    }
+    pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
+        bincode::decode_from_slice(bytes.as_slice(), bincode_config()).map(|(msg, _)| msg)
+    }
+}
 
 #[cfg(feature = "bin-msgs")]
 impl TryFrom<Vec<u8>> for MessageKind {
-    type Error = serde_binary::Error;
+    type Error = bincode::error::DecodeError;
     fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        serde_binary::from_slice(&value, ENDIANNESS)
+        Ok(bincode::decode_from_slice(value.as_slice(), bincode_config())?.0)
     }
 }
 
 #[cfg(feature = "bin-msgs")]
 impl TryFrom<MessageKind> for Vec<u8> {
-    type Error = serde_binary::Error;
+    type Error = bincode::error::EncodeError;
     fn try_from(value: MessageKind) -> Result<Self, Self::Error> {
-        serde_binary::to_vec(&value, ENDIANNESS)
+        bincode::encode_to_vec(value, bincode_config())
     }
 }
 
 /// A message sent between robots
+#[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone)]
 pub struct Message {
     /// The id of the robot that sent the message
@@ -75,6 +92,32 @@ pub struct Message {
 
     /// The kind of message
     pub kind: MessageKind,
+}
+
+#[cfg(feature = "bin-msgs")]
+impl Message {
+    pub fn encode(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        bincode::encode_to_vec(self, bincode_config())
+    }
+    pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
+        bincode::decode_from_slice(bytes.as_slice(), bincode_config()).map(|(msg, _)| msg)
+    }
+}
+
+#[cfg(feature = "bin-msgs")]
+impl TryFrom<Vec<u8>> for Message {
+    type Error = bincode::error::DecodeError;
+    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
+        Ok(bincode::decode_from_slice(value.as_slice(), bincode_config())?.0)
+    }
+}
+
+#[cfg(feature = "bin-msgs")]
+impl TryFrom<Message> for Vec<u8> {
+    type Error = bincode::error::EncodeError;
+    fn try_from(value: Message) -> Result<Self, Self::Error> {
+        bincode::encode_to_vec(value, bincode_config())
+    }
 }
 
 /// A point detected by the camera
@@ -111,6 +154,7 @@ impl Default for CamData {
 }
 
 /// A point detected by the lidar
+#[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LidarPoint {
     /// The angle of the point relative to the robot
@@ -121,6 +165,7 @@ pub struct LidarPoint {
 }
 
 /// Data from the lidar. Points have angles within the range [-PI, PI].
+#[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct LidarData(Vec<LidarPoint>);
 
