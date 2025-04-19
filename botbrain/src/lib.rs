@@ -37,7 +37,7 @@ impl RobotId {
 
 /// Kinds of messages that can be sent between robots
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MessageKind {
     ShapeDiff {
         shape: Shape,
@@ -86,7 +86,7 @@ impl TryFrom<MessageKind> for Vec<u8> {
 
 /// A message sent between robots
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Message {
     /// The id of the robot that sent the message
     pub sender_id: RobotId,
@@ -119,6 +119,27 @@ impl TryFrom<Message> for Vec<u8> {
     fn try_from(value: Message) -> Result<Self, Self::Error> {
         bincode::encode_to_vec(value, bincode_config())
     }
+}
+
+#[test]
+fn test_msg_serialization() {
+    let kind = MessageKind::ShapeDiff {
+        shape: Shape::Circle(shapes::Circle {
+            center: Pos2::new(-0.33, 0.66),
+            radius: 10.0,
+        }),
+        diff: 0.5,
+    };
+    let kind_bytes = kind.encode().unwrap();
+    let kind_decoded = MessageKind::decode(kind_bytes).unwrap();
+    assert_eq!(kind, kind_decoded);
+    let msg = Message {
+        sender_id: RobotId::new(12),
+        kind,
+    };
+    let msg_bytes = msg.encode().unwrap();
+    let msg_decoded = Message::decode(msg_bytes).unwrap();
+    assert_eq!(msg, msg_decoded);
 }
 
 /// A point detected by the camera
@@ -156,7 +177,7 @@ impl Default for CamData {
 
 /// A point detected by the lidar
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LidarPoint {
     /// The angle of the point relative to the robot
     pub angle: f32,
@@ -167,7 +188,7 @@ pub struct LidarPoint {
 
 /// Data from the lidar. Points have angles within the range [-PI, PI].
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct LidarData(Vec<LidarPoint>);
 
 impl LidarData {

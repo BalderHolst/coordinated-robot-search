@@ -6,7 +6,7 @@ use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 // #[serde(untagged)]
 pub enum Shape {
     Circle(Circle),
@@ -28,7 +28,7 @@ impl Shape {
 
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Circle {
     pub center: Pos2,
     pub radius: f32,
@@ -36,7 +36,7 @@ pub struct Circle {
 
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Cone {
     pub center: Pos2,
     pub radius: f32,
@@ -46,7 +46,7 @@ pub struct Cone {
 
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Line {
     pub start: Pos2,
     pub end: Pos2,
@@ -60,7 +60,7 @@ impl Line {
 
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct WideLine {
     pub line: Line,
     pub width: f32,
