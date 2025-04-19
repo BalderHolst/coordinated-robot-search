@@ -1,12 +1,10 @@
 use std::{f32::consts::PI, time::Duration};
 
-use emath::Vec2;
-
 use crate::{cast_robot, LidarPoint, MessageKind};
 
 use super::{
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Postbox, Robot, RobotId,
-    RobotPose,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Map, Postbox, Robot,
+    RobotId, RobotPose,
 };
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
@@ -28,7 +26,7 @@ impl Robot for AvoidObstaclesRobot {
         self.id = id;
     }
 
-    fn set_world_size(&mut self, _size: Vec2) {}
+    fn set_world(&mut self, _world: Map) {}
 
     fn get_postbox(&self) -> &Postbox {
         &self.postbox

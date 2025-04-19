@@ -1,5 +1,7 @@
 //! This module contains robot `search` behavior.
 
+use costmap::COSTMAP_GRID_SCALE;
+use pathing::PATH_PLANNER_GOAL_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -11,15 +13,24 @@ use emath::{Pos2, Vec2};
 use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
-    cast_robot, common, debug, params, scaled_grid::ScaledGrid, shapes::Circle,
-    utils::normalize_angle, BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType,
-    Postbox, Robot, RobotId, RobotPose, RobotRef,
+    cast_robot, common, debug,
+    params::{self},
+    scaled_grid::ScaledGrid,
+    shapes::{Circle, Line},
+    utils::normalize_angle,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, Map, Postbox, Robot,
+    RobotId, RobotPose, RobotRef,
 };
+
+mod costmap;
+mod frontiers;
+mod pathing;
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
     ("full", behaviors::full),
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
+    ("no-pathing", behaviors::no_pathing),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -33,6 +44,8 @@ const ANGLE_THRESHOLD: f32 = PI / 4.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
+/// The threshold at which the robot will switch from exploring to pathing
+const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.02;
 
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
@@ -43,7 +56,16 @@ const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
 const PROXIMITY_MAX_LAYERS: usize = 3;
 
+const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
+
 const ROBOT_SPACING: f32 = 4.0;
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub enum RobotMode {
+    #[default]
+    Exploring,
+    Pathing,
+}
 
 #[derive(Clone, Default)]
 pub struct SearchRobot {
@@ -68,6 +90,10 @@ pub struct SearchRobot {
     /// The data from the lidar. Distance to objects.
     pub lidar: LidarData,
 
+    /// The map navigating in
+    pub map: ScaledGrid<f32>,
+
+    /// For sending/receiving messages
     pub postbox: Postbox,
 
     /// Grid containing probabilities of objects in the environment.
@@ -83,12 +109,32 @@ pub struct SearchRobot {
     /// The time of the last proximity grid update
     pub last_proximity_grid_update: Duration,
 
+    /// Grid containing the costmap for path planning
+    pub costmap_grid: ScaledGrid<f32>,
+
+    /// The time of the last costmap grid update
+    pub last_costmap_grid_update: Duration,
+
+    /// Frontiers
+    pub frontiers_grid: ScaledGrid<f32>,
+
+    /// The goal of the path planner
+    pub path_planner_goal: Option<Pos2>,
+
+    /// The path planned by the robot
+    pub path_planner_path: Vec<Pos2>,
+
+    /// The path planned by the robot
+    pub path_fails: u16,
+
     /// Other robots and their positions
     pub others: HashMap<RobotId, (Pos2, f32)>,
 
     /// Debug object and their names. Used for visualization.
     /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
+
+    pub robot_mode: RobotMode,
 }
 
 impl Robot for SearchRobot {
@@ -100,9 +146,13 @@ impl Robot for SearchRobot {
         self.id = id;
     }
 
-    fn set_world_size(&mut self, size: Vec2) {
+    fn set_world(&mut self, world: Map) {
+        let size = world.size();
+        self.map = convert_to_botbrain_map(&world);
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
+        self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
+        self.frontiers_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
     }
 
     fn get_postbox(&self) -> &super::Postbox {
@@ -286,6 +336,12 @@ impl SearchRobot {
 
         self.debug("Gradient", "Search Cells", DebugType::NumberPoints(cells));
         self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
+
+        let g_len = g.length();
+        if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+            println!("Switching to pathing: gradient: {}", g_len);
+            self.robot_mode = RobotMode::Pathing;
+        }
         g
     }
 
@@ -349,13 +405,20 @@ impl SearchRobot {
         lidar_contribution
     }
 
-    pub fn control_towards(&self, target: Vec2) -> Control {
-        let angle_error = normalize_angle(self.angle - target.angle());
-        let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
-        let speed = 1.0 - t;
-        let steer = t * normalize_angle(target.angle() - self.angle);
+    pub fn control_towards(&self, target: Option<Vec2>) -> Control {
+        if let Some(target) = target {
+            let angle_error = normalize_angle(self.angle - target.angle());
+            let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
+            let speed = 1.0 - t;
+            let steer = normalize_angle(target.angle() - self.angle);
 
-        Control { speed, steer }
+            Control { speed, steer }
+        } else {
+            Control {
+                speed: 0.0,
+                steer: 0.0,
+            }
+        }
     }
 
     fn visualize(&mut self) {
@@ -388,6 +451,211 @@ impl SearchRobot {
             "Proximity Grid",
             DebugType::Grid(self.proximity_grid.clone()),
         );
+
+        soup.add(
+            "Grids",
+            "Costmap Grid",
+            DebugType::Grid(self.costmap_grid.clone()),
+        );
+
+        soup.add(
+            "Grids",
+            "Frontiers",
+            DebugType::Grid(self.frontiers_grid.clone()),
+        );
+
+        soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
+
+        if self.robot_mode == RobotMode::Pathing {
+            self.show_path();
+            self.show_frontiers();
+        }
+    }
+}
+
+/// Function related to path planning
+impl SearchRobot {
+    fn update_costmap_grid(&mut self, time: Duration) {
+        // Don't update the costmap grid too often
+        if (time - self.last_costmap_grid_update).as_secs_f32() < COSTMAP_GRID_UPDATE_INTERVAL {
+            return;
+        }
+        self.last_costmap_grid_update = time;
+
+        self.costmap_grid = costmap::make_costmap_grid(
+            self.pos,
+            self.angle,
+            &self.map,
+            &self.search_grid,
+            &self.lidar,
+        );
+    }
+
+    fn path_planning(&mut self) -> Option<Vec2> {
+        if self.path_fails > 20 {
+            self.path_fails = 0;
+            self.path_planner_goal = None;
+            self.path_planner_path = vec![];
+            println!("Pathing failed too many times");
+        }
+
+        // Logic to find goal or change to exploring mode when reached
+        if let Some(goal) = self.path_planner_goal {
+            let diff = goal - self.pos;
+            if diff.length() < PATH_PLANNER_GOAL_TOLERANCE {
+                self.path_planner_goal = None;
+                self.path_planner_path = vec![];
+                println!("Goal reached, switching to exploring mode");
+                self.robot_mode = RobotMode::Exploring;
+                return None;
+            }
+        } else {
+            // Set a goal using frontiers
+            let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+
+            match frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid) {
+                Some(goal) => self.path_planner_goal = Some(goal),
+                None => {
+                    // Should only happen in the beginning
+                    self.robot_mode = RobotMode::Exploring;
+                    return None;
+                }
+            }
+        }
+
+        // Don't stop pathing if there are no other robots in world
+        if !self.others.is_empty() {
+            // Only limit robot movement if there are other robots in the proximity grid
+            match self.proximity_grid.get(self.pos) {
+                Some(cell) if *cell == 0.0 => {
+                    // If we are not in the proximity grid, we can't move towards the goal
+                    // println!("Out of proximity grid");
+                    return None;
+                }
+                None => {
+                    println!("Robot position not in proximity grid: {:?}", self.pos);
+                }
+                _ => {}
+            }
+        }
+
+        // Follow path or reevaluate path or goal?
+        if self.path_planner_path.is_empty() {
+            if let Some(path) = pathing::find_path(
+                self.pos,
+                self.path_planner_goal.unwrap(), // Should always be set here
+                &self.costmap_grid,
+            ) {
+                self.path_planner_path = path;
+                // Start following the path next time
+                None
+            } else {
+                // TODO: Determine best way to proceed
+                // New goal, new path or switch mode?
+                println!("What: {:?}", self.robot_mode);
+                // Nothing
+                None
+            }
+        } else {
+            // Update the path to only contain the points we haven't reached
+            if (self.pos - self.path_planner_path[0]).length() < PATH_PLANNER_GOAL_TOLERANCE {
+                self.path_planner_path.remove(0);
+            }
+
+            // Follow the path
+            if let Ok(control_vec) = self.follow_path() {
+                Some(control_vec)
+            } else {
+                // TODO: Determine best way to proceed
+                // New goal, new path or switch mode?
+                println!("Path is blocked");
+                None
+            }
+        }
+    }
+
+    fn follow_path(&mut self) -> Result<Vec2, ()> {
+        if !self.path_planner_path.is_empty() {
+            // Check if all cells in the line to the goal are free
+            let line = Line {
+                start: self.pos,
+                end: self.path_planner_path[0],
+            };
+
+            match costmap::validate_thick_line(line, params::DIAMETER, &self.costmap_grid) {
+                true => {
+                    self.path_fails = 0;
+                    Ok((self.path_planner_path[0] - self.pos).normalized())
+                }
+                false => {
+                    // Track failures to set new goal or path
+                    self.path_fails += 1;
+                    Err(())
+                }
+            }
+        } else {
+            Err(())
+        }
+    }
+
+    fn show_path(&mut self) {
+        if self.path_planner_goal.is_some() {
+            let soup = &mut self.debug_soup;
+            let mut path = Vec::with_capacity(self.path_planner_path.len() + 1);
+            path.push(self.pos);
+            path.extend(self.path_planner_path.iter().cloned());
+            soup.add("Planner", "Goal Path", DebugType::GlobalLine(path));
+        }
+    }
+
+    fn show_frontiers(&mut self) {
+        self.frontiers_grid.fill(0.0);
+        let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+        for (x, y) in &frontiers {
+            self.frontiers_grid.grid_mut().set(*x, *y, -10.0);
+        }
+        let robot_pos = {
+            let tmp = self.frontiers_grid.world_to_grid(self.pos);
+            (tmp.x as usize, tmp.y as usize)
+        };
+        let mut frontier_regions =
+            frontiers::make_frontier_regions(robot_pos, frontiers, &self.costmap_grid);
+
+        frontier_regions.sort_by_key(|v1| v1.len());
+
+        let frontier_regions_index: Vec<(Pos2, f32)> = frontier_regions
+            .iter()
+            .rev() // Smallest idx for biggest regions
+            .enumerate()
+            .flat_map(|(idx, region)| {
+                region
+                    .iter()
+                    .map(|(x, y)| {
+                        let idx = idx as f32;
+                        let pos = self
+                            .frontiers_grid
+                            .grid_to_world(Pos2::new(*x as f32, *y as f32));
+                        (pos, idx)
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+
+        let best =
+            frontiers::evaluate_frontier_regions(robot_pos, frontier_regions, &self.costmap_grid);
+
+        self.get_debug_soup_mut().add(
+            "Planner",
+            "Frontier Regions Index",
+            DebugType::NumberPoints(frontier_regions_index),
+        );
+
+        if let Some(best) = best {
+            let pos = Pos2::new(best.0 as f32, best.1 as f32);
+            let pos = self.frontiers_grid.grid_to_world(pos);
+            self.get_debug_soup_mut()
+                .add("Planner", "Frontier Target", DebugType::Point(pos));
+        }
     }
 }
 
@@ -395,7 +663,7 @@ fn search(
     robot: &mut RobotRef,
     time: Duration,
     update: fn(&mut SearchRobot, time: Duration),
-    contributions: fn(&mut SearchRobot, &mut Vec2),
+    contributions: fn(&mut SearchRobot, &Vec2) -> Option<Vec2>,
 ) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
 
@@ -409,14 +677,27 @@ fn search(
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
-    contributions(robot, &mut target);
+    let target = contributions(robot, &target);
 
-    robot.debug("", "Target", DebugType::Vector(target));
+    robot.debug("", "Target", DebugType::Vector(target.unwrap_or_default()));
 
     robot.postbox.clean();
 
     let msgs = robot.postbox.empty();
     (robot.control_towards(target), msgs)
+}
+
+fn convert_to_botbrain_map(world: &Map) -> ScaledGrid<f32> {
+    let mut map = ScaledGrid::<f32>::new(world.width(), world.height(), world.scale());
+    println!("Converting world to botbrain map");
+    for (x, y, cell) in world.iter() {
+        let val = match cell {
+            super::MapCell::Free => 0.0,
+            super::MapCell::Obstacle => costmap::COSTMAP_OBSTACLE,
+        };
+        map.set(Pos2::new(x, y), val);
+    }
+    map
 }
 
 mod behaviors {
@@ -429,10 +710,22 @@ mod behaviors {
             |robot, time| {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
+                if robot.robot_mode == RobotMode::Pathing {
+                    robot.update_costmap_grid(time);
+                }
             },
-            |robot, target| {
-                *target += robot.search_gradient();
-                *target += robot.proximity_gradient();
+            |robot, target| match robot.robot_mode {
+                RobotMode::Exploring => {
+                    let mut target = *target;
+                    target += robot.search_gradient();
+                    target += robot.proximity_gradient();
+                    // target += robot.lidar();
+                    Some(target)
+                }
+                RobotMode::Pathing => {
+                    // No += since we want full control
+                    robot.path_planning()
+                }
             },
         )
     }
@@ -446,8 +739,10 @@ mod behaviors {
                 robot.update_proximity_grid_naive(time);
             },
             |robot, target| {
-                *target += robot.search_gradient();
-                *target += robot.proximity_gradient();
+                let mut target = *target;
+                target += robot.search_gradient();
+                target += robot.proximity_gradient();
+                Some(target)
             },
         )
     }
@@ -461,7 +756,26 @@ mod behaviors {
                 robot.update_proximity_grid(time);
             },
             |robot, target| {
-                *target += robot.search_gradient();
+                let mut target = *target;
+                target += robot.search_gradient();
+                Some(target)
+            },
+        )
+    }
+
+    pub fn no_pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+            },
+            |robot, target| {
+                let mut target = *target;
+                target += robot.search_gradient();
+                target += robot.proximity_gradient();
+                Some(target)
             },
         )
     }

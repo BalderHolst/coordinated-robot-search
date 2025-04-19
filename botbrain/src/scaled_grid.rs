@@ -92,6 +92,11 @@ impl<C: Clone + Default> ScaledGrid<C> {
         &self.grid
     }
 
+    /// The underlying grid mutable
+    pub fn grid_mut(&mut self) -> &mut Grid<C> {
+        &mut self.grid
+    }
+
     /// Convert a world position to the underlying grid position
     pub fn world_to_grid(&self, pos: Pos2) -> Pos2 {
         ((pos + self.size() / 2.0) / self.cell_size).floor()
@@ -220,6 +225,16 @@ impl<C: Clone + Default> ScaledGrid<C> {
                 let angle = utils::normalize_angle(angle);
                 angle.abs() < fov / 2.0
             })
+    }
+
+    /// Iterate over cells within a [Line]
+    pub fn iter_line(&self, line: &Line) -> impl Iterator<Item = Pos2> + '_ {
+        let Line { start, end } = line;
+        let start = self.world_to_grid(*start);
+        let end = self.world_to_grid(*end);
+        self.grid
+            .iter_line(start, end)
+            .map(move |(x, y)| self.grid_to_world(Pos2::new(x as f32, y as f32)))
     }
 }
 

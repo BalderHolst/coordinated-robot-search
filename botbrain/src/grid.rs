@@ -159,6 +159,25 @@ impl<C: Clone + Default> Grid<C> {
                 .map(move |x| (x, y))
         })
     }
+
+    /// Iterate over coordinates within a line
+    pub fn iter_line(&self, start: Pos2, end: Pos2) -> impl Iterator<Item = (usize, usize)> + '_ {
+        let delta = end - start;
+        let dir = delta.normalized();
+        let length = delta.length() as usize;
+        (0..=length).filter_map(move |n| {
+            let cur = start + dir * n as f32;
+            if cur.x < 0.0
+                || cur.x >= self.width as f32
+                || cur.y < 0.0
+                || cur.y >= self.height as f32
+            {
+                None
+            } else {
+                Some((cur.x as usize, cur.y as usize))
+            }
+        })
+    }
 }
 
 impl<C: Clone + Default> Debug for Grid<C> {

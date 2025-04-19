@@ -200,5 +200,10 @@ pub fn cast_ray(
         }
         distance += step_size;
     }
-    (distance - step_size / 2.0, None)
+
+    if distance >= max_range {
+        (max_range, None)
+    } else {
+        (distance - step_size / 2.0, None)
+    }
 }

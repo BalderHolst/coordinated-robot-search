@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-// #[serde(untagged)]
+#[serde(untagged)] // FIX: Figure out why this crashes in ros_agent
 pub enum Shape {
     Circle(Circle),
     Cone(Cone),

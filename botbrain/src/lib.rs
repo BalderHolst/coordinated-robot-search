@@ -6,6 +6,7 @@ use std::{any::Any, collections::HashSet};
 pub use burn;
 use debug::{DebugSoup, DebugType};
 pub use emath::{Pos2, Vec2};
+use scaled_grid::ScaledGrid;
 use serde::{Deserialize, Serialize};
 use shapes::{Cone, Shape};
 use utils::normalize_angle;
@@ -373,6 +374,17 @@ impl Postbox {
     }
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum MapCell {
+    /// The cell is free
+    #[default]
+    Free,
+    /// The cell is occupied by an object
+    Obstacle,
+}
+
+pub type Map = ScaledGrid<MapCell>;
+
 /// The pose of a robot
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RobotPose {
@@ -396,8 +408,8 @@ pub trait Robot: Send {
     /// Set the id of the robot
     fn set_id(&mut self, id: RobotId);
 
-    /// Set the size of the world
-    fn set_world_size(&mut self, size: Vec2);
+    // The world the robot is operating in
+    fn set_world(&mut self, world: Map);
 
     /// Get the robot postbox
     fn get_postbox(&self) -> &Postbox;
