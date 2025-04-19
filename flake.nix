@@ -7,11 +7,29 @@
             inputs.nixpkgs.follows = "nixpkgs";
         };
     };
-    outputs = { flake-utils, nixpkgs, rust-overlay, ... }:
+    outputs = 
+    { flake-utils, nixpkgs, rust-overlay, ... }:
         flake-utils.lib.eachDefaultSystem (system:
         let
             overlays = [ (import rust-overlay) ];
             pkgs = import nixpkgs { inherit system overlays; };
+            all-crates = pkgs: name: cmd: ignore:
+                (pkgs.writeShellScriptBin "${name}" ''
+                    ROOT=$(git rev-parse --show-toplevel)
+                    MANIFESTS=$(find $ROOT -type f -name Cargo.toml)
+                    for MANIFEST in $MANIFESTS; do
+                        MANIFEST=$(realpath -s --relative-to="." "$MANIFEST")
+                        CRATE=$(dirname $MANIFEST)
+                        CRATE_NAME=$(basename $CRATE)
+
+                        ${builtins.concatStringsSep "\n" (map (ignored: /*bash*/ ''
+                            [[ "$CRATE_NAME" == "${ignored}" ]] && continue
+                        '') ignore)}
+
+                        echo "Running '${cmd}'"
+                        ${cmd} || exit 1
+                    done
+                '');
         in {
         packages = rec {
             site = pkgs.stdenv.mkDerivation {
@@ -64,16 +82,27 @@
                 ]))
                 cargo-hack    # Check feature combinations
                 cargo-machete # Find unused dependencies
-                (pkgs.writeShellScriptBin "cargo-fmt-all" ''
-                    ROOT=$(git rev-parse --show-toplevel)
-                    CRATES=$(find $ROOT -type f -name Cargo.toml)
-                    for abs_path in $CRATES; do
-                        rel_path=$(realpath -s --relative-to="$ROOT" "$abs_path")
-                        echo "Formatting $(dirname $rel_path)"
-                        cargo fmt --all --manifest-path $ROOT/$rel_path
-                    done
-                '')
-            ];
+                (all-crates pkgs 
+                    "cargo-fmt-all"
+                    "cargo fmt --all --manifest-path $MANIFEST"
+                    []
+                )
+                (all-crates pkgs
+                    "cargo-hack-all"
+                    "cargo hack --manifest-path $MANIFEST --feature-powerset check"
+                    ["multi_robot_control"]
+                )
+                (all-crates pkgs
+                    "cargo-clippy-all"
+                    "cargo clippy --all-features --manifest-path $MANIFEST -- -D warnings"
+                    ["multi_robot_control"]
+                )
+                (all-crates pkgs
+                    "cargo-machete-all"
+                    "cargo machete --manifest-path $MANIFEST"
+                    ["multi_robot_control"]
+                )
+           ];
 
             env = {
                 LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath (with pkgs; [
