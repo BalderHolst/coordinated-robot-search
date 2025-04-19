@@ -742,6 +742,7 @@ dependencies = [
  "bytemuck",
  "clap",
  "emath",
+ "miniz_oxide",
  "rand 0.9.1",
  "serde",
 ]

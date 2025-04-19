@@ -60,27 +60,58 @@ fn bincode_config() -> bincode::config::Configuration {
 
 #[cfg(feature = "bin-msgs")]
 impl MessageKind {
-    pub fn encode(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
-        bincode::encode_to_vec(self, bincode_config())
+    pub fn encode(self) -> Result<Vec<u8>, bincode::error::EncodeError> {
+        self.try_into()
     }
-    pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
-        bincode::decode_from_slice(bytes.as_slice(), bincode_config()).map(|(msg, _)| msg)
+    pub fn decode(bytes: Vec<u8>) -> Result<Self, DecodeError> {
+        Self::try_from(bytes)
+    }
+}
+
+const COMPRESS_LEVEL: u8 = 6;
+
+#[cfg(feature = "bin-msgs")]
+#[derive(Debug)]
+pub enum DecodeError {
+    Bincode(bincode::error::DecodeError),
+    Miniz(miniz_oxide::inflate::DecompressError),
+}
+
+#[cfg(feature = "bin-msgs")]
+impl std::fmt::Display for DecodeError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            DecodeError::Bincode(err) => write!(f, "Bincode error: {}", err),
+            DecodeError::Miniz(err) => write!(f, "Miniz error: {}", err),
+        }
     }
 }
 
 #[cfg(feature = "bin-msgs")]
+impl std::error::Error for DecodeError {}
+
+#[cfg(feature = "bin-msgs")]
 impl TryFrom<Vec<u8>> for MessageKind {
-    type Error = bincode::error::DecodeError;
-    fn try_from(value: Vec<u8>) -> Result<Self, Self::Error> {
-        Ok(bincode::decode_from_slice(value.as_slice(), bincode_config())?.0)
+    type Error = DecodeError;
+    fn try_from(compressed_bytes: Vec<u8>) -> Result<Self, Self::Error> {
+        let bytes = miniz_oxide::inflate::decompress_to_vec(compressed_bytes.as_slice())
+            .map_err(DecodeError::Miniz)?;
+
+        match bincode::decode_from_slice(bytes.as_slice(), bincode_config()) {
+            Ok((msg_kind, _n)) => Ok(msg_kind),
+            Err(e) => Err(DecodeError::Bincode(e)),
+        }
     }
 }
 
 #[cfg(feature = "bin-msgs")]
 impl TryFrom<MessageKind> for Vec<u8> {
     type Error = bincode::error::EncodeError;
-    fn try_from(value: MessageKind) -> Result<Self, Self::Error> {
-        bincode::encode_to_vec(value, bincode_config())
+    fn try_from(msg_kind: MessageKind) -> Result<Self, Self::Error> {
+        let bytes = bincode::encode_to_vec(msg_kind, bincode_config())?;
+        let compressed_bytes =
+            miniz_oxide::deflate::compress_to_vec(bytes.as_slice(), COMPRESS_LEVEL);
+        Ok(compressed_bytes)
     }
 }
 
@@ -130,7 +161,7 @@ fn test_msg_serialization() {
         }),
         diff: 0.5,
     };
-    let kind_bytes = kind.encode().unwrap();
+    let kind_bytes = kind.clone().encode().unwrap();
     let kind_decoded = MessageKind::decode(kind_bytes).unwrap();
     assert_eq!(kind, kind_decoded);
     let msg = Message {
