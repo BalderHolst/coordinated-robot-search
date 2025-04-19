@@ -62,6 +62,8 @@
                     polars
                     matplotlib
                 ]))
+                cargo-hack    # Check feature combinations
+                cargo-machete # Find unused dependencies
                 (pkgs.writeShellScriptBin "cargo-fmt-all" ''
                     ROOT=$(git rev-parse --show-toplevel)
                     CRATES=$(find $ROOT -type f -name Cargo.toml)
