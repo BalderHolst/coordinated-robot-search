@@ -19,5 +19,5 @@ bytemuck = { version = "1.22.0", features = ["derive"], optional = true }
 
 # Reinforcement learning ('burn' need specific version of 'bincode')
 burn = { version = "0.16.0", features = ["wgpu"], optional = true }
-bincode = { version = "2.0.0-rc.3", features = ["derive"], optional = true }
-bincode_derive = { version = "2.0.0-rc.3", optional = true }
+bincode = { version = "=2.0.0-rc.3", features = ["derive"], optional = true }
+bincode_derive = { version = "=2.0.0-rc.3", optional = true }

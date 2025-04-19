@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-botbrain = { path = "../botbrain" }
+botbrain = { path = "../botbrain", features = ["rl"] }
 simple_sim = { path = "../simple_sim", features = ["single-thread"] }
 
 serde = { version = "1.0", features = ["derive"] }
