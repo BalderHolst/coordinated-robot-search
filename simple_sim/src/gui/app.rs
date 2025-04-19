@@ -109,6 +109,7 @@ pub struct App {
     cursor_state: CursorState,
     robot_soups: Vec<DebugSoup>,
     behavior_name: String,
+    take_screenshot: bool,
 }
 
 pub struct AppArgs {
@@ -269,6 +270,7 @@ impl App {
             cursor_state: CursorState::default(),
             robot_soups,
             behavior_name,
+            take_screenshot: false,
         }
     }
 
@@ -627,6 +629,65 @@ impl App {
         self.global_opts.focused = Some(self.robot_opts.len() - 1);
         self.global_opts.paused.store(false, Ordering::SeqCst);
     }
+
+    fn handle_screenshot(&mut self, ui: &egui::Ui) {
+        if self.take_screenshot {
+            println!("[INFO] Taking screenshot!");
+
+            let user_data = egui::UserData::default();
+            ui.ctx()
+                .send_viewport_cmd(egui::ViewportCommand::Screenshot(user_data));
+
+            self.take_screenshot = false;
+        }
+
+        ui.input(|i| {
+            // Bind screenshot key
+            bind_pressed!(i; Key::F5 => { self.take_screenshot = true; });
+
+            // Handle screenshot event
+            for event in &i.events {
+                if let egui::Event::Screenshot {
+                    viewport_id: _,
+                    user_data: _,
+                    image,
+                } = event
+                {
+                    let mut i: usize = 0;
+                    let mut path;
+                    loop {
+                        path = std::path::PathBuf::from(format!("screenshot_{i}.png",));
+                        if !path.exists() {
+                            break;
+                        }
+                        i += 1;
+                    }
+
+                    println!("Saving screenshot to '{}'", path.display());
+
+                    let pixels: Vec<u8> = image
+                        .pixels
+                        .clone()
+                        .into_iter()
+                        .flat_map(|p| p.to_array().into_iter())
+                        .collect();
+
+                    let Some(image) = image::RgbaImage::from_raw(
+                        image.width() as u32,
+                        image.height() as u32,
+                        pixels,
+                    ) else {
+                        eprintln!("ERROR: Failed to create image from pixels");
+                        continue;
+                    };
+
+                    _ = image.save(path).map_err(|e| {
+                        eprintln!("ERROR: Failed to save image: {e}");
+                    });
+                }
+            }
+        });
+    }
 }
 
 impl eframe::App for App {
@@ -735,6 +796,10 @@ impl eframe::App for App {
                             });
                         }
                     }
+
+                    ui.button("Screenshot").clicked().then(|| {
+                        self.take_screenshot = true;
+                    });
 
                     // Spawn Robot Button
                     ui.selectable_label(
@@ -897,6 +962,8 @@ impl eframe::App for App {
                         self.global_opts.paused.store(!paused, Ordering::Relaxed);
                     });
                 });
+
+                self.handle_screenshot(ui);
 
                 // Handle clicks
                 resp.clicked().then(|| {

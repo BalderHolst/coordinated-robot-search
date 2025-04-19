@@ -5375,6 +5375,7 @@ dependencies = [
  "clap",
  "clap-stdin",
  "eframe",
+ "image",
  "ron",
  "serde",
  "serde_json",
