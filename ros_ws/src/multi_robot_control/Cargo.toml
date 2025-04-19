@@ -26,7 +26,7 @@ name = "ros_agent_msg_printer"
 path = "./src/ros_agent_msg_printer/main.rs"
 
 [dependencies]
-botbrain = { path = "../../../botbrain", features = ["cli", "serde-bin"] }
+botbrain = { path = "../../../botbrain", features = ["cli", "bin-msgs", "rl"] }
 clap = { version = "4.5.31", features = ["derive"] }
 serde-binary = "0.5.0"
 

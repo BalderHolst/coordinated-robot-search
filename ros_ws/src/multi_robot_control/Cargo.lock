@@ -357,11 +357,11 @@ dependencies = [
  "bincode",
  "bincode_derive",
  "burn",
+ "bytemuck",
  "clap",
  "emath",
  "rand 0.9.0",
  "serde",
- "serde-binary",
 ]
 
 [[package]]
@@ -1504,6 +1504,7 @@ version = "0.30.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4fe73c1207b864ee40aa0b0c038d6092af1030744678c60188a05c28553515d"
 dependencies = [
+ "bytemuck",
  "serde",
 ]
 
