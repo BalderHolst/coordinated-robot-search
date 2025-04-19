@@ -81,7 +81,8 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, 
         self.id = id;
     }
 
-    fn set_world_size(&mut self, size: Vec2) {
+    fn set_world(&mut self, world: super::Map) {
+        let size = world.size();
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
     }
 
