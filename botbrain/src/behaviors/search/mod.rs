@@ -1,7 +1,7 @@
 //! This module contains robot `search` behavior.
 
 use costmap::COSTMAP_GRID_SCALE;
-use pathing::PATH_PLANNER_GOAL_TOLERANCE;
+use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -502,7 +502,7 @@ impl SearchRobot {
         // Logic to find goal or change to exploring mode when reached
         if let Some(goal) = self.path_planner_goal {
             let diff = goal - self.pos;
-            if diff.length() < PATH_PLANNER_GOAL_TOLERANCE {
+            if diff.length() < PATH_PLANNER_DISTANCE_TOLERANCE {
                 self.path_planner_goal = None;
                 self.path_planner_path = vec![];
                 println!("Goal reached, switching to exploring mode");
@@ -558,7 +558,7 @@ impl SearchRobot {
             }
         } else {
             // Update the path to only contain the points we haven't reached
-            if (self.pos - self.path_planner_path[0]).length() < PATH_PLANNER_GOAL_TOLERANCE {
+            if (self.pos - self.path_planner_path[0]).length() < PATH_PLANNER_DISTANCE_TOLERANCE {
                 self.path_planner_path.remove(0);
             }
 

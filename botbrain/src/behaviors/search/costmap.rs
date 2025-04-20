@@ -15,6 +15,7 @@ pub(super) const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
 pub(super) const COSTMAP_SEARCHED: f32 = -1.0;
 pub(super) const COSTMAP_UNKNOWN: f32 = 1.0;
 
+/// Checks if all cells in the line is free
 pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
     costmap_grid.iter_line(&line).all(|pos| {
         if let Some(&cell) = costmap_grid.get(pos) {
@@ -25,6 +26,7 @@ pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
     })
 }
 
+/// Checks if all cells in the line with a width is free
 pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
     costmap_grid.iter_line(&line).all(|pos| {
         costmap_grid
@@ -42,6 +44,7 @@ pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32
     })
 }
 
+/// Constructs a costmap grid from a search grid, a obstacle map and a lidar
 pub fn make_costmap_grid(
     robot_pos: Pos2,
     robot_angle: f32,

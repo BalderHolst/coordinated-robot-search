@@ -9,7 +9,8 @@ use crate::{behaviors::ScaledGrid, params, shapes::Line};
 
 use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
-pub(super) const PATH_PLANNER_GOAL_TOLERANCE: f32 = 0.5;
+/// When a goal/point is within this distance from the robot
+pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = 0.5;
 pub(super) const NEIGHBORS_4: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
     (0, 1),
@@ -22,11 +23,13 @@ pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
     (-1, -1),
 ];
 
+/// Constructs a path using straight line or A* algorithm as backup
 pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
     find_straight_path(robot_pos, goal, costmap_grid)
         .or_else(|| find_a_star_path(robot_pos, goal, costmap_grid))
 }
 
+/// Constructs a path using a straight line
 pub fn find_straight_path(
     robot_pos: Pos2,
     goal: Pos2,
@@ -42,6 +45,7 @@ pub fn find_straight_path(
 }
 
 #[derive(Copy, Clone, Eq, PartialEq)]
+/// Node for the A* algorithm
 struct Node {
     position: (usize, usize),
     cost: usize,
@@ -64,11 +68,13 @@ impl PartialOrd for Node {
     }
 }
 
-pub fn heuristic(a: (usize, usize), b: (usize, usize)) -> usize {
+/// Calculate the euclidean distance between two points
+pub fn euclidean_dist(a: (usize, usize), b: (usize, usize)) -> usize {
     // Euclidean distance
     (((a.0 as f64 - b.0 as f64).powi(2) + (a.1 as f64 - b.1 as f64).powi(2)).sqrt()) as usize
 }
 
+/// Constructs a path using the A* algorithm
 pub fn find_a_star_path(
     robot_pos: Pos2,
     goal: Pos2,
@@ -90,7 +96,7 @@ pub fn find_a_star_path(
     open_set.push(Node {
         position: robot_pos,
         cost: 0,
-        priority: heuristic(robot_pos, goal),
+        priority: euclidean_dist(robot_pos, goal),
     });
 
     let mut came_from: HashMap<(usize, usize), (usize, usize)> = HashMap::new();
@@ -149,7 +155,7 @@ pub fn find_a_star_path(
 
             if !cost_so_far.contains_key(&new_pos) || new_cost < cost_so_far[&new_pos] {
                 cost_so_far.insert(new_pos, new_cost);
-                let priority = new_cost + heuristic(new_pos, goal);
+                let priority = new_cost + euclidean_dist(new_pos, goal);
                 open_set.push(Node {
                     position: new_pos,
                     cost: new_cost,
@@ -169,12 +175,12 @@ pub fn find_a_star_path(
         .map(|path| smooth_path(path, costmap_grid))
 }
 
+// Shorten the path by removing while still keeping a min distance to obstacles
 pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2> {
     let mut smoothed_path = vec![];
     let mut prev_pos = path[0];
     let mut idx = 1;
     let mut cur_len = 0;
-    // println!("Starting smooth path: {}", path.len());
     loop {
         let line = Line {
             start: prev_pos,

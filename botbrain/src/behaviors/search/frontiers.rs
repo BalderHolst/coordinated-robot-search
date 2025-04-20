@@ -44,13 +44,7 @@ pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool 
     })
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Default)]
-enum FrontierRegion {
-    #[default]
-    Explored,
-    Id(usize),
-}
-
+/// Finds the frontiers from the robot position using the costmap
 pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSet<(usize, usize)> {
     let robot_pos = {
         let tmp = costmap_grid.world_to_grid(robot_pos);
@@ -93,6 +87,7 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
     frontiers
 }
 
+/// Constructs the frontier regions from the frontiers
 pub fn make_frontier_regions(
     robot_pos: (usize, usize),
     frontiers: HashSet<(usize, usize)>,
@@ -137,6 +132,7 @@ pub fn make_frontier_regions(
     regions
 }
 
+/// Find the closest pos in the best frontier region to go to
 fn find_frontiers_region_closest_pos(
     robot_pos: (usize, usize),
     frontier_region: &[(usize, usize)],
@@ -144,12 +140,13 @@ fn find_frontiers_region_closest_pos(
     frontier_region
         .iter()
         .min_by(|&&f1, &&f2| {
-            pathing::heuristic(robot_pos, f1).cmp(&pathing::heuristic(robot_pos, f2))
+            pathing::euclidean_dist(robot_pos, f1).cmp(&pathing::euclidean_dist(robot_pos, f2))
         })
         .unwrap()
         .to_owned()
 }
 
+/// Evaluates the fontier regions and returns the best frontier
 pub fn evaluate_frontier_regions(
     robot_pos: (usize, usize),
     frontier_regions: Vec<Vec<(usize, usize)>>,
@@ -165,7 +162,7 @@ pub fn evaluate_frontier_regions(
         // Find the weight of the frontier regions
         .map(|region| {
             let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
-            let huristic = pathing::heuristic(closest_region_frontier, robot_pos) as f32;
+            let huristic = pathing::euclidean_dist(closest_region_frontier, robot_pos) as f32;
 
             let size = region.len();
 
@@ -191,6 +188,7 @@ pub fn evaluate_frontier_regions(
     Some(best_frontier.2)
 }
 
+/// Find the best frontier to go to
 pub fn evaluate_frontiers(
     robot_pos: Pos2,
     frontiers: HashSet<(usize, usize)>,
