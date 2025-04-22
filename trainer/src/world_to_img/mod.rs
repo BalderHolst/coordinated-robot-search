@@ -26,7 +26,7 @@ pub fn world_to_img(args: WorldToImgArgs) -> Result<(), String> {
             let output_file_path = output
                 .join(file.file_name())
                 .with_extension(DEFAULT_IMG_EXT);
-            world_to_img_file(&input_file_path, output_file_path, args.force)?;
+            world_to_img_file(&input_file_path, output_file_path, args.force, args.theme)?;
         }
     } else if input.is_file() {
         if output.is_dir() {
@@ -35,7 +35,7 @@ pub fn world_to_img(args: WorldToImgArgs) -> Result<(), String> {
                 input.display()
             ));
         }
-        world_to_img_file(&input, output, args.force)?;
+        world_to_img_file(&input, output, args.force, args.theme)?;
     } else {
         return Err(format!(
             "Input file is not a valid directory or file: {}",
@@ -46,7 +46,12 @@ pub fn world_to_img(args: WorldToImgArgs) -> Result<(), String> {
     Ok(())
 }
 
-fn world_to_img_file(input: &PathBuf, output: PathBuf, force: bool) -> Result<(), String> {
+fn world_to_img_file(
+    input: &PathBuf,
+    output: PathBuf,
+    force: bool,
+    theme: simple_sim::gui::Theme,
+) -> Result<(), String> {
     if !input.exists() {
         return Err(format!("Input file not found: {}", input.display()));
     }
@@ -63,7 +68,7 @@ fn world_to_img_file(input: &PathBuf, output: PathBuf, force: bool) -> Result<()
     }
 
     let world = simple_sim::world::world_from_path(input)?;
-    let img = render_world(&world);
+    let img = render_world(&world, theme);
 
     img.save(&output)
         .map_err(|e| format!("Failed to save image to '{}': {}", output.display(), e))?;
@@ -71,7 +76,10 @@ fn world_to_img_file(input: &PathBuf, output: PathBuf, force: bool) -> Result<()
     Ok(())
 }
 
-fn render_world(world: &simple_sim::world::World) -> image::RgbaImage {
+fn render_world(
+    world: &simple_sim::world::World,
+    theme: simple_sim::gui::Theme,
+) -> image::RgbaImage {
     let grid = world.grid().clone();
 
     let w = grid.width() as u32;
@@ -89,7 +97,7 @@ fn render_world(world: &simple_sim::world::World) -> image::RgbaImage {
         let mut color = grid
             .get(grid_x, grid_y)
             .map(|cell| {
-                let cell_color = cell.color();
+                let cell_color = cell.color(theme);
                 cell_color.to_array()
             })
             .unwrap_or([u8::MAX, 0, 0, u8::MAX]);

@@ -34,12 +34,67 @@ use eframe::{
     CreationContext,
 };
 
-const ROBOT_COLOR: Hsva = Hsva {
-    h: 1.2,
-    s: 0.1,
-    v: 0.6,
-    a: 1.0,
-};
+#[derive(Clone, Copy, Default, clap::ValueEnum)]
+pub enum Theme {
+    Light,
+    #[default]
+    Dark,
+}
+
+impl Theme {
+    fn main_background(&self) -> Color32 {
+        match self {
+            Self::Light => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
+            Self::Dark => Hsva::new(0.0, 0.0, 0.01, 1.0).into(),
+        }
+    }
+
+    pub fn world_background(&self) -> Color32 {
+        match self {
+            Self::Light => Hsva::new(0.0, 0.0, 0.80, 1.0).into(),
+            Self::Dark => Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
+        }
+    }
+
+    fn world_border(&self) -> (f32, Color32) {
+        match self {
+            Theme::Light => (0.03, Color32::BLACK),
+            Theme::Dark => (0.02, Color32::from_gray(200)),
+        }
+    }
+
+    fn panel_background(&self) -> Color32 {
+        match self {
+            Self::Light => Color32::WHITE,
+            Self::Dark => Color32::from_black_alpha(200),
+        }
+    }
+
+    fn pallete(&self, n: usize) -> Color32 {
+        let hue = n as f32 * PI / 10.0;
+        Hsva::new(hue, 0.8, 0.8, 1.0).into()
+    }
+
+    fn robot(&self) -> Color32 {
+        match self {
+            Self::Light => Color32::from_gray(20),
+            Self::Dark => Hsva {
+                h: 1.2,
+                s: 0.4,
+                v: 0.6,
+                a: 1.0,
+            }
+            .into(),
+        }
+    }
+
+    fn robot_text(&self) -> Color32 {
+        match self {
+            Self::Dark => Color32::from_black_alpha(200),
+            Self::Light => Color32::from_white_alpha(200),
+        }
+    }
+}
 
 /// Textures used by the app
 struct AppTextures {
@@ -48,6 +103,7 @@ struct AppTextures {
 }
 
 pub struct GlobalOptions {
+    theme: Theme,
     paused: Arc<AtomicBool>,
     pause_at: Arc<Mutex<Option<f32>>>,
     focused: Option<usize>,
@@ -60,6 +116,7 @@ pub struct GlobalOptions {
 impl Default for GlobalOptions {
     fn default() -> Self {
         Self {
+            theme: Theme::default(),
             paused: Arc::new(AtomicBool::new(false)),
             pause_at: Arc::new(Mutex::new(None)),
             focused: None,
@@ -113,6 +170,7 @@ pub struct App {
 }
 
 pub struct AppArgs {
+    pub theme: Theme,
     pub target_sps: f32,
     pub target_fps: f32,
     pub paused: bool,
@@ -125,9 +183,11 @@ impl From<GlobArgs> for AppArgs {
             paused,
             target_fps,
             target_sps,
+            theme,
             ..
         } = args;
         Self {
+            theme,
             paused,
             target_fps,
             target_sps,
@@ -228,7 +288,7 @@ impl App {
             });
         }
 
-        let world_image = world_to_image(&world);
+        let world_image = world_to_image(&world, args.theme);
         let world_image = ImageData::from(world_image);
 
         let texture_manager = &cc.egui_ctx.tex_manager();
@@ -244,6 +304,7 @@ impl App {
         );
 
         let global_opts = GlobalOptions {
+            theme: args.theme,
             paused,
             pause_at,
             ..Default::default()
@@ -301,6 +362,8 @@ impl App {
             let robot_pos = self.cam.world_to_viewport(robot_state.pose.pos);
             let robot_angle = robot_state.pose.angle;
 
+            let theme = self.global_opts.theme;
+
             if self.global_opts.show_only.is_none_or(|f| f == n) {
                 // Draw robot (as a circle)
                 {
@@ -311,7 +374,7 @@ impl App {
                     painter.circle(
                         robot_pos,
                         self.cam.scaled(DIAMETER / 2.0),
-                        ROBOT_COLOR,
+                        theme.robot(),
                         stroke,
                     );
                 }
@@ -326,7 +389,7 @@ impl App {
                             robot_pos,
                             robot_pos + left * self.cam.scaled(DIAMETER / 2.0 + FOV_INIDICATOR_LEN),
                         ],
-                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), theme.robot()),
                     );
                     let right = Vec2::angled(robot_angle + CAM_FOV / 2.0);
                     painter.line_segment(
@@ -335,7 +398,7 @@ impl App {
                             robot_pos
                                 + right * self.cam.scaled(DIAMETER / 2.0 + FOV_INIDICATOR_LEN),
                         ],
-                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), ROBOT_COLOR),
+                        PathStroke::new(self.cam.scaled(FOV_INIDICATOR_WIDTH), theme.robot()),
                     );
                 }
 
@@ -343,8 +406,8 @@ impl App {
                 let vel = Vec2::angled(robot_angle) * (robot_state.vel + DIAMETER * 0.5);
                 let end = robot_pos + self.cam.scaled(vel);
                 let stroke_width = self.cam.scaled(0.05);
-                let stroke = Stroke::new(stroke_width, ROBOT_COLOR);
-                painter.circle_filled(end, stroke_width / 2.0, ROBOT_COLOR);
+                let stroke = Stroke::new(stroke_width, theme.robot());
+                painter.circle_filled(end, stroke_width / 2.0, theme.robot());
                 painter.arrow(robot_pos, end - robot_pos, stroke);
 
                 // Draw id of robot
@@ -357,7 +420,7 @@ impl App {
                     Align2::CENTER_CENTER,
                     robot_state.id.as_u32().to_string(),
                     font_id,
-                    Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
+                    theme.robot_text(),
                 );
             }
 
@@ -367,7 +430,7 @@ impl App {
                 if !robot_opts.debug_items.contains(&(category, name)) {
                     continue;
                 }
-                let color = get_color(n);
+                let color = theme.pallete(n);
                 let data = &**data;
                 match data {
                     DebugType::Vector(vec) => {
@@ -700,10 +763,12 @@ impl App {
 
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let theme = self.global_opts.theme;
+
         egui::TopBottomPanel::top("top-bar")
             .frame(Frame {
                 inner_margin: Margin::symmetric(4.0, 4.0),
-                fill: Hsva::new(0.0, 0.0, 0.005, 1.0).into(),
+                fill: theme.panel_background(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -729,7 +794,7 @@ impl eframe::App for App {
                         });
                     }
 
-                    if let Ok(actual_sps) = self.actual_sps_bg.lock() {
+                    if let Ok(actual_sps) = self.actual_sps_bg.try_lock() {
                         self.actual_sps = *actual_sps;
                     }
                     ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
@@ -749,7 +814,7 @@ impl eframe::App for App {
         egui::TopBottomPanel::bottom("bottom-bar")
             .frame(Frame {
                 inner_margin: Margin::symmetric(4.0, 4.0),
-                fill: Hsva::new(0.0, 0.0, 0.005, 1.0).into(),
+                fill: theme.panel_background(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -764,7 +829,9 @@ impl eframe::App for App {
                             .clamping(egui::SliderClamping::Never),
                     );
                     if prev_target_sps != self.target_sps {
-                        *self.target_sps_bg.lock().unwrap() = self.target_sps as f32;
+                        if let Ok(mut target) = self.target_sps_bg.try_lock() {
+                            *target = self.target_sps as f32;
+                        }
                     }
 
                     // Pause/Resume Button
@@ -879,7 +946,13 @@ impl eframe::App for App {
                         ui.label(category);
                         current_category = category;
                     }
-                    draw_debug_item_label(ui, get_color(n), category, name, robot_opts);
+                    draw_debug_item_label(
+                        ui,
+                        self.global_opts.theme.pallete(n),
+                        category,
+                        name,
+                        robot_opts,
+                    );
                 }
 
                 // if let DebugSoup(Some(soup)) = agent.robot.get_debug_soup() {
@@ -910,7 +983,7 @@ impl eframe::App for App {
 
         egui::CentralPanel::default()
             .frame(Frame {
-                fill: Hsva::new(0.0, 0.0, 0.01, 1.0).into(),
+                fill: theme.main_background(),
                 ..Default::default()
             })
             .show(ctx, |ui| {
@@ -942,7 +1015,6 @@ impl eframe::App for App {
                     self.cam.set_pos(agent_pos);
                 }
 
-                painter.rect_filled(world_rect, 0.0, Rgba::from_white_alpha(0.01));
                 let uv = Rect::from_min_max(pos2(0.0, 0.0), pos2(1.0, 1.0));
                 painter.image(self.textures.world, world_rect, uv, Color32::WHITE);
 
@@ -1009,6 +1081,9 @@ impl eframe::App for App {
                         }
                     }
                 });
+
+                let (w, c) = theme.world_border();
+                painter.rect_stroke(world_rect, 0.0, Stroke::new(self.cam.scaled(w), c));
 
                 self.draw_diagnostics(&painter);
                 self.draw_robots(&painter);
@@ -1089,9 +1164,4 @@ fn draw_debug_item_label(
             };
         }
     });
-}
-
-fn get_color(n: usize) -> Color32 {
-    let hue = n as f32 * PI / 10.0;
-    Hsva::new(hue, 0.8, 0.8, 1.0).into()
 }

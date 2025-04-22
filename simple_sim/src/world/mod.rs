@@ -11,7 +11,7 @@ use eframe::{
 
 use botbrain::{scaled_grid::ScaledGrid, Pos2};
 
-use crate::utils;
+use crate::{gui::Theme, utils};
 
 pub type World = ScaledGrid<Cell>;
 
@@ -28,9 +28,9 @@ impl Cell {
         matches!(self, Self::Empty)
     }
 
-    pub fn color(&self) -> Color32 {
+    pub fn color(&self, theme: Theme) -> Color32 {
         match self {
-            Self::Empty => Color32::from_gray(40),
+            Self::Empty => theme.world_background(),
             Self::Wall => Hsva::new(0.6, 0.7, 0.5, 1.0).into(),
             Self::SearchItem => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
         }
@@ -92,6 +92,6 @@ pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
     Ok(desc.create())
 }
 
-pub fn world_to_image(world: &World) -> ColorImage {
-    utils::grid_to_image(world.grid(), |c| c.color())
+pub fn world_to_image(world: &World, theme: Theme) -> ColorImage {
+    utils::grid_to_image(world.grid(), |c| c.color(theme))
 }

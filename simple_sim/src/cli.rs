@@ -4,6 +4,8 @@ use botbrain::behaviors::Behavior;
 
 use clap::{self, Args, Parser, Subcommand};
 
+use crate::gui::Theme;
+
 #[cfg(not(feature = "single-thread"))]
 pub fn default_threads() -> usize {
     match std::thread::available_parallelism() {
@@ -17,6 +19,10 @@ pub fn default_threads() -> usize {
 
 #[derive(Clone, Parser)]
 pub struct GlobArgs {
+    /// Theme to use for the UI
+    #[arg(short, long, default_value = "dark")]
+    pub theme: Theme,
+
     // TODO: This does not work for some reason
     /// Target frames per second
     #[arg(long("fps"), default_value = "60")]

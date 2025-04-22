@@ -1,7 +1,7 @@
 use app::{App, AppArgs};
 use arrow_array::RecordBatch;
 use arrow_schema::Schema;
-use eframe::egui;
+use eframe::egui::{self, Style, Visuals};
 
 use crate::{
     cli::{GlobArgs, RunArgs},
@@ -13,6 +13,8 @@ use crate::{
 mod app;
 mod bind_key;
 mod camera;
+
+pub use app::Theme;
 
 pub fn run_interactive(args: GlobArgs, run_args: RunArgs) -> Result<(), String> {
     let sim_args = SimArgs {
@@ -32,12 +34,9 @@ pub fn run_scenario(
     args: GlobArgs,
 ) -> Result<RecordBatch, String> {
     let app_args = AppArgs {
-        paused: false,
-        target_fps: args.target_fps,
-        target_sps: args.target_sps,
         pause_at: Some(scenario.duration),
+        ..AppArgs::from(args)
     };
-
     run(sim, app_args)?;
 
     // TODO: Actually collect data
@@ -54,6 +53,15 @@ fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {
         concat!(env!("CARGO_PKG_NAME"), " ", env!("CARGO_PKG_VERSION")),
         options,
         Box::new(|cc| {
+            let style = Style {
+                visuals: match app_args.theme {
+                    app::Theme::Light => Visuals::light(),
+                    app::Theme::Dark => Visuals::dark(),
+                },
+                ..Style::default()
+            };
+            cc.egui_ctx.set_style(style);
+
             // Create app
             let app = App::new(sim, app_args, cc);
 

@@ -106,4 +106,8 @@ pub struct WorldToImgArgs {
     /// Overwrite existing files
     #[arg(short, long)]
     pub force: bool,
+
+    /// Theme to use for rendering
+    #[arg(short, long, default_value = "light")]
+    pub theme: simple_sim::gui::Theme,
 }

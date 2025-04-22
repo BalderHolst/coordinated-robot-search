@@ -57,6 +57,7 @@ pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
             input: out_dir,
             output: render_dir,
             force: args.force,
+            theme: simple_sim::gui::Theme::Light,
         };
         crate::world_to_img::world_to_img(render_args)?;
     }
