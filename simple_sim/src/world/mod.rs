@@ -59,21 +59,24 @@ pub fn convert_to_botbrain_map(world: &World) -> botbrain::Map {
 pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
     println!("Loading world from {:?}", path);
 
+    let contents = || {
+        std::fs::read_to_string(path)
+            .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))
+    };
+
     match path.extension().and_then(|ext| ext.to_str()) {
         Some("ron") => {
-            let contents = std::fs::read_to_string(path)
-                .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
-
-            let obj_desc = ron::from_str::<ObjectDescription>(&contents)
+            let obj_desc = ron::from_str::<ObjectDescription>(&contents()?)
                 .map_err(|e| format!("Failed to parse RON file {}: {}", path.display(), e))?;
-
+            Ok(WorldDescription::Objs(obj_desc))
+        }
+        Some("json") => {
+            let obj_desc = serde_json::from_str::<ObjectDescription>(&contents()?)
+                .map_err(|e| format!("Failed to parse JSON file {}: {}", path.display(), e))?;
             Ok(WorldDescription::Objs(obj_desc))
         }
         Some("yaml") => {
-            let contents = std::fs::read_to_string(path)
-                .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
-
-            let mut bitmap_desc = serde_yml::from_str::<BitmapDescription>(&contents)
+            let mut bitmap_desc = serde_yml::from_str::<BitmapDescription>(&contents()?)
                 .map_err(|e| format!("Failed to parse YAML file {}: {}", path.display(), e))?;
 
             let image_path = path.with_file_name(&bitmap_desc.image);

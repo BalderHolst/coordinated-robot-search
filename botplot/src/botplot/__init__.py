@@ -47,6 +47,7 @@ OBJ_LABEL = "Objs"
 BITMAP_LABEL = "Bitmap"
 @dataclass
 class World:
+    file: str
     data: dict
 
     def is_obj(self) -> bool:
@@ -59,6 +60,30 @@ class World:
         if self.is_obj(): return self.data[OBJ_LABEL]
         if self.is_bitmap(): return self.data[BITMAP_LABEL]
         else: raise ValueError(f"World must be either a bitmap or an object world. Found keys: {self.data.keys()}")
+
+    def img(self):
+        if self.is_obj():
+            desc_name = os.path.basename(self.file).replace(".json", "-desc.json")
+            desc_file = os.path.join(data_dir(), desc_name)
+
+            json.dump(self.data[OBJ_LABEL], open(desc_file, "w"), indent=4)
+
+            img_name = os.path.basename(self.file).replace(".json", ".png")
+            img_file = os.path.join(data_dir(), img_name)
+            proc = subprocess.run([trainer_file(),
+                            "world-to-img",
+                            "--input", desc_file,
+                            "--output", os.path.join(data_dir(), img_file),
+                            "--force",
+                            ])
+            if proc.returncode != 0:
+                print(f"Error: {proc.stderr}")
+                exit(1)
+
+            return plt.imread(img_file)
+
+
+        pass
 
     def dims(self) -> tuple[float, float]:
         desc = self.desc()
@@ -101,7 +126,7 @@ class Result:
         return data_path, desc_path
 
     def world(self) -> World:
-        return World(self.desc()["world"])
+        return World(self.description, self.desc()["world"])
 
 def relpath(path: str) -> str:
     """Returns the relative path to the given path."""
@@ -134,13 +159,16 @@ def env_file(var: str) -> str:
 def data_dir() -> str: return env_dir("DATA_DIR")
 def plot_dir() -> str: return env_dir("PLOT_DIR")
 def sim_file() -> str: return env_file("SIMULATOR")
+def trainer_file() -> str: return env_file("TRAINER")
 
 def world_plot(fig, ax, result: Result, title: str, out_file: str):
 
     if title:
         ax.set_title(title, fontsize=16)
 
-    width, height = result.world().dims()
+    world = result.world()
+
+    width, height = world.dims()
 
     xmin, ymin = -width / 2, -height / 2
     xmax, ymax =  width / 2,  height / 2
@@ -157,6 +185,9 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
 
     # ncol = min(len(ax.get_legend_handles_labels()[0]), 4)  # Get the number of legend entries
     # ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.02), borderaxespad=0., ncol=ncol)
+
+    world_img = world.img()
+    ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
 
     plt.tight_layout()
 
@@ -227,7 +258,6 @@ def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
 def plot_paths(result: Result, title: str, segments=1):
     df = result.df()
     desc = result.desc()
-
 
     for seg in range(segments):
         fig, ax = plt.subplots()

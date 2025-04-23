@@ -5972,11 +5972,11 @@ dependencies = [
 name = "trainer"
 version = "0.1.0"
 dependencies = [
- "bincode",
  "bincode_derive",
  "botbrain",
  "burn",
  "clap",
+ "clap-stdin",
  "image",
  "rand 0.9.1",
  "ringbuffer",
