@@ -31,6 +31,7 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
     ("no-pathing", behaviors::no_pathing),
+    ("pure-pathing", behaviors::pure_pathing),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -45,7 +46,7 @@ const ANGLE_THRESHOLD: f32 = PI / 4.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 /// The threshold at which the robot will switch from exploring to pathing
-const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.02;
+const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.1;
 
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
@@ -573,7 +574,7 @@ impl SearchRobot {
             if let Ok(control_vec) = self.follow_path() {
                 Some(control_vec)
             } else {
-                // TODO: Determine best way to proceed
+                // TODO: Use lidar to get away from wall
                 // New goal, new path or switch mode?
                 println!("Path is blocked");
                 None
@@ -783,6 +784,23 @@ mod behaviors {
                 target += robot.search_gradient();
                 target += robot.proximity_gradient();
                 Some(target)
+            },
+        )
+    }
+
+    pub fn pure_pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.robot_mode = RobotMode::Pathing;
+                target
             },
         )
     }

@@ -10,7 +10,7 @@ use crate::{behaviors::ScaledGrid, params, shapes::Line};
 use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
 /// When a goal/point is within this distance from the robot
-pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = 0.5;
+pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = 0.2;
 pub(super) const NEIGHBORS_4: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
     (0, 1),
@@ -40,7 +40,7 @@ pub fn find_straight_path(
         end: goal,
     };
     // Check if all cells in the line to the goal are free
-    costmap::validate_thick_line(line, params::DIAMETER * 5.0, costmap_grid)
+    costmap::validate_thick_line(line, params::DIAMETER, costmap_grid)
         .then(|| vec![robot_pos, goal])
 }
 
@@ -116,7 +116,7 @@ pub fn find_a_star_path(
             final_path = Some(path);
         }
 
-        for (dx, dy) in &NEIGHBORS_4 {
+        for (dx, dy) in &NEIGHBORS_8 {
             let new_x = current.position.0 as isize + dx;
             let new_y = current.position.1 as isize + dy;
 
@@ -136,7 +136,7 @@ pub fn find_a_star_path(
                 .grid()
                 .iter_circle(
                     Pos2::new(new_pos.0 as f32, new_pos.1 as f32),
-                    params::DIAMETER * 4.0,
+                    params::DIAMETER,
                 )
                 .any(|(x, y)| {
                     if let Some(&new_pos_value) = costmap_grid.grid().get(x, y) {
@@ -187,7 +187,7 @@ pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2>
             end: path[idx],
         };
 
-        if !costmap::validate_thick_line(line, params::DIAMETER * 5.0, costmap_grid) {
+        if !costmap::validate_thick_line(line, params::DIAMETER * 2.0, costmap_grid) {
             if cur_len > 0 {
                 smoothed_path.push(prev_pos);
                 prev_pos = path[idx - 1];

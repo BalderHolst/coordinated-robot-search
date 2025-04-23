@@ -29,7 +29,7 @@ pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool 
         return false;
     }
 
-    NEIGHBORS_4.iter().any(|(x, y)| {
+    NEIGHBORS_8.iter().any(|(x, y)| {
         let new_pos = (pos.0 as isize + x, pos.1 as isize + y);
         if new_pos.0 < 0 || new_pos.1 < 0 {
             false
@@ -54,7 +54,10 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
     let mut frontiers: HashSet<(usize, usize)> = HashSet::new();
     let mut visited: HashSet<(usize, usize)> = HashSet::new();
     let mut queue = VecDeque::new();
-    queue.push_back(robot_pos);
+    for (dx, dy) in &NEIGHBORS_8 {
+        let new_pos = (robot_pos.0 as isize + dx, robot_pos.1 as isize + dy);
+        queue.push_back((new_pos.0 as usize, new_pos.1 as usize));
+    }
 
     while let Some(pos) = queue.pop_front() {
         if visited.contains(&pos) {
@@ -69,7 +72,7 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
             if cell != COSTMAP_SEARCHED {
                 continue;
             }
-            for (dx, dy) in &NEIGHBORS_4 {
+            for (dx, dy) in &NEIGHBORS_8 {
                 let new_pos = (pos.0 as isize + dx, pos.1 as isize + dy);
                 if new_pos.0 < 0 || new_pos.1 < 0 {
                     continue;
@@ -140,7 +143,19 @@ fn find_frontiers_region_closest_pos(
     frontier_region
         .iter()
         .min_by(|&&f1, &&f2| {
-            pathing::euclidean_dist(robot_pos, f1).cmp(&pathing::euclidean_dist(robot_pos, f2))
+            let d1 = pathing::euclidean_dist(robot_pos, f1);
+            let d2 = pathing::euclidean_dist(robot_pos, f2);
+            let d1_valid = (d1 as f32) > params::DIAMETER;
+            let d2_valid = (d2 as f32) > params::DIAMETER;
+            if !d1_valid && !d2_valid {
+                Ordering::Equal
+            } else if !d1_valid {
+                Ordering::Greater
+            } else if !d2_valid {
+                Ordering::Less
+            } else {
+                d1.cmp(&d2)
+            }
         })
         .unwrap()
         .to_owned()
@@ -163,6 +178,10 @@ pub fn evaluate_frontier_regions(
         .map(|region| {
             let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
             let huristic = pathing::euclidean_dist(closest_region_frontier, robot_pos) as f32;
+            if huristic <= params::DIAMETER {
+                // Very bad to be on the robot pos
+                return (f32::MAX, 0, closest_region_frontier);
+            }
 
             let size = region.len();
 
@@ -177,6 +196,7 @@ pub fn evaluate_frontier_regions(
         closest_region_frontier
             .into_iter()
             .max_by(|&(h1, s1, p1), &(h2, s2, p2)| {
+                // TODO: Add how much the robot should turn to the weight
                 let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (s1 as f32 / biggest_frontier as f32)
                     + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - h1 / furthest_frontier);
                 let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (s2 as f32 / biggest_frontier as f32)
