@@ -66,26 +66,26 @@ pub fn make_costmap_grid(
         costmap_grid.set(Pos2 { x, y }, cell);
     });
 
-    // Using lidar to insert dynamic obstacles
-    lidar
-        .points()
-        .filter_map(|&LidarPoint { angle, distance }| {
-            // Make small circle if distance is under max distance
-            if distance < LIDAR_RANGE {
-                let point = robot_pos + Vec2::angled(angle + robot_angle) * distance;
-                Some(Circle {
-                    center: point,
-                    radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH / 2.0,
-                })
-            } else {
-                None
-            }
-        })
-        .for_each(|circle| {
-            costmap_grid
-                // Negative if don't want to go there, positive if want to go there
-                .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
-        });
+    // // Using lidar to insert dynamic obstacles
+    // lidar
+    //     .points()
+    //     .filter_map(|&LidarPoint { angle, distance }| {
+    //         // Make small circle if distance is under max distance
+    //         if distance < LIDAR_RANGE {
+    //             let point = robot_pos + Vec2::angled(angle + robot_angle) * distance;
+    //             Some(Circle {
+    //                 center: point,
+    //                 radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH / 2.0,
+    //             })
+    //         } else {
+    //             None
+    //         }
+    //     })
+    //     .for_each(|circle| {
+    //         costmap_grid
+    //             // Negative if don't want to go there, positive if want to go there
+    //             .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
+    //     });
 
     map.iter().for_each(|(x, y, &cell)| {
         // Negative if don't want to go there, positive if want to go there

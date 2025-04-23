@@ -4,19 +4,24 @@ use core::f32;
 use std::{
     cmp::Ordering,
     collections::{HashSet, VecDeque},
+    f32::consts::PI,
 };
 
-use emath::Pos2;
+use emath::{Pos2, Vec2};
 
-use crate::behaviors::{search::pathing::NEIGHBORS_8, ScaledGrid};
+use crate::{
+    behaviors::{search::pathing::NEIGHBORS_8, ScaledGrid},
+    params, utils,
+};
 
 use super::{
     costmap::{COSTMAP_SEARCHED, COSTMAP_UNKNOWN},
     pathing::{self, NEIGHBORS_4},
 };
 
-const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.4;
-const FRONTIER_REGION_DISTANCE_WEIGHT: f32 = 0.6;
+const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.3;
+const FRONTIER_REGION_DISTANCE_WEIGHT: f32 = 0.4;
+const FRONTIER_REGION_TURN_WEIGHT: f32 = 0.3;
 
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
@@ -164,6 +169,7 @@ fn find_frontiers_region_closest_pos(
 /// Evaluates the fontier regions and returns the best frontier
 pub fn evaluate_frontier_regions(
     robot_pos: (usize, usize),
+    robot_angle: f32,
     frontier_regions: Vec<Vec<(usize, usize)>>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<(usize, usize)> {
@@ -172,45 +178,55 @@ pub fn evaluate_frontier_regions(
     // The biggest frontier region
     let mut biggest_frontier = 0;
 
-    let closest_region_frontier: Vec<_> = frontier_regions
+    let frontiers: Vec<_> = frontier_regions
         .iter()
+        .enumerate()
         // Find the weight of the frontier regions
-        .map(|region| {
+        .map(|(idx, region)| {
             let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
-            let huristic = pathing::euclidean_dist(closest_region_frontier, robot_pos) as f32;
-            if huristic <= params::DIAMETER {
+            let dist = pathing::euclidean_dist(closest_region_frontier, robot_pos) as f32;
+            if dist <= params::DIAMETER {
                 // Very bad to be on the robot pos
-                return (f32::MAX, 0, closest_region_frontier);
+                return (f32::MAX, 0, PI, closest_region_frontier);
             }
 
             let size = region.len();
 
-            furthest_frontier = furthest_frontier.max(huristic);
+            let frontier_angle = Vec2::new(
+                closest_region_frontier.0 as f32 - robot_pos.0 as f32,
+                closest_region_frontier.1 as f32 - robot_pos.1 as f32,
+            )
+            .angle();
+            let angle_to_target = utils::normalize_angle(frontier_angle - robot_angle).abs();
+
+            furthest_frontier = furthest_frontier.max(dist);
             biggest_frontier = biggest_frontier.max(region.len());
 
-            (huristic, size, closest_region_frontier)
+            (dist, size, angle_to_target, closest_region_frontier)
         })
         .collect();
 
-    let best_frontier =
-        closest_region_frontier
-            .into_iter()
-            .max_by(|&(h1, s1, p1), &(h2, s2, p2)| {
-                // TODO: Add how much the robot should turn to the weight
-                let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (s1 as f32 / biggest_frontier as f32)
-                    + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - h1 / furthest_frontier);
-                let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (s2 as f32 / biggest_frontier as f32)
-                    + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - h2 / furthest_frontier);
+    let best_frontier = frontiers.into_iter().max_by(
+        |&(dist_1, size_1, turn_1, pos_1), &(dist_2, size_2, turn_2, pos_2)| {
+            let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (size_1 as f32 / biggest_frontier as f32)
+                + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - dist_1 / furthest_frontier)
+                + FRONTIER_REGION_TURN_WEIGHT * (1.0 - turn_1 / PI);
 
-                weight1.partial_cmp(&weight2).unwrap_or(Ordering::Equal)
-            })?;
+            let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (size_2 as f32 / biggest_frontier as f32)
+                + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - dist_2 / furthest_frontier)
+                + FRONTIER_REGION_TURN_WEIGHT * (1.0 - turn_2 / PI);
 
-    Some(best_frontier.2)
+            weight1.partial_cmp(&weight2).unwrap_or(Ordering::Equal)
+        },
+    )?;
+
+    Some(best_frontier.3)
 }
 
 /// Find the best frontier to go to
 pub fn evaluate_frontiers(
     robot_pos: Pos2,
+    robot_angle: f32,
     frontiers: HashSet<(usize, usize)>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<Pos2> {
@@ -222,7 +238,9 @@ pub fn evaluate_frontiers(
 
     let frontier_regions = make_frontier_regions(robot_pos, frontiers, costmap_grid);
     let goal = {
-        let goal = evaluate_frontier_regions(robot_pos, frontier_regions, costmap_grid)?;
+        let goal =
+            evaluate_frontier_regions(robot_pos, robot_angle, frontier_regions, costmap_grid)?;
+
         Pos2::new(goal.0 as f32, goal.1 as f32)
     };
     Some(costmap_grid.grid_to_world(goal))

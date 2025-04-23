@@ -521,7 +521,8 @@ impl SearchRobot {
             // Set a goal using frontiers
             let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
 
-            match frontiers::evaluate_frontiers(self.pos, frontiers, &self.costmap_grid) {
+            match frontiers::evaluate_frontiers(self.pos, self.angle, frontiers, &self.costmap_grid)
+            {
                 Some(goal) => self.path_planner_goal = Some(goal),
                 None => {
                     // Should only happen in the beginning
@@ -649,8 +650,12 @@ impl SearchRobot {
             })
             .collect();
 
-        let best =
-            frontiers::evaluate_frontier_regions(robot_pos, frontier_regions, &self.costmap_grid);
+        let best = frontiers::evaluate_frontier_regions(
+            robot_pos,
+            self.angle,
+            frontier_regions,
+            &self.costmap_grid,
+        );
 
         self.get_debug_soup_mut().add(
             "Planner",
