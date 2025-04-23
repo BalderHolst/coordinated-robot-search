@@ -37,7 +37,7 @@ pub struct BitmapDescription {
     pub bitmap: PgmImage,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum WorldDescription {
     Bitmap(BitmapDescription),
     Objs(ObjectDescription),

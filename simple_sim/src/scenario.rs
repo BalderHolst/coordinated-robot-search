@@ -7,17 +7,14 @@ use serde::{Deserialize, Serialize};
 use crate::{
     cli::{GlobArgs, ScenarioArgs},
     gui, sim,
-    world::{
-        description::{ObjectDescription, WorldDescription},
-        world_from_path,
-    },
+    world::{desc_from_path, description::WorldDescription, world_from_path},
 };
 
 #[derive(Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum ScenarioWorld {
     Path(PathBuf),
-    ObjDesc(ObjectDescription),
+    Desc(WorldDescription),
 }
 
 #[derive(Serialize, Deserialize)]
@@ -38,8 +35,22 @@ pub struct Scenario {
     pub robots: Vec<RobotPose>,
 }
 
+impl Scenario {
+    pub fn embed_world(self) -> Result<Self, String> {
+        let world_desc = match self.world {
+            ScenarioWorld::Path(path) => desc_from_path(&path)?,
+            ScenarioWorld::Desc(desc) => desc,
+        };
+
+        Ok(Self {
+            world: ScenarioWorld::Desc(world_desc),
+            ..self
+        })
+    }
+}
+
 pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), String> {
-    let scenario = match scenario_args.scenario.clone().contents() {
+    let mut scenario = match scenario_args.scenario.clone().contents() {
         Ok(s) if scenario_args.json => serde_json::from_str(&s)
             .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
         Ok(s) => ron::de::from_str::<Scenario>(&s)
@@ -48,6 +59,10 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     };
 
     if let Some(desc_path) = &scenario_args.description {
+        scenario = scenario
+            .embed_world()
+            .map_err(|e| format!("Error reading world file: {e}"))?;
+
         let json = serde_json::to_string_pretty(&scenario).unwrap();
         std::fs::write(desc_path, json)
             .map_err(|e| format!("Could not write description file: {e}"))?;
@@ -55,7 +70,7 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
 
     let world = match &scenario.world {
         ScenarioWorld::Path(path) => world_from_path(path)?,
-        ScenarioWorld::ObjDesc(desc) => WorldDescription::Objs(desc.clone()).create(),
+        ScenarioWorld::Desc(desc) => desc.clone().create(),
     };
 
     let mut sim = sim::Simulator::new(sim::SimArgs {

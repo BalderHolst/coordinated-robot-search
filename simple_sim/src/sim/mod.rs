@@ -115,7 +115,7 @@ pub fn run_scenario_headless(
     let mut time_data = Vec::with_capacity(steps);
 
     let mut robot_data = (0..scenario.robots.len())
-        .map(|i| RobotData::new(steps, &format!("robot_{}/", i)))
+        .map(|i| RobotData::new(steps, &format!("robot_{}", i)))
         .collect::<Vec<_>>();
 
     let mut coverage_data = Vec::with_capacity(steps);

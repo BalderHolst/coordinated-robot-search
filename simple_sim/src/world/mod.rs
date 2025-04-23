@@ -56,10 +56,10 @@ pub fn convert_to_botbrain_map(world: &World) -> botbrain::Map {
     map
 }
 
-pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
+pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
     println!("Loading world from {:?}", path);
 
-    let desc = match path.extension().and_then(|ext| ext.to_str()) {
+    match path.extension().and_then(|ext| ext.to_str()) {
         Some("ron") => {
             let contents = std::fs::read_to_string(path)
                 .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))?;
@@ -67,7 +67,7 @@ pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
             let obj_desc = ron::from_str::<ObjectDescription>(&contents)
                 .map_err(|e| format!("Failed to parse RON file {}: {}", path.display(), e))?;
 
-            WorldDescription::Objs(obj_desc)
+            Ok(WorldDescription::Objs(obj_desc))
         }
         Some("yaml") => {
             let contents = std::fs::read_to_string(path)
@@ -84,11 +84,14 @@ pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
 
             bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
 
-            WorldDescription::Bitmap(bitmap_desc)
+            Ok(WorldDescription::Bitmap(bitmap_desc))
         }
         _ => Err(format!("Unknown file type for {:?}", path))?,
-    };
+    }
+}
 
+pub fn world_from_path(path: &PathBuf) -> Result<World, String> {
+    let desc = desc_from_path(path)?;
     Ok(desc.create())
 }
 
