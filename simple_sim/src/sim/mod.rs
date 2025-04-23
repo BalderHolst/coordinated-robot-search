@@ -8,12 +8,12 @@ use std::{
     time::Instant,
 };
 
-use arrow_array::{Array, Float32Array, Float64Array, RecordBatch};
+use arrow_array::{Array, Float32Array, Float64Array, Int16Array, RecordBatch};
 use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 use botbrain::{
     self,
     behaviors::{Behavior, Time},
-    debug::DebugSoup,
+    debug::{DebugSoup, DebugType},
     scaled_grid::ScaledGrid,
     Control, RobotId, RobotPose,
 };
@@ -43,6 +43,7 @@ struct RobotData {
     avel: Vec<f32>,
     steer: Vec<f32>,
     speed: Vec<f32>,
+    mode: Vec<i16>,
 }
 
 impl RobotData {
@@ -61,6 +62,7 @@ impl RobotData {
             avel: Vec::with_capacity(capacity),
             steer: Vec::with_capacity(capacity),
             speed: Vec::with_capacity(capacity),
+            mode: Vec::with_capacity(capacity),
         }
     }
 
@@ -74,6 +76,7 @@ impl RobotData {
             Field::new(format!("{prefix}avel"), DataType::Float32, false),
             Field::new(format!("{prefix}steer"), DataType::Float32, false),
             Field::new(format!("{prefix}speed"), DataType::Float32, false),
+            Field::new(format!("{prefix}mode"), DataType::Int16, false),
         ])
     }
 
@@ -85,6 +88,13 @@ impl RobotData {
         self.avel.push(state.avel);
         self.steer.push(control.steer);
         self.speed.push(control.speed);
+
+        let mode = match state.soup.get("", "mode").map(|t| (*t).clone()) {
+            Some(DebugType::Int(mode)) => mode,
+            _ => 0,
+        };
+
+        self.mode.push(mode as i16);
     }
 
     fn into_batch(self) -> RecordBatch {
@@ -99,6 +109,7 @@ impl RobotData {
                 Arc::<Float32Array>::new(self.avel.into()),
                 Arc::<Float32Array>::new(self.steer.into()),
                 Arc::<Float32Array>::new(self.speed.into()),
+                Arc::<Int16Array>::new(self.mode.into()),
             ],
         )
         .expect("Failed to create RecordBatch")

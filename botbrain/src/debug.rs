@@ -150,6 +150,8 @@ pub enum DebugType {
     NumberPoints(Vec<(Pos2, f32)>),
     Number(f32),
 
+    Int(i32),
+
     Grid(ScaledGrid<f32>),
 }
 

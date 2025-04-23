@@ -466,6 +466,13 @@ impl SearchRobot {
 
         soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
 
+        let mode = match &self.robot_mode {
+            RobotMode::Exploring => 0,
+            RobotMode::Pathing => 1,
+        };
+
+        soup.add("", "mode", DebugType::Int(mode));
+
         if self.robot_mode == RobotMode::Pathing {
             self.show_path();
             self.show_frontiers();

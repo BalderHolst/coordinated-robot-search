@@ -3,12 +3,12 @@ ObjectDescription(
     height: 15,
     scale: 0.10,
     obstacles: [
-        WideLine((
+        WideLine(
             line: Line(
                 start: (x: -2, y: 0), 
                 end: (x: 2, y: 0)
             ),
             width: 0.1,
-        ))
+        )
     ],
 )

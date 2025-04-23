@@ -548,6 +548,24 @@ impl App {
                         );
                         numbers += 1;
                     }
+                    DebugType::Int(n) => {
+                        let font_id = FontId {
+                            size: self.cam.scaled(0.2),
+                            family: FontFamily::Monospace,
+                        };
+                        painter.text(
+                            robot_pos
+                                + Vec2::new(
+                                    0.0,
+                                    -self.cam.scaled(0.5) - numbers as f32 * self.cam.scaled(0.2),
+                                ),
+                            Align2::CENTER_CENTER,
+                            format!("{name}: {n:.3}"),
+                            font_id,
+                            color,
+                        );
+                        numbers += 1;
+                    }
                     DebugType::RobotRays(rays) => {
                         for (angle, distance) in rays {
                             let color =

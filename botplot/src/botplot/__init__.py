@@ -237,25 +237,40 @@ def plot_paths(result: Result, title: str, segments=1):
         try:
             for i, _ in enumerate(desc["robots"]):
 
+                x_col = df[f"robot_{i}/x"]
+                y_col = df[f"robot_{i}/y"]
+                mode_col = df[f"robot_{i}/mode"]
 
-                x = df[f"robot_{i}/x"]
-                y = df[f"robot_{i}/y"]
+                x_col = x_col[:end]
+                y_col = y_col[:end]
+                mode_col = mode_col[:end]
+
+                color = None
+                cursor = 0
+
+                start = 0
+                mode = mode_col[0]
+
+                while cursor < len(mode_col):
+                    while cursor < len(mode_col) and mode_col[cursor] == mode:
+                        cursor += 1
+                    linestyle = '-' if mode == 0 else 'dotted'
+                    # print(f"{t_col[start]:.0f}s - {t_col[cursor-1]:.0f}s => mode: {mode}")
+                    line, = ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle=linestyle, color=color)
+                    if color is None: color = line.get_color()
+                    start = cursor
+                    if cursor < len(mode_col):
+                        mode = mode_col[cursor]
 
 
-                x = x[:end]
-                y = y[:end]
-
-                line, = ax.plot(x, y, label=f"Robot {i}")
-
-                color = line.get_color()
 
                 cross_size = 0.4
                 widen = lambda x, size: [x - size, x + size]
-                ax.plot(widen(x[0],  cross_size), widen(y[0], cross_size), color=color, linewidth=4, alpha=0.7)
-                ax.plot(widen(x[0], -cross_size), widen(y[0], cross_size), color=color, linewidth=4, alpha=0.7)
+                ax.plot(widen(x_col[0],  cross_size), widen(y_col[0], cross_size), color=color, linewidth=4, alpha=0.7)
+                ax.plot(widen(x_col[0], -cross_size), widen(y_col[0], cross_size), color=color, linewidth=4, alpha=0.7)
 
                 # Draw circle at starting position
-                ax.add_patch(patches.Circle((x[-1], y[-1]), color=color, radius=0.5, alpha=0.7))
+                ax.add_patch(patches.Circle((x_col[-1], y_col[-1]), color=color, radius=0.5, alpha=0.7))
 
         except pl.exceptions.ColumnNotFoundError as e:
             data_path, desc_path = result.paths()

@@ -5,12 +5,14 @@ if __name__ == "__main__":
         title=f"robots",
         world="simple_sim/worlds/objectmap/medium_obstacles.ron",
         behavior="search",
-        duration=400,
+        duration=1000,
         robots=[
-            bp.Robot(x=10, y=-20),
-            bp.Robot(x=12, y=-20),
-            bp.Robot(x=10, y=-22),
-            bp.Robot(x=12, y=-22),
+            bp.Robot(x=4, y=4),
+            bp.Robot(x=4, y=6),
+            bp.Robot(x=6, y=4),
+            bp.Robot(x=6, y=6),
+            bp.Robot(x=8, y=4),
+            bp.Robot(x=8, y=6),
         ],
     )
 
