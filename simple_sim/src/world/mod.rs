@@ -29,10 +29,11 @@ impl Cell {
     }
 
     pub fn color(&self, theme: Theme) -> Color32 {
-        match self {
-            Self::Empty => theme.world_background(),
-            Self::Wall => Hsva::new(0.6, 0.7, 0.5, 1.0).into(),
-            Self::SearchItem => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
+        match (self, theme) {
+            (Self::Empty, _) => theme.world_background(),
+            (Self::Wall, Theme::Grayscale) => Color32::BLACK,
+            (Self::Wall, _) => Hsva::new(0.6, 0.7, 0.5, 1.0).into(),
+            (Self::SearchItem, _) => Hsva::new(0.22, 0.8, 0.8, 1.0).into(),
         }
     }
 }

@@ -70,15 +70,20 @@ class World:
 
             img_name = os.path.basename(self.file).replace(".json", ".png")
             img_file = os.path.join(data_dir(), img_name)
-            proc = subprocess.run([trainer_file(),
-                            "world-to-img",
-                            "--input", desc_file,
-                            "--output", os.path.join(data_dir(), img_file),
-                            "--force",
-                            ])
-            if proc.returncode != 0:
-                print(f"Error: {proc.stderr}")
-                exit(1)
+
+            if os.path.exists(img_file):
+                print(f"Using cached world image: {relpath(img_file)}")
+            else:
+                proc = subprocess.run([trainer_file(),
+                                "world-to-img",
+                                "--input", desc_file,
+                                "--output", os.path.join(data_dir(), img_file),
+                                "--theme", "grayscale",
+                                "--force",
+                                ])
+                if proc.returncode != 0:
+                    print(f"Error: {proc.stderr}")
+                    exit(1)
 
             return plt.imread(img_file)
 
@@ -286,7 +291,7 @@ def plot_paths(result: Result, title: str, segments=1):
                         cursor += 1
                     linestyle = '-' if mode == 0 else 'dotted'
                     # print(f"{t_col[start]:.0f}s - {t_col[cursor-1]:.0f}s => mode: {mode}")
-                    line, = ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle=linestyle, color=color)
+                    line, = ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle=linestyle, color=color, alpha=0.8)
                     if color is None: color = line.get_color()
                     start = cursor
                     if cursor < len(mode_col):

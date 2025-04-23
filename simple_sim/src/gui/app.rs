@@ -39,6 +39,7 @@ pub enum Theme {
     Light,
     #[default]
     Dark,
+    Grayscale,
 }
 
 impl Theme {
@@ -46,6 +47,7 @@ impl Theme {
         match self {
             Self::Light => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
             Self::Dark => Hsva::new(0.0, 0.0, 0.01, 1.0).into(),
+            Self::Grayscale => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
         }
     }
 
@@ -53,6 +55,7 @@ impl Theme {
         match self {
             Self::Light => Hsva::new(0.0, 0.0, 0.80, 1.0).into(),
             Self::Dark => Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
+            Self::Grayscale => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
         }
     }
 
@@ -60,6 +63,7 @@ impl Theme {
         match self {
             Theme::Light => (0.03, Color32::BLACK),
             Theme::Dark => (0.02, Color32::from_gray(200)),
+            Theme::Grayscale => (0.03, Color32::BLACK),
         }
     }
 
@@ -67,6 +71,7 @@ impl Theme {
         match self {
             Self::Light => Color32::WHITE,
             Self::Dark => Color32::from_black_alpha(200),
+            Self::Grayscale => Color32::WHITE,
         }
     }
 
@@ -85,6 +90,7 @@ impl Theme {
                 a: 1.0,
             }
             .into(),
+            Self::Grayscale => Color32::from_gray(20),
         }
     }
 
@@ -92,6 +98,7 @@ impl Theme {
         match self {
             Self::Dark => Color32::from_black_alpha(200),
             Self::Light => Color32::from_white_alpha(200),
+            Self::Grayscale => Color32::from_gray(200),
         }
     }
 }

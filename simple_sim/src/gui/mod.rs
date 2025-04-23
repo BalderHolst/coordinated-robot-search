@@ -57,6 +57,7 @@ fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {
                 visuals: match app_args.theme {
                     app::Theme::Light => Visuals::light(),
                     app::Theme::Dark => Visuals::dark(),
+                    app::Theme::Grayscale => Visuals::light(),
                 },
                 ..Style::default()
             };
