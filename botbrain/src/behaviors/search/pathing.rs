@@ -35,12 +35,13 @@ pub fn find_straight_path(
     goal: Pos2,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<Vec<Pos2>> {
+    let dir = (goal - robot_pos).normalized();
     let line = Line {
-        start: robot_pos,
-        end: goal,
+        start: robot_pos + dir * params::DIAMETER,
+        end: goal + dir * params::DIAMETER,
     };
     // Check if all cells in the line to the goal are free
-    costmap::validate_thick_line(line, params::DIAMETER, costmap_grid)
+    costmap::validate_thick_line(line, params::DIAMETER * 2.0, costmap_grid)
         .then(|| vec![robot_pos, goal])
 }
 
@@ -132,20 +133,12 @@ pub fn find_a_star_path(
                 continue;
             }
 
-            let obstacle_in_range = costmap_grid
-                .grid()
-                .iter_circle(
-                    Pos2::new(new_pos.0 as f32, new_pos.1 as f32),
-                    params::DIAMETER,
-                )
-                .any(|(x, y)| {
-                    if let Some(&new_pos_value) = costmap_grid.grid().get(x, y) {
-                        new_pos_value == COSTMAP_OBSTACLE
-                            || new_pos_value == COSTMAP_DYNAMIC_OBSTACLE
-                    } else {
-                        false
-                    }
-                });
+            let new_pos_world = {
+                let temp = Pos2::new(new_pos.0 as f32, new_pos.1 as f32);
+                costmap_grid.grid_to_world(temp)
+            };
+            let obstacle_in_range =
+                costmap::validate_pos(new_pos_world, params::DIAMETER * 2.0, costmap_grid);
 
             if obstacle_in_range {
                 continue; // obstacle
@@ -166,13 +159,12 @@ pub fn find_a_star_path(
         }
     }
 
-    final_path
-        .and_then(|path| {
-            path.into_iter()
-                .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
-                .collect()
-        })
-        .map(|path| smooth_path(path, costmap_grid))
+    final_path.and_then(|path| {
+        path.into_iter()
+            .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
+            .collect()
+    })
+    // .map(|path| smooth_path(path, costmap_grid))
 }
 
 // Shorten the path by removing while still keeping a min distance to obstacles

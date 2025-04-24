@@ -17,16 +17,6 @@ pub(super) const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
 pub(super) const COSTMAP_SEARCHED: f32 = -1.0;
 pub(super) const COSTMAP_UNKNOWN: f32 = 1.0;
 
-/// Checks if all cells in the line is free
-pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
-    costmap_grid.iter_line(&line).all(|pos| {
-        if let Some(&cell) = costmap_grid.get(pos) {
-            cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-        } else {
-            true
-        }
-    })
-}
 /// Checks if a pos is free
 /// If width is 0.0 only the pos is checked
 /// If width is > 0.0 the pos is checked and the surrounding cells are checked
@@ -50,6 +40,17 @@ pub fn validate_pos(pos: Pos2, width: f32, costmap_grid: &ScaledGrid<f32>) -> bo
             }
         })
     }
+}
+
+/// Checks if all cells in the line is free
+pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
+    costmap_grid.iter_line(&line).all(|pos| {
+        if let Some(&cell) = costmap_grid.get(pos) {
+            cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+        } else {
+            true
+        }
+    })
 }
 
 /// Checks if all cells in the line with a width is free
@@ -98,6 +99,7 @@ pub fn make_costmap_grid(
         costmap_grid.set(Pos2 { x, y }, cell);
     });
 
+    // INFO: This is commented out for now, as we don't need dynamic obstacles (only dynamic obstacles currently are other robots)
     // // Using lidar to insert dynamic obstacles
     // lidar
     //     .points()

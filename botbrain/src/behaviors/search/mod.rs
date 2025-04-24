@@ -41,7 +41,7 @@ const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
 const FORWARD_BIAS: f32 = 0.05;
 
-const ANGLE_THRESHOLD: f32 = PI / 4.0;
+const ANGLE_THRESHOLD: f32 = PI / 8.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.20;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
@@ -477,6 +477,10 @@ impl SearchRobot {
         if self.robot_mode == RobotMode::Pathing {
             self.show_path();
             self.show_frontiers();
+
+            let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
+            self.get_debug_soup_mut()
+                .add("Planner", "Goal", DebugType::Point(goal));
         }
     }
 }
@@ -552,15 +556,17 @@ impl SearchRobot {
         if self.path_planner_path.is_empty() {
             if let Some(path) = pathing::find_path(
                 self.pos,
-                self.path_planner_goal.unwrap(), // Should always be set here
+                self.path_planner_goal
+                    .expect("Path planner goal should be set"),
                 &self.costmap_grid,
             ) {
                 self.path_planner_path = path;
                 // Start following the path next time
                 None
             } else {
+                self.path_planner_goal = None;
                 // TODO: Determine best way to proceed
-                // New goal, new path or switch mode?
+                // New goal, new path, use lidar, or switch mode?
                 println!("What: {:?}", self.robot_mode);
                 // Nothing
                 None
@@ -586,10 +592,13 @@ impl SearchRobot {
     fn follow_path(&mut self) -> Result<Vec2, ()> {
         if !self.path_planner_path.is_empty() {
             // Check if all cells in the line to the goal are free
-            let line = Line {
-                start: self.pos,
-                end: self.path_planner_path[0],
-            };
+            let dir = (self.path_planner_path[0] - self.pos).normalized();
+            let mut start = self.pos + dir * params::DIAMETER;
+            let end = self.path_planner_path[0];
+            if (end - start).length() < params::DIAMETER * 2.0 {
+                start = end;
+            }
+            let line = Line { start, end };
 
             match costmap::validate_thick_line(line, params::DIAMETER, &self.costmap_grid) {
                 true => {
@@ -804,7 +813,7 @@ mod behaviors {
             },
             |robot, _target| {
                 let target = robot.path_planning();
-                robot.robot_mode = RobotMode::Pathing;
+                robot.robot_mode = RobotMode::Pathing; // Make sure we stay in pathing mode always
                 target
             },
         )
