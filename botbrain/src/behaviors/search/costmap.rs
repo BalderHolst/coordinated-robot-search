@@ -27,6 +27,30 @@ pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
         }
     })
 }
+/// Checks if a pos is free
+/// If width is 0.0 only the pos is checked
+/// If width is > 0.0 the pos is checked and the surrounding cells are checked
+pub fn validate_pos(pos: Pos2, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
+    if width == 0.0 {
+        if let Some(&cell) = costmap_grid.get(pos) {
+            cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+        } else {
+            true
+        }
+    } else {
+        let circle = Circle {
+            center: pos,
+            radius: width,
+        };
+        costmap_grid.iter_circle(&circle).all(|pos| {
+            if let Some(&cell) = costmap_grid.get(pos) {
+                cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+            } else {
+                true
+            }
+        })
+    }
+}
 
 /// Checks if all cells in the line with a width is free
 pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
@@ -35,7 +59,7 @@ pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32
     for point in points {
         let line = Line {
             start: line.start + (dir - Vec2::angled(-PI / 2.0)) * point,
-            end: line.end + dir * point,
+            end: line.end + (dir - Vec2::angled(-PI / 2.0)) * point,
         };
         let valid = costmap_grid.iter_line(&line).all(|pos| {
             if let Some(&cell) = costmap_grid.get(pos) {
