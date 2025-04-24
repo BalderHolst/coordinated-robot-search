@@ -178,31 +178,36 @@ pub fn evaluate_frontier_regions(
     // The biggest frontier region
     let mut biggest_frontier = 0;
 
-    let frontiers: Vec<_> = frontier_regions
+    let frontiers: Vec<(f32, usize, f32, (usize, usize))> = frontier_regions
         .iter()
-        .enumerate()
         // Find the weight of the frontier regions
-        .map(|(idx, region)| {
-            let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
-            let dist = pathing::euclidean_dist(closest_region_frontier, robot_pos) as f32;
-            if dist <= params::DIAMETER {
-                // Very bad to be on the robot pos
-                return (f32::MAX, 0, PI, closest_region_frontier);
-            }
+        .flat_map(|region| {
+            // let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
+            region
+                .iter()
+                .map(|&pos| {
+                    let dist = pathing::euclidean_dist(pos, robot_pos) as f32;
+                    if dist <= params::DIAMETER {
+                        // Very bad to be on the robot pos
+                        return (f32::MAX, 0, PI, pos);
+                    }
 
-            let size = region.len();
+                    let size = region.len();
 
-            let frontier_angle = Vec2::new(
-                closest_region_frontier.0 as f32 - robot_pos.0 as f32,
-                closest_region_frontier.1 as f32 - robot_pos.1 as f32,
-            )
-            .angle();
-            let angle_to_target = utils::normalize_angle(frontier_angle - robot_angle).abs();
+                    let frontier_angle = Vec2::new(
+                        pos.0 as f32 - robot_pos.0 as f32,
+                        pos.1 as f32 - robot_pos.1 as f32,
+                    )
+                    .angle();
+                    let angle_to_target =
+                        utils::normalize_angle(frontier_angle - robot_angle).abs();
 
-            furthest_frontier = furthest_frontier.max(dist);
-            biggest_frontier = biggest_frontier.max(region.len());
+                    furthest_frontier = furthest_frontier.max(dist);
+                    biggest_frontier = biggest_frontier.max(region.len());
 
-            (dist, size, angle_to_target, closest_region_frontier)
+                    (dist, size, angle_to_target, pos)
+                })
+                .collect::<Vec<(f32, usize, f32, (usize, usize))>>()
         })
         .collect();
 
