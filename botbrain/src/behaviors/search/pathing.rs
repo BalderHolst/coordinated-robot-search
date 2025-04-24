@@ -158,12 +158,13 @@ pub fn find_a_star_path(
         }
     }
 
-    final_path.and_then(|path| {
-        path.into_iter()
-            .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
-            .collect()
-    })
-    // .map(|path| smooth_path(path, costmap_grid))
+    final_path
+        .and_then(|path| {
+            path.into_iter()
+                .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
+                .collect()
+        })
+        .map(|path| smooth_path(path, costmap_grid))
 }
 
 // Shorten the path by removing while still keeping a min distance to obstacles
