@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use emath::{Pos2, Vec2};
 
 use crate::{
@@ -28,20 +30,26 @@ pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
 
 /// Checks if all cells in the line with a width is free
 pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
-    costmap_grid.iter_line(&line).all(|pos| {
-        costmap_grid
-            .iter_circle(&Circle {
-                center: pos,
-                radius: width / 2.0,
-            })
-            .all(|pos| {
-                if let Some(&cell) = costmap_grid.get(pos) {
-                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-                } else {
-                    true
-                }
-            })
-    })
+    let dir = (line.end - line.start).normalized();
+    let points = [-width / 2.0, 0.0, width / 2.0];
+    for point in points {
+        let line = Line {
+            start: line.start + (dir - Vec2::angled(-PI / 2.0)) * point,
+            end: line.end + dir * point,
+        };
+        let valid = costmap_grid.iter_line(&line).all(|pos| {
+            if let Some(&cell) = costmap_grid.get(pos) {
+                cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+            } else {
+                true
+            }
+        });
+        if !valid {
+            println!("Invalid line: {:?}", line);
+            return false;
+        }
+    }
+    true
 }
 
 /// Constructs a costmap grid from a search grid, a obstacle map and a lidar
