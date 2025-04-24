@@ -137,10 +137,9 @@ pub fn find_a_star_path(
                 let temp = Pos2::new(new_pos.0 as f32, new_pos.1 as f32);
                 costmap_grid.grid_to_world(temp)
             };
-            let obstacle_in_range =
+            let valid_pos =
                 costmap::validate_pos(new_pos_world, params::DIAMETER * 2.0, costmap_grid);
-
-            if obstacle_in_range {
+            if !valid_pos {
                 continue; // obstacle
             }
 

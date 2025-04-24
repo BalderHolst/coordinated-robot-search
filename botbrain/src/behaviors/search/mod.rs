@@ -564,10 +564,16 @@ impl SearchRobot {
                 // Start following the path next time
                 None
             } else {
-                self.path_planner_goal = None;
                 // TODO: Determine best way to proceed
                 // New goal, new path, use lidar, or switch mode?
-                println!("What: {:?}", self.robot_mode);
+                let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
+                self.get_debug_soup_mut()
+                    .add("Planner", "Goal", DebugType::Point(goal));
+                println!(
+                    "What: {:?}, goal: {:?}",
+                    self.robot_mode, self.path_planner_goal
+                );
+                self.path_planner_goal = None;
                 // Nothing
                 None
             }
