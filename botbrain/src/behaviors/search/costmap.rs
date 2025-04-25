@@ -70,7 +70,7 @@ pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32
             }
         });
         if !valid {
-            println!("Invalid line: {:?}", line);
+            // println!("Invalid line: {:?}", line);
             return false;
         }
     }
