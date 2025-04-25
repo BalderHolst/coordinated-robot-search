@@ -260,10 +260,16 @@ impl SearchRobot {
             robots: &Vec<(&RobotId, &(Pos2, f32))>,
             assigned: &mut HashSet<RobotId>,
             network: &mut Vec<Pos2>,
+            level: usize,
         ) {
             if assigned.contains(&id) {
                 return;
             }
+
+            if level > robots.len() {
+                unreachable!("A robot should be assigned for each call to `assign`")
+            }
+
             let (_, (pos, _)) = *robots.iter().find(|(i, _)| *i == &id).unwrap();
             network.push(*pos);
             assigned.insert(id);
@@ -274,7 +280,7 @@ impl SearchRobot {
                 }
                 let d = (*pos - *other_pos).length();
                 if d < COMMUNICATION_RANGE {
-                    assign(**other_id, robots, assigned, network);
+                    assign(**other_id, robots, assigned, network, level + 1);
                 }
             }
         }
@@ -294,7 +300,7 @@ impl SearchRobot {
                 break;
             };
             let mut network = vec![];
-            assign(*id, &robots, &mut assigned, &mut network);
+            assign(*id, &robots, &mut assigned, &mut network, 0);
             networks.push(network);
         }
 
