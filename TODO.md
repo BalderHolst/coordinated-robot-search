@@ -26,6 +26,7 @@
 - [ ] Plot data transfer
 - [ ] Measure "robot spread" as a parameter
 - [ ] Plot "robot spread"
+- [ ] Measure performance
 
 #### Reinforcement Learning
 - [ ] Train a network for a very long time
