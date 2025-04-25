@@ -12,7 +12,7 @@
 
 #### Manual Algoritm
 - [ ] Tune pathing
-- [ ] Use robot angle when pathing
+- [x] Use robot angle when pathing
 - [ ] Repath if lidar sees obstacle
 - [ ] Use lidar again for search algorithms
 
@@ -33,6 +33,13 @@
 - [ ] Add proximity penalty
 
 #### Report
-- [ ] Find examples of bandwidth (for report)
+- [ ] Find examples of bandwidth
 - [ ] Create missing figures
-- [ ] Compare manual search algorithms (in report)
+- [ ] Compare manual search algorithms
+
+#### Repository
+- [ ] Document `botbrain` library
+- [ ] Document `simple_sim` library
+- [ ] Make a nice README
+    - [ ] How to run code
+    - [ ] How are the files organized?
