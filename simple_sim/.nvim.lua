@@ -6,7 +6,8 @@ local config = {
 	["rust-analyzer"] = {
 		cargo = {
 			allFeatures = false,
-			features = { "default" },
+			features = { "single-thread" },
+			-- features = { "default" },
 		},
 	},
 }
@@ -15,6 +16,17 @@ local config = {
 local rustaceanvim_default_config = vim.g.rustaceanvim or {}
 vim.g.rustaceanvim =
 	vim.tbl_deep_extend("force", rustaceanvim_default_config, { server = { default_settings = config } })
+
+-- Restart rust lsp with new config if already running
+-- For rustaceanvim
+for _, client in pairs(vim.lsp.get_clients()) do
+	if client.name == "rust-analyzer" then
+		local config_str = vim.inspect(config["rust-analyzer"])
+		vim.cmd.RustAnalyzer({ "config", config_str })
+		vim.cmd.RustAnalyzer({ "restart" })
+		break
+	end
+end
 
 -- For vim.lsp
 -- local lsp_default_config = vim.lsp.config["rust-analyzer"] or {}
