@@ -1,7 +1,7 @@
 use burn::prelude::*;
 
 use crate::{
-    behaviors::rl::{action::Action, model::Network, RlRobot},
+    behaviors::rl::{action::Action, network::Network, RlRobot},
     params, LidarPoint,
 };
 

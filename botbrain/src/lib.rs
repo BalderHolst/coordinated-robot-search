@@ -285,6 +285,12 @@ impl LidarData {
             }
         }
     }
+
+    pub fn shortest_ray(&self) -> Option<LidarPoint> {
+        self.points()
+            .max_by(|a, b| a.distance.total_cmp(&b.distance))
+            .cloned()
+    }
 }
 
 #[test]

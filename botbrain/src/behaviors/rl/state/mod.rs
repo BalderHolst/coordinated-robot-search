@@ -1,10 +1,10 @@
+mod polar;
 mod single_ray;
 mod small;
-mod small_solo;
 
 use burn::prelude::*;
 
-use super::{action::Action, model::Network, RlRobot};
+use super::{action::Action, network::Network, RlRobot};
 
 pub trait State: Clone + Send + 'static {
     const SIZE: usize;
@@ -15,9 +15,9 @@ pub trait State: Clone + Send + 'static {
 }
 
 // State representations
+pub use polar::PolarState;
 pub use single_ray::RayState;
 pub use small::SmallState;
-pub use small_solo::SmallSoloState;
 
 pub mod utils {
     pub struct ArrayWriter<'a> {

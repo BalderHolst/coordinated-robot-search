@@ -1,34 +1,28 @@
 use burn::{
+    nn::{Linear, LinearConfig},
     prelude::*,
     tensor::{activation, backend::AutodiffBackend},
 };
-use nn::{Linear, LinearConfig};
 
 use crate::behaviors::rl::{action::Action, state::State};
 
-use super::{soft_update_linear, AutodiffNetwork, Network, TrainedNetwork};
+use super::{soft_update_linear, AutodiffNetwork, Network};
 
 #[derive(Debug, Module)]
-pub struct TinyNet<B: Backend> {
+pub struct SmallNetwork<B: Backend> {
     linear1: Linear<B>,
     linear2: Linear<B>,
     linear3: Linear<B>,
 }
 
-impl<B: Backend> TinyNet<B> {
-    const HIDDEN_SIZE_1: usize = 5;
-    const HIDDEN_SIZE_2: usize = 5;
+impl<B: Backend> SmallNetwork<B> {
+    const HIDDEN_SIZE_1: usize = 20;
+    const HIDDEN_SIZE_2: usize = 10;
 }
 
-impl<B: AutodiffBackend, S: State, A: Action> AutodiffNetwork<B, S, A> for TinyNet<B> {}
+impl<B: AutodiffBackend, S: State, A: Action> AutodiffNetwork<B, S, A> for SmallNetwork<B> {}
 
-impl<B: Backend, S: State, A: Action> TrainedNetwork<B, S, A> for TinyNet<B> {
-    fn bytes() -> &'static [u8] {
-        include_bytes!("tiny.bin")
-    }
-}
-
-impl<B: Backend, S: State, A: Action> Network<B, S, A> for TinyNet<B> {
+impl<B: Backend, S: State, A: Action> Network<B, S, A> for SmallNetwork<B> {
     fn init(device: &B::Device) -> Self {
         Self {
             linear1: LinearConfig::new(S::SIZE, Self::HIDDEN_SIZE_1).init(device),

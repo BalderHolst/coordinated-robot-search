@@ -3,10 +3,10 @@ use std::time::Duration;
 use crate::{behaviors::BehaviorOutput, cast_robot, RobotRef};
 
 pub mod minimal;
+pub mod polar;
 pub mod small;
-pub mod small_solo;
 
-use super::{action::Action, model::Network, state::State, RlRobot, REACT_HZ};
+use super::{action::Action, network::Network, state::State, RlRobot, REACT_HZ};
 
 use burn::prelude::*;
 

@@ -34,9 +34,9 @@ pub enum RobotKind {
     AvoidObstacles,
     Search,
     #[cfg(feature = "rl")]
-    SmallRl,
+    PolarRl,
     #[cfg(feature = "rl")]
-    SmallSoloRl,
+    SmallRl,
     #[cfg(feature = "rl")]
     MinimalRl,
 }
@@ -51,7 +51,7 @@ impl RobotKind {
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
             #[cfg(feature = "rl")]
-            RobotKind::SmallSoloRl => &[("run", rl::robots::small::run::<MyBackend>)],
+            RobotKind::PolarRl => &[("run", rl::robots::polar::run::<MyBackend>)],
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
         }
@@ -69,8 +69,8 @@ impl RobotKind {
                 || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
             #[cfg(feature = "rl")]
-            RobotKind::SmallSoloRl => {
-                || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
+            RobotKind::PolarRl => {
+                || Box::new(rl::robots::polar::PolarRlRobot::<MyBackend>::default())
             }
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => {
@@ -87,7 +87,7 @@ impl RobotKind {
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => "small-rl",
             #[cfg(feature = "rl")]
-            RobotKind::SmallSoloRl => "small-solo-rl",
+            RobotKind::PolarRl => "small-solo-rl",
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => "minimal-rl",
         }

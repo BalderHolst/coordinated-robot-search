@@ -1,5 +1,5 @@
 pub mod action;
-pub mod model;
+pub mod network;
 pub mod robots;
 pub mod state;
 
@@ -8,7 +8,7 @@ use std::{collections::HashMap, time::Duration};
 use action::Action;
 use burn::prelude::Backend;
 use emath::Pos2;
-use model::{Model, Network, TrainedNetwork};
+use network::{Model, Network, TrainedNetwork};
 use state::State;
 
 use crate::{
@@ -58,12 +58,11 @@ pub struct RlRobot<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     pub others: HashMap<RobotId, (Pos2, f32)>,
 
     /// Debug object and their names. Used for visualization.
-    /// Set to `None` to disable debug visualization.
     pub debug_soup: DebugSoup,
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
-    pub model: model::BotModel<B, S, A, N>,
+    pub model: network::BotModel<B, S, A, N>,
 
     /// Last time the robot reacted to the environment
     pub last_control_update: Duration,
@@ -142,7 +141,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B
             search_gradient: Default::default(),
             others: Default::default(),
             debug_soup: DebugSoup::new_active(),
-            model: model::BotModel::new_model(Model::<B, S, A, N>::new(N::init(
+            model: network::BotModel::new_model(Model::<B, S, A, N>::new(N::init(
                 &Default::default(),
             ))),
             last_control_update: Duration::ZERO,
@@ -154,7 +153,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B
 impl<B: Backend, S: State, A: Action, N: TrainedNetwork<B, S, A>> RlRobot<B, S, A, N> {
     pub fn new_trained() -> Self {
         Self {
-            model: model::BotModel::new_trained_model(&Default::default()),
+            model: network::BotModel::new_trained_model(&Default::default()),
             ..Default::default()
         }
     }
@@ -179,7 +178,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
 
     pub fn new_controlled() -> Self {
         Self {
-            model: model::BotModel::new_controlled(A::default()),
+            model: network::BotModel::new_controlled(A::default()),
             ..Default::default()
         }
     }
