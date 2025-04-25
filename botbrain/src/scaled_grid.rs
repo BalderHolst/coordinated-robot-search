@@ -155,6 +155,14 @@ impl<C: Clone + Default> ScaledGrid<C> {
         })
     }
 
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (f32, f32, &mut C)> + '_ {
+        self.grid.iter_mut().map(|(x, y, cell)| {
+            let x = x as f32 * self.cell_size - self.width / 2.0;
+            let y = y as f32 * self.cell_size - self.height / 2.0;
+            (x, y, cell)
+        })
+    }
+
     /// Fill the grid with a value
     pub fn fill(&mut self, cell: C) {
         self.grid.fill(cell);
@@ -235,6 +243,17 @@ impl<C: Clone + Default> ScaledGrid<C> {
         self.grid
             .iter_line(start, end)
             .map(move |(x, y)| self.grid_to_world(Pos2::new(x as f32, y as f32)))
+    }
+
+    /// Maskes out the ScaledGrid cells
+    /// If mask returns true, the cell is kept
+    /// If not the cell is set to default
+    pub fn mask(&mut self, keep: impl Fn(Pos2) -> bool) {
+        self.iter_mut().for_each(|(x, y, cell)| {
+            if !keep(Pos2 { x, y }) {
+                *cell = C::default()
+            }
+        });
     }
 }
 

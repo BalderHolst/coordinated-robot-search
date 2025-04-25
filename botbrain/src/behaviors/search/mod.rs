@@ -1,6 +1,8 @@
 //! This module contains robot `search` behavior.
 
-use costmap::COSTMAP_GRID_SCALE;
+use costmap::{
+    COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_DYNAMIC_OBSTACLE_WIDTH, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE,
+};
 use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
@@ -66,6 +68,7 @@ pub enum RobotMode {
     #[default]
     Exploring,
     Pathing,
+    ProximityPathing,
 }
 
 #[derive(Clone, Default)]
@@ -246,6 +249,8 @@ impl SearchRobot {
         }
     }
 
+    // FIX: Something is wrong with the proximity grid
+    // Robots Are not assigned to the correct groups
     fn update_proximity_grid(&mut self, time: Duration) {
         // Don't update the proximity grid too often
         if (time - self.last_proximity_grid_update).as_secs_f32() < PROXIMITY_GRID_UPDATE_INTERVAL {
@@ -480,13 +485,19 @@ impl SearchRobot {
         let mode = match &self.robot_mode {
             RobotMode::Exploring => 0,
             RobotMode::Pathing => 1,
+            RobotMode::ProximityPathing => 2,
         };
 
         soup.add("", "mode", DebugType::Int(mode));
 
         if self.robot_mode == RobotMode::Pathing {
             self.show_path();
-            self.show_frontiers();
+
+            let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
+            self.get_debug_soup_mut()
+                .add("Planner", "Goal", DebugType::Point(goal));
+        } else if self.robot_mode == RobotMode::ProximityPathing {
+            self.show_path();
 
             let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
             self.get_debug_soup_mut()
@@ -536,7 +547,17 @@ impl SearchRobot {
             }
         } else {
             // Set a goal using frontiers
-            let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+            let mut frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+            self.show_frontiers(&frontiers);
+            if frontiers.is_empty() {
+                for (pos, _angle) in self.others.values() {
+                    let robot_frontiers = frontiers::find_frontiers(*pos, &self.costmap_grid);
+                    if !robot_frontiers.is_empty() {
+                        frontiers = robot_frontiers;
+                        break;
+                    }
+                }
+            }
 
             match frontiers::evaluate_frontiers(self.pos, self.angle, frontiers, &self.costmap_grid)
             {
@@ -550,13 +571,89 @@ impl SearchRobot {
         }
 
         // Don't stop pathing if there are no other robots in world
-        if !self.others.is_empty() {
-            // Only limit robot movement if there are other robots in the proximity grid
+        if !self.others.is_empty() && self.robot_mode != RobotMode::ProximityPathing {
             match self.proximity_grid.get(self.pos) {
+                // 0.0 means we are outside the proximity grid
                 Some(cell) if *cell == 0.0 => {
-                    // If we are not in the proximity grid, we can't move towards the goal
-                    // println!("Out of proximity grid");
-                    return None;
+                    let mut masked_costmap = self.costmap_grid.clone();
+                    // Maske the grid to find a new goal within the proximity grid
+
+                    masked_costmap.mask(|pos| {
+                        if let Some(proximity_cell) = self.proximity_grid.get(pos) {
+                            // Don't overwrite obstacles
+                            if let Some(costmap_cell) = self.costmap_grid.get(pos) {
+                                *costmap_cell == COSTMAP_OBSTACLE
+                                    || *costmap_cell == COSTMAP_DYNAMIC_OBSTACLE
+                                    || *proximity_cell != 0.0
+                            } else {
+                                // Keep the cell if it is in the proximity grid
+                                *proximity_cell != 0.0
+                            }
+                        } else {
+                            false
+                        }
+                    });
+
+                    // Set a goal from current position
+                    let mut frontiers = frontiers::find_frontiers(self.pos, &masked_costmap);
+
+                    // If no frontiers, try to find a frontier from other robots positions
+                    if frontiers.is_empty() {
+                        for (pos, _angle) in self.others.values() {
+                            let robot_frontiers = frontiers::find_frontiers(*pos, &masked_costmap);
+                            if !robot_frontiers.is_empty() {
+                                frontiers = robot_frontiers;
+                                break;
+                            }
+                        }
+                    }
+
+                    // If still no frontiers, use the current position with full costmap
+                    if frontiers.is_empty() {
+                        // As backup
+                        frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
+                    }
+
+                    self.show_frontiers(&frontiers);
+
+                    self.get_debug_soup_mut().add(
+                        "Planner",
+                        "Masked Costmap",
+                        DebugType::Grid(masked_costmap.clone()),
+                    );
+
+                    // self.get_debug_soup_mut().add(
+                    //     "Planner",
+                    //     "Masked frontiers",
+                    //     DebugType::Grid(masked_costmap.clone()),
+                    // );
+
+                    let frontier_len = frontiers.len();
+
+                    match frontiers::evaluate_frontiers(
+                        self.pos,
+                        self.angle,
+                        frontiers,
+                        &masked_costmap,
+                    ) {
+                        Some(goal) => {
+                            println!("[{}] Set prox goal", self.id.0);
+                            self.get_debug_soup_mut().add(
+                                "Planner",
+                                "Goal",
+                                DebugType::Point(goal),
+                            );
+
+                            self.robot_mode = RobotMode::ProximityPathing;
+                            self.path_planner_goal = Some(goal);
+                        }
+                        None => {
+                            println!("[{}] No prox goal. N frontiers={}", self.id.0, frontier_len,);
+                            // Should only happen in the beginning
+                            self.robot_mode = RobotMode::Exploring;
+                            return None;
+                        }
+                    }
                 }
                 None => {
                     println!(
@@ -583,9 +680,9 @@ impl SearchRobot {
             } else {
                 // TODO: Determine best way to proceed
                 // New goal, new path, use lidar, or switch mode?
-                let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
-                self.get_debug_soup_mut()
-                    .add("Planner", "Goal", DebugType::Point(goal));
+                // let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
+                // self.get_debug_soup_mut()
+                //     .add("Planner", "Goal", DebugType::Point(goal));
                 println!(
                     "[{}] What: {:?}, goal: {:?}",
                     self.id.as_u32(),
@@ -593,8 +690,7 @@ impl SearchRobot {
                     self.path_planner_goal
                 );
                 self.path_planner_goal = None;
-                // Nothing
-                None
+                Some(self.lidar())
             }
         } else {
             // Update the path to only contain the points we haven't reached
@@ -609,7 +705,7 @@ impl SearchRobot {
                 // TODO: Use lidar to get away from wall
                 // New goal, new path or switch mode?
                 println!("[{}] Path is blocked", self.id.as_u32());
-                None
+                Some(self.lidar())
             }
         }
     }
@@ -637,6 +733,7 @@ impl SearchRobot {
                 }
             }
         } else {
+            println!("[{}] Path is empty", self.id.0);
             Err(())
         }
     }
@@ -651,10 +748,9 @@ impl SearchRobot {
         }
     }
 
-    fn show_frontiers(&mut self) {
+    fn show_frontiers(&mut self, frontiers: &HashSet<(usize, usize)>) {
         self.frontiers_grid.fill(0.0);
-        let frontiers = frontiers::find_frontiers(self.pos, &self.costmap_grid);
-        for (x, y) in &frontiers {
+        for (x, y) in frontiers {
             self.frontiers_grid.grid_mut().set(*x, *y, -10.0);
         }
         let robot_pos = {
@@ -662,7 +758,7 @@ impl SearchRobot {
             (tmp.x as usize, tmp.y as usize)
         };
         let mut frontier_regions =
-            frontiers::make_frontier_regions(robot_pos, frontiers, &self.costmap_grid);
+            frontiers::make_frontier_regions(frontiers.clone(), &self.costmap_grid);
 
         frontier_regions.sort_by_key(|v1| v1.len());
 
@@ -767,9 +863,10 @@ mod behaviors {
                     target += robot.search_gradient();
                     target += robot.proximity_gradient();
                     // target += robot.lidar();
+                    // TODO: Maybe check if should switch to pathing here?
                     Some(target)
                 }
-                RobotMode::Pathing => {
+                RobotMode::Pathing | RobotMode::ProximityPathing => {
                     // No += since we want full control
                     robot.path_planning()
                 }
@@ -838,7 +935,15 @@ mod behaviors {
             },
             |robot, _target| {
                 let target = robot.path_planning();
-                robot.robot_mode = RobotMode::Pathing; // Make sure we stay in pathing mode always
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                // robot.get_debug_soup_mut().add(
+                //     "Planner",
+                //     "Coverage",
+                //     DebugType::Number(crate::get_coverage(&robot.search_grid, &robot.map)),
+                // );
                 target
             },
         )

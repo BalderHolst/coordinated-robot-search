@@ -97,7 +97,6 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
 
 /// Constructs the frontier regions from the frontiers
 pub fn make_frontier_regions(
-    robot_pos: (usize, usize),
     frontiers: HashSet<(usize, usize)>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Vec<Vec<(usize, usize)>> {
@@ -187,7 +186,7 @@ pub fn evaluate_frontier_regions(
                 .iter()
                 .map(|&pos| {
                     let dist = pathing::euclidean_dist(pos, robot_pos) as f32;
-                    if dist <= params::DIAMETER * 2.0 {
+                    if dist < params::DIAMETER * 2.0 {
                         // Very bad to be on the robot pos
                         return (f32::MAX, 0, PI, pos);
                     }
@@ -252,7 +251,7 @@ pub fn evaluate_frontiers(
         (tmp.x as usize, tmp.y as usize)
     };
 
-    let frontier_regions = make_frontier_regions(robot_pos, frontiers, costmap_grid);
+    let frontier_regions = make_frontier_regions(frontiers, costmap_grid);
     let goal = {
         let goal_grid =
             evaluate_frontier_regions(robot_pos, robot_angle, frontier_regions, costmap_grid)?;

@@ -10,7 +10,7 @@ use crate::{behaviors::ScaledGrid, params, shapes::Line};
 use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
 
 /// When a goal/point is within this distance from the robot
-pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = 0.2;
+pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = params::RADIUS;
 pub(super) const NEIGHBORS_4: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
     (0, 1),
@@ -179,7 +179,7 @@ pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2>
             end: path[idx],
         };
 
-        if !costmap::validate_thick_line(line, params::DIAMETER * 2.0, costmap_grid) {
+        if !costmap::validate_thick_line(line, params::DIAMETER * 3.0, costmap_grid) {
             if cur_len > 0 {
                 smoothed_path.push(prev_pos);
                 prev_pos = path[idx - 1];
