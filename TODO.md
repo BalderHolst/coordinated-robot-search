@@ -1,4 +1,5 @@
 # TODO list
+
 - [x] Realsense? NO
 - [x] Update URDF (remove imu?)
 - [x] Localization in multi-robot enviornment
@@ -11,17 +12,20 @@
 - [x] Look into machine learning
 
 #### Manual Algoritm
-- [ ] Tune pathing
+
+- [x] Tune pathing
 - [x] Use robot angle when pathing
-- [ ] Repath if lidar sees obstacle
-- [ ] Use lidar again for search algorithms
+- [x] Repath if lidar sees obstacle
+- [] Use lidar again for search algorithms
 
 #### Tune Simulations
+
 - [ ] Match robot parameters in simulations
 - [ ] Create ROS2 data logger
 - [ ] Compare ROS2 and simple_sim output for same scenario
 
 #### Benchmarks
+
 - [ ] Measure data transfer
 - [ ] Plot data transfer
 - [ ] Measure "robot spread" as a parameter
@@ -29,17 +33,20 @@
 - [ ] Measure performance
 
 #### Reinforcement Learning
+
 - [ ] Train a network for a very long time
 - [ ] Add proximity penalty
 
 #### Report
+
 - [ ] Find examples of bandwidth
 - [ ] Create missing figures
 - [ ] Compare manual search algorithms
 
 #### Repository
+
 - [ ] Document `botbrain` library
 - [ ] Document `simple_sim` library
 - [ ] Make a nice README
-    - [ ] How to run code
-    - [ ] How are the files organized?
+  - [ ] How to run code
+  - [ ] How are the files organized?

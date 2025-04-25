@@ -20,8 +20,8 @@ use super::{
 };
 
 const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.2;
-const FRONTIER_REGION_DISTANCE_WEIGHT: f32 = 0.4;
-const FRONTIER_REGION_TURN_WEIGHT: f32 = 0.4;
+const FRONTIER_REGION_DISTANCE_WEIGHT: f32 = 0.6;
+const FRONTIER_REGION_TURN_WEIGHT: f32 = 0.2;
 
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
