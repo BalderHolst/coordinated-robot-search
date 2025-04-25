@@ -509,7 +509,13 @@ impl SearchRobot {
         }
         self.last_costmap_grid_update = time;
 
-        self.costmap_grid = costmap::make_costmap_grid(&self.map, &self.search_grid);
+        self.costmap_grid = costmap::make_costmap_grid(
+            self.pos,
+            self.angle,
+            &self.map,
+            &self.search_grid,
+            &self.lidar,
+        );
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
@@ -677,7 +683,6 @@ impl SearchRobot {
                     self.robot_mode,
                     self.path_planner_goal
                 );
-                self.path_planner_goal = None;
                 Some(self.lidar())
             }
         } else {

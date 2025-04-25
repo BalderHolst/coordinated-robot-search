@@ -4,7 +4,9 @@ use emath::{Pos2, Vec2};
 
 use crate::{
     behaviors::ScaledGrid,
+    params::LIDAR_RANGE,
     shapes::{Circle, Line},
+    LidarData, LidarPoint,
 };
 
 pub(super) const COSTMAP_GRID_SCALE: f32 = 0.5;
@@ -76,7 +78,13 @@ pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32
 }
 
 /// Constructs a costmap grid from a search grid, a obstacle map and a lidar
-pub fn make_costmap_grid(map: &ScaledGrid<f32>, search_grid: &ScaledGrid<f32>) -> ScaledGrid<f32> {
+pub fn make_costmap_grid(
+    robot_pos: Pos2,
+    robot_angle: f32,
+    map: &ScaledGrid<f32>,
+    search_grid: &ScaledGrid<f32>,
+    lidar: &LidarData,
+) -> ScaledGrid<f32> {
     let mut costmap_grid = ScaledGrid::<f32>::new(map.width(), map.height(), COSTMAP_GRID_SCALE);
 
     // Update costmap from search grid
@@ -92,26 +100,26 @@ pub fn make_costmap_grid(map: &ScaledGrid<f32>, search_grid: &ScaledGrid<f32>) -
     });
 
     // INFO: This is commented out for now, as we don't need dynamic obstacles (only dynamic obstacles currently are other robots)
-    // // Using lidar to insert dynamic obstacles
-    // lidar
-    //     .points()
-    //     .filter_map(|&LidarPoint { angle, distance }| {
-    //         // Make small circle if distance is under max distance
-    //         if distance < LIDAR_RANGE {
-    //             let point = robot_pos + Vec2::angled(angle + robot_angle) * distance;
-    //             Some(Circle {
-    //                 center: point,
-    //                 radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH / 2.0,
-    //             })
-    //         } else {
-    //             None
-    //         }
-    //     })
-    //     .for_each(|circle| {
-    //         costmap_grid
-    //             // Negative if don't want to go there, positive if want to go there
-    //             .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
-    //     });
+    // Using lidar to insert dynamic obstacles
+    lidar
+        .points()
+        .filter_map(|&LidarPoint { angle, distance }| {
+            // Make small circle if distance is under max distance
+            if distance < LIDAR_RANGE {
+                let point = robot_pos + Vec2::angled(angle + robot_angle) * distance;
+                Some(Circle {
+                    center: point,
+                    radius: COSTMAP_DYNAMIC_OBSTACLE_WIDTH / 2.0,
+                })
+            } else {
+                None
+            }
+        })
+        .for_each(|circle| {
+            costmap_grid
+                // Negative if don't want to go there, positive if want to go there
+                .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
+        });
 
     map.iter().for_each(|(x, y, &cell)| {
         // Negative if don't want to go there, positive if want to go there
