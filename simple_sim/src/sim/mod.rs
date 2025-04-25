@@ -15,13 +15,17 @@ use botbrain::{
     behaviors::{Behavior, Time},
     debug::{DebugSoup, DebugType},
     scaled_grid::ScaledGrid,
-    Control, RobotId, RobotPose,
+    Control, Pos2, RobotId, RobotPose,
 };
 
 #[cfg(not(feature = "single-thread"))]
 use robot_pool::RobotThreadPool;
 
-use crate::{cli::ScenarioArgs, scenario::Scenario, world::World};
+use crate::{
+    cli::ScenarioArgs,
+    scenario::Scenario,
+    world::{Cell, World},
+};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -217,18 +221,29 @@ pub struct SimState {
 #[derive(Clone)]
 pub struct SimDiagnostics {
     pub coverage_grid: ScaledGrid<bool>,
+    world: World,
 }
 
 impl SimDiagnostics {
     pub fn coverage(&self) -> f32 {
-        let total_area = self.coverage_grid.width() * self.coverage_grid.height();
+        let mut total_area = 0;
         let covered_cells = self
             .coverage_grid
             .iter()
-            .filter(|(_, _, &covered)| covered)
+            .filter(|&(x, y, &covered)| {
+                if let Some(&cell) = self.world.get(Pos2 { x, y }) {
+                    if cell != Cell::Wall {
+                        total_area += 1;
+                        covered
+                    } else {
+                        false
+                    }
+                } else {
+                    false
+                }
+            })
             .count();
-        let covered_area = covered_cells as f32 * self.coverage_grid.scale().powi(2);
-        covered_area / total_area
+        covered_cells as f32 / total_area as f32
     }
 }
 
@@ -271,6 +286,7 @@ impl Simulator {
             time: Time::default(),
             diagnostics: SimDiagnostics {
                 coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
+                world: world.clone(),
             },
         };
 
