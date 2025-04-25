@@ -76,7 +76,6 @@ pub(crate) fn update_search_grid(
     others: &mut HashMap<RobotId, (Pos2, f32)>,
     multiplier: f32,
 ) {
-    const HEAT_WIDTH: f32 = PI / 4.0; // TODO: Unused?
     const CAM_MULTPLIER: f32 = 20.0;
 
     process_search_messages(search_grid, postbox, others);

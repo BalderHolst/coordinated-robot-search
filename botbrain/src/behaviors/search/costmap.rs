@@ -99,7 +99,6 @@ pub fn make_costmap_grid(
         costmap_grid.set(Pos2 { x, y }, cell);
     });
 
-    // INFO: This is commented out for now, as we don't need dynamic obstacles (only dynamic obstacles currently are other robots)
     // Using lidar to insert dynamic obstacles
     lidar
         .points()

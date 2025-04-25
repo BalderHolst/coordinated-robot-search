@@ -247,8 +247,6 @@ impl SearchRobot {
         }
     }
 
-    // FIX: Something is wrong with the proximity grid
-    // Robots Are not assigned to the correct groups
     fn update_proximity_grid(&mut self, time: Duration) {
         // Don't update the proximity grid too often
         if (time - self.last_proximity_grid_update).as_secs_f32() < PROXIMITY_GRID_UPDATE_INTERVAL {
