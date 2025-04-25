@@ -349,11 +349,11 @@ impl SearchRobot {
 
         let g_len = g.length();
         if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
-            println!(
-                "[{}] Switching to pathing: gradient: {}",
-                self.id.as_u32(),
-                g_len
-            );
+            // println!(
+            //     "[{}] Switching to pathing: gradient: {}",
+            //     self.id.as_u32(),
+            //     g_len
+            // );
             self.robot_mode = RobotMode::Pathing;
         }
         g
@@ -523,7 +523,7 @@ impl SearchRobot {
             self.path_fails = 0;
             self.path_planner_goal = None;
             self.path_planner_path = vec![];
-            println!("[{}] Pathing failed too many times", self.id.as_u32());
+            // println!("[{}] Pathing failed too many times", self.id.as_u32());
         }
 
         // Logic to find goal or change to exploring mode when reached
@@ -532,10 +532,10 @@ impl SearchRobot {
             if diff.length() < PATH_PLANNER_DISTANCE_TOLERANCE {
                 self.path_planner_goal = None;
                 self.path_planner_path = vec![];
-                println!(
-                    "[{}] Goal reached, switching to exploring mode",
-                    self.id.as_u32()
-                );
+                // println!(
+                //     "[{}] Goal reached, switching to exploring mode",
+                //     self.id.as_u32()
+                // );
                 self.robot_mode = RobotMode::Exploring;
                 return None;
             }
@@ -631,7 +631,7 @@ impl SearchRobot {
                         &masked_costmap,
                     ) {
                         Some(goal) => {
-                            println!("[{}] Set prox goal", self.id.0);
+                            // println!("[{}] Set prox goal", self.id.0);
                             self.get_debug_soup_mut().add(
                                 "Planner",
                                 "Goal",
@@ -642,7 +642,7 @@ impl SearchRobot {
                             self.path_planner_goal = Some(goal);
                         }
                         None => {
-                            println!("[{}] No prox goal. N frontiers={}", self.id.0, frontier_len,);
+                            // println!("[{}] No prox goal. N frontiers={}", self.id.0, frontier_len,);
                             // Should only happen in the beginning
                             self.robot_mode = RobotMode::Exploring;
                             return None;
@@ -650,11 +650,11 @@ impl SearchRobot {
                     }
                 }
                 None => {
-                    println!(
-                        "[{}] Robot position not in proximity grid: {:?}",
-                        self.id.as_u32(),
-                        self.pos
-                    );
+                    // println!(
+                    //     "[{}] Robot position not in proximity grid: {:?}",
+                    //     self.id.as_u32(),
+                    //     self.pos
+                    // );
                 }
                 _ => {}
             }
@@ -672,17 +672,12 @@ impl SearchRobot {
                 // Start following the path next time
                 None
             } else {
-                // TODO: Determine best way to proceed
-                // New goal, new path, use lidar, or switch mode?
-                // let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
-                // self.get_debug_soup_mut()
-                //     .add("Planner", "Goal", DebugType::Point(goal));
-                println!(
-                    "[{}] What: {:?}, goal: {:?}",
-                    self.id.as_u32(),
-                    self.robot_mode,
-                    self.path_planner_goal
-                );
+                // println!(
+                //     "[{}] What: {:?}, goal: {:?}",
+                //     self.id.as_u32(),
+                //     self.robot_mode,
+                //     self.path_planner_goal
+                // );
                 Some(self.lidar())
             }
         } else {
@@ -695,9 +690,7 @@ impl SearchRobot {
             if let Ok(control_vec) = self.follow_path() {
                 Some(control_vec)
             } else {
-                // TODO: Use lidar to get away from wall
-                // New goal, new path or switch mode?
-                println!("[{}] Path is blocked", self.id.as_u32());
+                // println!("[{}] Path is blocked", self.id.as_u32());
                 Some(self.lidar())
             }
         }
@@ -726,7 +719,7 @@ impl SearchRobot {
                 }
             }
         } else {
-            println!("[{}] Path is empty", self.id.0);
+            // println!("[{}] Path is empty", self.id.0);
             Err(())
         }
     }
