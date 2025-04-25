@@ -24,11 +24,11 @@ pub fn run<B: Backend>(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
     })
 }
 
-// impl<B: Backend> network::TrainedNetwork<B, St, Ac> for Net<B> {
-//     fn bytes() -> &'static [u8] {
-//         include_bytes!("weights/polar.bin")
-//     }
-// }
+impl<B: Backend> network::TrainedNetwork<B, St, Ac> for Net<B> {
+    fn bytes() -> &'static [u8] {
+        include_bytes!("weights/polar.bin")
+    }
+}
 
 impl<B: Backend, A: Action, N: network::Network<B, St, A>> RlRobot<B, St, A, N> {
     pub fn visualize_state(&mut self) {

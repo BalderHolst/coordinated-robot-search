@@ -5,6 +5,7 @@ use botbrain::{
     params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE},
     CamData, CamPoint, Pos2, RobotPose, Vec2,
 };
+use eframe::emath::normalized_angle;
 
 use crate::world::{Cell, World};
 
@@ -41,7 +42,7 @@ pub fn step_agent(
         // Update position of the robot
         let vel = Vec2::angled(state.pose.angle) * state.vel;
         state.pose.pos += vel * dt;
-        state.pose.angle += state.avel * dt;
+        state.pose.angle = normalized_angle(state.pose.angle + state.avel * dt);
 
         // Set the new state of the robot
         robot.input_pose(RobotPose {

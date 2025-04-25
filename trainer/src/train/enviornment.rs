@@ -2,7 +2,7 @@ use std::{f32::consts::PI, io, marker::PhantomData, path::PathBuf};
 
 use botbrain::{
     behaviors::{
-        rl::{action::Action, model::Network, state::State, RlRobot, REACT_HZ},
+        rl::{action::Action, network::Network, state::State, RlRobot, REACT_HZ},
         Behavior,
     },
     params::{self, RADIUS},

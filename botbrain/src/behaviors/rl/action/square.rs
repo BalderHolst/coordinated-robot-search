@@ -5,6 +5,8 @@ use super::Action;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SquareAction<const SPEEDS: usize, const STEERS: usize>(usize);
 
+const MIN_SPEED_T: f32 = 0.1;
+
 impl<const SPEEDS: usize, const STEERS: usize> Action for SquareAction<SPEEDS, STEERS> {
     const SIZE: usize = STEERS * SPEEDS;
 
@@ -16,6 +18,8 @@ impl<const SPEEDS: usize, const STEERS: usize> Action for SquareAction<SPEEDS, S
         // Interpolation variables in range [0, 1]
         let speed_t = (i % SPEEDS) as f32 / (SPEEDS - 1) as f32;
         let steer_t = (i / SPEEDS) as f32 / (STEERS - 1) as f32;
+
+        let speed_t = speed_t.max(MIN_SPEED_T);
 
         assert!((0.0..=1.0).contains(&speed_t),);
         assert!((0.0..=1.0).contains(&steer_t),);

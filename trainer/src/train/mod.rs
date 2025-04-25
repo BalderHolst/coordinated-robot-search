@@ -6,11 +6,12 @@ use std::marker::PhantomData;
 use std::{fmt, fs};
 
 use botbrain::behaviors::rl;
+use botbrain::behaviors::rl::robots::polar::PolarRlRobot;
 use botbrain::{
     behaviors::{
         rl::{
             action::Action,
-            model::{AutodiffNetwork, Network},
+            network::{AutodiffNetwork, Network},
             robots::{minimal::MinimalRlRobot, small::SmallRlRobot},
             state::State,
             RlRobot,
@@ -61,13 +62,18 @@ pub fn run<B: Backend, DB: AutodiffBackend>(args: TrainArgs) -> Result<(), Strin
         TrainingConfig::new().with_clip_grad(Some(GradientClippingConfig::Value(100.0)));
 
     match args.robot {
+        RobotKind::MinimalRl => {
+            type R<B> = PhantomData<MinimalRlRobot<B>>;
+            let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
+            train(train_config, args.episodes, args, r, dr);
+        }
         RobotKind::SmallRl => {
             type R<B> = PhantomData<SmallRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
             train(train_config, args.episodes, args, r, dr);
         }
-        RobotKind::MinimalRl => {
-            type R<B> = PhantomData<MinimalRlRobot<B>>;
+        RobotKind::PolarRl => {
+            type R<B> = PhantomData<PolarRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
             train(train_config, args.episodes, args, r, dr);
         }
@@ -108,7 +114,7 @@ impl fmt::Display for EpisodeStats {
 type SwarmState<S> = Vec<S>;
 type SwarmAction<A> = Vec<A>;
 
-type Recorder = BinFileRecorder<rl::model::RecorderSettings>;
+type Recorder = BinFileRecorder<rl::network::RecorderSettings>;
 
 fn train<
     B: Backend,

@@ -4,7 +4,7 @@ use burn::{prelude::Backend, tensor::Tensor};
 use emath::{Pos2, Vec2};
 
 use crate::{
-    behaviors::rl::{action::Action, model::Network},
+    behaviors::rl::{action::Action, network},
     utils::normalize_angle,
     LidarData,
 };
@@ -85,7 +85,7 @@ impl State for SmallState {
         Tensor::from_floats(data, device)
     }
 
-    fn from_robot<B: Backend, A: Action, N: Network<B, Self, A>>(
+    fn from_robot<B: Backend, A: Action, N: network::Network<B, Self, A>>(
         robot: &RlRobot<B, Self, A, N>,
     ) -> Self {
         // Map the robot position to the range [-1, 1]
