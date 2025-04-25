@@ -1,8 +1,6 @@
 //! This module contains robot `search` behavior.
 
-use costmap::{
-    COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_DYNAMIC_OBSTACLE_WIDTH, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE,
-};
+use costmap::{COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE};
 use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
@@ -490,15 +488,11 @@ impl SearchRobot {
 
         soup.add("", "mode", DebugType::Int(mode));
 
-        if self.robot_mode == RobotMode::Pathing {
+        if matches!(
+            self.robot_mode,
+            RobotMode::Pathing | RobotMode::ProximityPathing
+        ) {
             self.show_path();
-
-            let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
-            self.get_debug_soup_mut()
-                .add("Planner", "Goal", DebugType::Point(goal));
-        } else if self.robot_mode == RobotMode::ProximityPathing {
-            self.show_path();
-
             let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
             self.get_debug_soup_mut()
                 .add("Planner", "Goal", DebugType::Point(goal));
@@ -515,13 +509,7 @@ impl SearchRobot {
         }
         self.last_costmap_grid_update = time;
 
-        self.costmap_grid = costmap::make_costmap_grid(
-            self.pos,
-            self.angle,
-            &self.map,
-            &self.search_grid,
-            &self.lidar,
-        );
+        self.costmap_grid = costmap::make_costmap_grid(&self.map, &self.search_grid);
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {

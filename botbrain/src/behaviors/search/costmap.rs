@@ -4,9 +4,7 @@ use emath::{Pos2, Vec2};
 
 use crate::{
     behaviors::ScaledGrid,
-    params::LIDAR_RANGE,
     shapes::{Circle, Line},
-    LidarData, LidarPoint,
 };
 
 pub(super) const COSTMAP_GRID_SCALE: f32 = 0.5;
@@ -78,13 +76,7 @@ pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32
 }
 
 /// Constructs a costmap grid from a search grid, a obstacle map and a lidar
-pub fn make_costmap_grid(
-    robot_pos: Pos2,
-    robot_angle: f32,
-    map: &ScaledGrid<f32>,
-    search_grid: &ScaledGrid<f32>,
-    lidar: &LidarData,
-) -> ScaledGrid<f32> {
+pub fn make_costmap_grid(map: &ScaledGrid<f32>, search_grid: &ScaledGrid<f32>) -> ScaledGrid<f32> {
     let mut costmap_grid = ScaledGrid::<f32>::new(map.width(), map.height(), COSTMAP_GRID_SCALE);
 
     // Update costmap from search grid

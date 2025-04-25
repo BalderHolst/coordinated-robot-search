@@ -7,7 +7,7 @@ use emath::Pos2;
 
 use crate::{behaviors::ScaledGrid, params, shapes::Line};
 
-use super::costmap::{self, COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_OBSTACLE};
+use super::costmap::{self};
 
 /// When a goal/point is within this distance from the robot
 pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = params::RADIUS;
