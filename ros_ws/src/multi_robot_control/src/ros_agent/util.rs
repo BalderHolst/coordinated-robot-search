@@ -3,8 +3,9 @@ use std::{
     time::Duration,
 };
 
+use botbrain::{MapCell, scaled_grid::ScaledGrid};
 use futures::StreamExt;
-use r2r::{QosProfile, log_info};
+use r2r::{QosProfile, log_info, nav_msgs};
 
 pub async fn ros2_node_spinner(node: Arc<Mutex<r2r::Node>>) {
     let node_logger = node.lock().unwrap().logger().to_string();
@@ -51,4 +52,23 @@ pub fn get_ros2_time(node: Arc<Mutex<r2r::Node>>) -> Duration {
         .unwrap()
         .get_now()
         .unwrap()
+}
+
+pub fn ros2_map_to_botbrain_map(map: &nav_msgs::msg::OccupancyGrid) -> ScaledGrid<MapCell> {
+    let (width, height) = (map.info.width, map.info.height);
+    let scale = map.info.resolution;
+    let mut botbrain_map = ScaledGrid::new(width as f32 * scale, height as f32 * scale, scale);
+
+    for y in 0..height {
+        for x in 0..width {
+            let cell = map.data[y as usize * width as usize + x as usize];
+            let cell = match cell {
+                100 => MapCell::Obstacle,
+                _ => MapCell::Free,
+            };
+            botbrain_map.grid_mut().set(x as usize, y as usize, cell);
+        }
+    }
+
+    botbrain_map
 }

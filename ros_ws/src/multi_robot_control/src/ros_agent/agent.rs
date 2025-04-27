@@ -93,10 +93,8 @@ impl RosAgent {
         let map = map.await.expect("Map handler failed");
 
         // Set world size
-        robot.set_world_size(Vec2::new(
-            map.map.info.width as f32 * map.map_scale,
-            map.map.info.height as f32 * map.map_scale,
-        ));
+        let world = util::ros2_map_to_botbrain_map(&map.map);
+        robot.set_world(world);
 
         // Publish to map_overlay
         let map_overlay_pub = node
@@ -133,6 +131,7 @@ impl RosAgent {
         .await;
 
         // Vertical FOV is not used
+        // The params are directly set in the URDF for TB4
         let vision = ObjectDetection::new(CameraInfo::new(320, 240, 1.25, 1.0));
 
         // Publish to cmd_vel
@@ -358,7 +357,8 @@ impl RosAgent {
 
     fn update_map_overlay(&self) {
         let mut map = self.map.map.clone();
-        let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
+        let search_grid = self.robot.get_debug_soup().get("Grids", "Costmap Grid");
+        // let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
         let mut min = f32::INFINITY;
         let mut max = f32::NEG_INFINITY;
         if let Some(item) = search_grid {
