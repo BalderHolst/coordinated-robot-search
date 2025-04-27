@@ -9,8 +9,8 @@ use crate::{
     LidarData, LidarPoint,
 };
 
-pub(super) const COSTMAP_GRID_SCALE: f32 = 0.5;
-pub(super) const COSTMAP_DYNAMIC_OBSTACLE_WIDTH: f32 = 1.0;
+pub(super) const COSTMAP_GRID_SCALE: f32 = 0.2;
+pub(super) const COSTMAP_DYNAMIC_OBSTACLE_WIDTH: f32 = 0.5;
 
 pub(super) const COSTMAP_OBSTACLE: f32 = -3.0;
 pub(super) const COSTMAP_DYNAMIC_OBSTACLE: f32 = -2.0;
@@ -20,61 +20,45 @@ pub(super) const COSTMAP_UNKNOWN: f32 = 1.0;
 /// Checks if a pos is free
 /// If width is 0.0 only the pos is checked
 /// If width is > 0.0 the pos is checked and the surrounding cells are checked
-pub fn validate_pos(pos: Pos2, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
-    if width == 0.0 {
-        if let Some(&cell) = costmap_grid.get(pos) {
-            cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-        } else {
-            true
+pub fn validate_pos(pos: Pos2, clearance: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
+    match clearance {
+        0.0 => costmap_grid
+            .get(pos)
+            .is_some_and(|&cell| cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE),
+        _ => {
+            let circle = Circle {
+                center: pos,
+                radius: clearance,
+            };
+            costmap_grid.iter_circle(&circle).all(|pos| {
+                costmap_grid.get(pos).is_some_and(|&cell| {
+                    cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
+                })
+            })
         }
-    } else {
-        let circle = Circle {
-            center: pos,
-            radius: width,
-        };
-        costmap_grid.iter_circle(&circle).all(|pos| {
-            if let Some(&cell) = costmap_grid.get(pos) {
-                cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-            } else {
-                true
-            }
-        })
     }
 }
 
 /// Checks if all cells in the line is free
 pub fn validate_line(line: Line, costmap_grid: &ScaledGrid<f32>) -> bool {
     costmap_grid.iter_line(&line).all(|pos| {
-        if let Some(&cell) = costmap_grid.get(pos) {
-            cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-        } else {
-            true
-        }
+        costmap_grid
+            .get(pos)
+            .is_some_and(|&cell| cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE)
     })
 }
 
 /// Checks if all cells in the line with a width is free
-pub fn validate_thick_line(line: Line, width: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
+pub fn validate_thick_line(line: Line, clearance: f32, costmap_grid: &ScaledGrid<f32>) -> bool {
     let dir = (line.end - line.start).normalized();
-    let points = [-width / 2.0, 0.0, width / 2.0];
-    for point in points {
+    let points = [-clearance, 0.0, clearance];
+    points.iter().all(|&diff| {
         let line = Line {
-            start: line.start + (dir - Vec2::angled(-PI / 2.0)) * point,
-            end: line.end + (dir - Vec2::angled(-PI / 2.0)) * point,
+            start: line.start + (dir - Vec2::angled(-PI / 2.0)) * diff,
+            end: line.end + (dir - Vec2::angled(-PI / 2.0)) * diff,
         };
-        let valid = costmap_grid.iter_line(&line).all(|pos| {
-            if let Some(&cell) = costmap_grid.get(pos) {
-                cell != COSTMAP_OBSTACLE && cell != COSTMAP_DYNAMIC_OBSTACLE
-            } else {
-                true
-            }
-        });
-        if !valid {
-            // println!("Invalid line: {:?}", line);
-            return false;
-        }
-    }
-    true
+        validate_line(line, costmap_grid)
+    })
 }
 
 /// Constructs a costmap grid from a search grid, a obstacle map and a lidar

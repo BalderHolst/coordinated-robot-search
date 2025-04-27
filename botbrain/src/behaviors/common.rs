@@ -1,4 +1,4 @@
-use std::{collections::HashMap, f32::consts::PI};
+use std::collections::HashMap;
 
 use emath::{Pos2, Vec2};
 

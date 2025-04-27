@@ -1,7 +1,7 @@
 //! This module contains robot `search` behavior.
 
 use costmap::{COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE};
-use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
+use pathing::{smooth_path, PATH_PLANNER_DISTANCE_TOLERANCE};
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -43,7 +43,7 @@ const FORWARD_BIAS: f32 = 0.05;
 
 const ANGLE_THRESHOLD: f32 = PI / 8.0;
 
-const SEARCH_GRID_SCALE: f32 = 0.20;
+const SEARCH_GRID_SCALE: f32 = 0.10;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 /// The threshold at which the robot will switch from exploring to pathing
 const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.1;
@@ -51,7 +51,7 @@ const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.1;
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 
-const PROXIMITY_GRID_SCALE: f32 = 1.00;
+const PROXIMITY_GRID_SCALE: f32 = 0.5;
 const PROXIMITY_GRID_UPDATE_INTERVAL: f32 = 2.0;
 const PROXIMITY_WEIGHT: f32 = 10.0;
 const PROXIMITY_GRADIENT_RANGE: f32 = 10.0;
@@ -59,7 +59,9 @@ const PROXIMITY_MAX_LAYERS: usize = 3;
 
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
-const ROBOT_SPACING: f32 = 4.0;
+const ROBOT_SPACING: f32 = 2.0;
+
+const ROBOT_OBSTACLE_CLEARANCE: f32 = params::DIAMETER;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub enum RobotMode {
@@ -517,7 +519,7 @@ impl SearchRobot {
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
-        if self.path_fails > 20 {
+        if self.path_fails > 100 {
             self.path_fails = 0;
             self.path_planner_goal = None;
             self.path_planner_path = vec![];
@@ -620,7 +622,7 @@ impl SearchRobot {
                     //     DebugType::Grid(masked_costmap.clone()),
                     // );
 
-                    let frontier_len = frontiers.len();
+                    // let frontier_len = frontiers.len();
 
                     match frontiers::evaluate_frontiers(
                         self.pos,
@@ -685,39 +687,39 @@ impl SearchRobot {
             }
 
             // Follow the path
-            if let Ok(control_vec) = self.follow_path() {
-                Some(control_vec)
-            } else {
-                // println!("[{}] Path is blocked", self.id.as_u32());
-                Some(self.lidar())
-            }
+            self.follow_path().ok()
         }
     }
 
     fn follow_path(&mut self) -> Result<Vec2, ()> {
         if !self.path_planner_path.is_empty() {
             // Check if all cells in the line to the goal are free
-            let dir = (self.path_planner_path[0] - self.pos).normalized();
-            let mut start = self.pos + dir * params::DIAMETER;
-            let end = self.path_planner_path[0];
-            if (end - start).length() < params::DIAMETER * 2.0 {
-                start = end;
-            }
-            let line = Line { start, end };
+            // let dir = (self.path_planner_path[0] - self.pos).normalized();
+            // let mut start = self.pos + dir * params::DIAMETER;
+            // let end = self.path_planner_path[0];
+            // if (end - start).length() < params::DIAMETER * 2.0 {
+            //     start = end;
+            // }
+            let line = Line {
+                start: self.pos,
+                end: self.path_planner_path[0],
+            };
 
-            match costmap::validate_thick_line(line, params::DIAMETER, &self.costmap_grid) {
+            let target = (self.path_planner_path[0] - self.pos).normalized();
+
+            match costmap::validate_line(line, &self.costmap_grid) {
                 true => {
                     self.path_fails = 0;
-                    Ok((self.path_planner_path[0] - self.pos).normalized())
+                    Ok(target)
                 }
                 false => {
                     // Track failures to set new goal or path
                     self.path_fails += 1;
-                    Err(())
+                    Ok((target + self.lidar()).normalized())
                 }
             }
         } else {
-            // println!("[{}] Path is empty", self.id.0);
+            println!("[{}] Path is empty", self.id.0);
             Err(())
         }
     }
@@ -728,7 +730,13 @@ impl SearchRobot {
             let mut path = Vec::with_capacity(self.path_planner_path.len() + 1);
             path.push(self.pos);
             path.extend(self.path_planner_path.iter().cloned());
+            // let smooth_path = smooth_path(path.clone(), &self.costmap_grid);
             soup.add("Planner", "Goal Path", DebugType::GlobalLine(path));
+            // soup.add(
+            //     "Planner",
+            //     "Smooth Goal Path",
+            //     DebugType::GlobalLine(smooth_path),
+            // );
         }
     }
 

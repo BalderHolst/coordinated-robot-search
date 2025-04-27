@@ -7,7 +7,10 @@ use emath::Pos2;
 
 use crate::{behaviors::ScaledGrid, params, shapes::Line};
 
-use super::costmap::{self};
+use super::{
+    costmap::{self},
+    ROBOT_OBSTACLE_CLEARANCE,
+};
 
 /// When a goal/point is within this distance from the robot
 pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = params::RADIUS;
@@ -25,8 +28,12 @@ pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
 
 /// Constructs a path using straight line or A* algorithm as backup
 pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
-    find_straight_path(robot_pos, goal, costmap_grid)
-        .or_else(|| find_a_star_path(robot_pos, goal, costmap_grid))
+    find_straight_path(robot_pos, goal, costmap_grid).or_else(|| {
+        find_a_star_path(robot_pos, goal, ROBOT_OBSTACLE_CLEARANCE, costmap_grid).or_else(|| {
+            println!("Trying with smaller a-star clearance");
+            find_a_star_path(robot_pos, goal, params::RADIUS, costmap_grid)
+        })
+    })
 }
 
 /// Constructs a path using a straight line
@@ -41,7 +48,7 @@ pub fn find_straight_path(
         end: goal + dir * params::DIAMETER,
     };
     // Check if all cells in the line to the goal are free
-    costmap::validate_thick_line(line, params::DIAMETER * 2.0, costmap_grid)
+    costmap::validate_thick_line(line, ROBOT_OBSTACLE_CLEARANCE, costmap_grid)
         .then(|| vec![robot_pos, goal])
 }
 
@@ -79,6 +86,7 @@ pub fn euclidean_dist(a: (usize, usize), b: (usize, usize)) -> usize {
 pub fn find_a_star_path(
     robot_pos: Pos2,
     goal: Pos2,
+    clearance: f32,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<Vec<Pos2>> {
     let world_size = costmap_grid.grid().size();
@@ -117,7 +125,7 @@ pub fn find_a_star_path(
             final_path = Some(path);
         }
 
-        for (dx, dy) in &NEIGHBORS_8 {
+        for (dx, dy) in &NEIGHBORS_4 {
             let new_x = current.position.0 as isize + dx;
             let new_y = current.position.1 as isize + dy;
 
@@ -137,8 +145,8 @@ pub fn find_a_star_path(
                 let temp = Pos2::new(new_pos.0 as f32, new_pos.1 as f32);
                 costmap_grid.grid_to_world(temp)
             };
-            let valid_pos =
-                costmap::validate_pos(new_pos_world, params::DIAMETER * 2.0, costmap_grid);
+            // A little clearance for the robot to move
+            let valid_pos = costmap::validate_pos(new_pos_world, clearance, costmap_grid);
             if !valid_pos {
                 continue; // obstacle
             }
@@ -179,7 +187,7 @@ pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2>
             end: path[idx],
         };
 
-        if !costmap::validate_thick_line(line, params::DIAMETER * 3.0, costmap_grid) {
+        if !costmap::validate_thick_line(line, ROBOT_OBSTACLE_CLEARANCE, costmap_grid) {
             if cur_len > 0 {
                 smoothed_path.push(prev_pos);
                 prev_pos = path[idx - 1];

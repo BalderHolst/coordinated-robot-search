@@ -17,6 +17,7 @@ use crate::{
 use super::{
     costmap::{self, COSTMAP_SEARCHED, COSTMAP_UNKNOWN},
     pathing::{self, NEIGHBORS_4},
+    ROBOT_OBSTACLE_CLEARANCE,
 };
 
 const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.2;
@@ -26,11 +27,10 @@ const FRONTIER_REGION_TURN_WEIGHT: f32 = 0.2;
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
 pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool {
-    if let Some(&cell) = costmap_grid.grid().get(pos.0, pos.1) {
-        if cell != COSTMAP_SEARCHED {
-            return false;
-        }
-    } else {
+    if !matches!(
+        costmap_grid.grid().get(pos.0, pos.1),
+        Some(&COSTMAP_SEARCHED)
+    ) {
         return false;
     }
 
@@ -73,7 +73,8 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
 
         if is_frontier(pos, costmap_grid) {
             frontiers.insert(pos);
-        } else if let Some(&cell) = costmap_grid.grid().get(pos.0, pos.1) {
+        }
+        if let Some(&cell) = costmap_grid.grid().get(pos.0, pos.1) {
             if cell != COSTMAP_SEARCHED {
                 continue;
             }
@@ -149,6 +150,7 @@ fn find_frontiers_region_closest_pos(
         .min_by(|&&f1, &&f2| {
             let d1 = pathing::euclidean_dist(robot_pos, f1);
             let d2 = pathing::euclidean_dist(robot_pos, f2);
+            // FIX: Remove this check
             let d1_valid = (d1 as f32) > params::DIAMETER;
             let d2_valid = (d2 as f32) > params::DIAMETER;
             if !d1_valid && !d2_valid {
@@ -184,11 +186,12 @@ pub fn evaluate_frontier_regions(
             // let closest_region_frontier = find_frontiers_region_closest_pos(robot_pos, region);
             region
                 .iter()
-                .map(|&pos| {
-                    let dist = pathing::euclidean_dist(pos, robot_pos) as f32;
-                    if dist < params::DIAMETER * 2.0 {
+                .filter_map(|&pos| {
+                    let dist_grid = pathing::euclidean_dist(pos, robot_pos) as f32;
+                    // FIX: Remove 2.0
+                    if dist_grid < params::DIAMETER / costmap_grid.scale() * 2.0 {
                         // Very bad to be on the robot pos
-                        return (f32::MAX, 0, PI, pos);
+                        return None;
                     }
                     let pos_world = {
                         let temp = Pos2::new(pos.0 as f32, pos.1 as f32);
@@ -196,10 +199,10 @@ pub fn evaluate_frontier_regions(
                     };
 
                     let is_valid =
-                        costmap::validate_pos(pos_world, params::DIAMETER * 2.0, costmap_grid);
+                        costmap::validate_pos(pos_world, ROBOT_OBSTACLE_CLEARANCE, costmap_grid);
                     if !is_valid {
                         // Very bad to be too close to obstacles
-                        return (f32::MAX, 0, PI, pos);
+                        return None;
                     }
 
                     let size = region.len();
@@ -212,10 +215,10 @@ pub fn evaluate_frontier_regions(
                     let angle_to_target =
                         utils::normalize_angle(frontier_angle - robot_angle).abs();
 
-                    furthest_frontier = furthest_frontier.max(dist);
+                    furthest_frontier = furthest_frontier.max(dist_grid);
                     biggest_frontier = biggest_frontier.max(region.len());
 
-                    (dist, size, angle_to_target, pos)
+                    Some((dist_grid, size, angle_to_target, pos))
                 })
                 .collect::<Vec<(f32, usize, f32, (usize, usize))>>()
         })
@@ -246,7 +249,7 @@ pub fn evaluate_frontiers(
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<Pos2> {
     // For working with grid coordinates
-    let robot_pos = {
+    let robot_pos_grid = {
         let tmp = costmap_grid.world_to_grid(robot_pos);
         (tmp.x as usize, tmp.y as usize)
     };
@@ -254,7 +257,7 @@ pub fn evaluate_frontiers(
     let frontier_regions = make_frontier_regions(frontiers, costmap_grid);
     let goal = {
         let goal_grid =
-            evaluate_frontier_regions(robot_pos, robot_angle, frontier_regions, costmap_grid)?;
+            evaluate_frontier_regions(robot_pos_grid, robot_angle, frontier_regions, costmap_grid)?;
         costmap_grid.grid_to_world(Pos2::new(goal_grid.0 as f32, goal_grid.1 as f32))
     };
     Some(goal)
