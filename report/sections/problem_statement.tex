@@ -1,0 +1,15 @@
+\section{Problem Statement}
+\label{sec:problem-statement}
+
+% TODO: Make sure that the number of parameters is correct
+This project is about developing distributed algorithms which enable robot collaboration in the search for an item within a predefined and mapped environment. During a search mission the environment is progressively explored until the search item is found. The effectiveness of the search algorithm is measured using {\color{red} three} parameters:
+
+\begin{itemize}
+    \item Map coverage over time
+    \item The amount of data sent between robots
+    \item The computational expense of the algorithm
+\end{itemize}
+
+All software developed in this project is exclusively tested in simulation, and the communication technology is therefore not specified. Robots are however limited in their communication range and the behavior algorithms should therefore keep the robots within this range of each other. Each robot is equipped with a camera for detecting the search item and a LiDAR to determine distances to objects for obstacle avoidance and localization using AMCL. \\
+
+The project also includes the development of a simple simulation environment which allows for easier development of search algorithms by providing visual debugging and working without ROS2 for a faster iteration cycle. This simple environment also makes it possible to train an agent using reinforcement learning.
