@@ -813,12 +813,6 @@ impl eframe::App for App {
                         self.global_opts.focused = None;
                     });
 
-                    for (n, _) in self.sim_state.robot_states.iter().enumerate() {
-                        ui.button(format!("Robot [{n}]")).clicked().then(|| {
-                            self.global_opts.focused = Some(n);
-                        });
-                    }
-
                     if let Ok(actual_sps) = self.actual_sps_bg.try_lock() {
                         self.actual_sps = *actual_sps;
                     }
@@ -920,6 +914,16 @@ impl eframe::App for App {
                     );
                     ui.toggle_value(&mut self.global_opts.show_connections, "Show Connections");
                 });
+            });
+
+        egui::SidePanel::left("left-panel")
+            .resizable(true)
+            .show_animated(ctx, true, |ui| {
+                for (n, _) in self.sim_state.robot_states.iter().enumerate() {
+                    ui.button(format!("Robot [{n}]")).clicked().then(|| {
+                        self.global_opts.focused = Some(n);
+                    });
+                }
             });
 
         egui::SidePanel::right("right-panel")
