@@ -347,15 +347,15 @@ impl SearchRobot {
         self.debug("Gradient", "Search Cells", DebugType::NumberPoints(cells));
         self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
 
-        let g_len = g.length();
-        if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
-            // println!(
-            //     "[{}] Switching to pathing: gradient: {}",
-            //     self.id.as_u32(),
-            //     g_len
-            // );
-            self.robot_mode = RobotMode::Pathing;
-        }
+        // let g_len = g.length();
+        // if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+        //     // println!(
+        //     //     "[{}] Switching to pathing: gradient: {}",
+        //     //     self.id.as_u32(),
+        //     //     g_len
+        //     // );
+        //     self.robot_mode = RobotMode::Pathing;
+        // }
         g
     }
 
@@ -852,10 +852,16 @@ mod behaviors {
             |robot, target| match robot.robot_mode {
                 RobotMode::Exploring => {
                     let mut target = *target;
-                    target += robot.search_gradient();
-                    target += robot.proximity_gradient();
-                    // target += robot.lidar();
-                    // TODO: Maybe check if should switch to pathing here?
+                    let search_gradient = robot.search_gradient();
+                    let proximity_gradient = robot.proximity_gradient();
+                    let lidar = robot.lidar();
+                    target += search_gradient + proximity_gradient + lidar;
+                    // if target.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+                    //     robot.robot_mode = RobotMode::Pathing;
+                    // }
+                    if search_gradient.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+                        robot.robot_mode = RobotMode::Pathing;
+                    }
                     Some(target)
                 }
                 RobotMode::Pathing | RobotMode::ProximityPathing => {
