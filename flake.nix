@@ -94,7 +94,7 @@
                 )
                 (all-crates pkgs
                     "cargo-clippy-all"
-                    "cargo clippy --all-features --manifest-path $MANIFEST -- -D warnings"
+                    "cargo hack --manifest-path $MANIFEST --feature-powerset clippy -- -D warnings"
                     ["multi_robot_control"]
                 )
                 (all-crates pkgs
