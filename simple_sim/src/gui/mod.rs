@@ -62,6 +62,7 @@ fn run(sim: Simulator, app_args: AppArgs) -> Result<(), String> {
                 ..Style::default()
             };
             cc.egui_ctx.set_style(style);
+            cc.egui_ctx.set_pixels_per_point(app_args.ui_scale);
 
             // Create app
             let app = App::new(sim, app_args, cc);

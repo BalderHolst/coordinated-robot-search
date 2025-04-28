@@ -178,6 +178,7 @@ pub struct App {
 
 pub struct AppArgs {
     pub theme: Theme,
+    pub ui_scale: f32,
     pub target_sps: f32,
     pub target_fps: f32,
     pub paused: bool,
@@ -191,10 +192,12 @@ impl From<GlobArgs> for AppArgs {
             target_fps,
             target_sps,
             theme,
+            ui_scale,
             ..
         } = args;
         Self {
             theme,
+            ui_scale,
             paused,
             target_fps,
             target_sps,
