@@ -6,8 +6,8 @@ local config = {
 	["rust-analyzer"] = {
 		cargo = {
 			allFeatures = false,
-			features = { "single-thread" },
-			-- features = { "default" },
+			-- features = { "single-thread" },
+			features = { "default" },
 		},
 	},
 }

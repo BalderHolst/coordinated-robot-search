@@ -1,5 +1,3 @@
-use std::f32::consts::PI;
-
 use emath::{Pos2, Vec2};
 
 use crate::{
@@ -77,15 +75,14 @@ pub fn make_costmap_grid(
     let mut costmap = ScaledGrid::<f32>::new(map.width(), map.height(), COSTMAP_GRID_SCALE);
 
     // Update costmap from search grid
-    search_grid.iter().for_each(|(x, y, &cell)| {
-        // Negative if don't want to go there, positive if want to go there
-        // Non-zero cells are explored therefore we won't go there
-        let cell = if cell != 0.0 {
-            COSTMAP_SEARCHED
-        } else {
-            COSTMAP_UNKNOWN
+    costmap.iter_mut().for_each(|(x, y, costmap_cell)| {
+        if let Some(&cell) = search_grid.get(Pos2 { x, y }) {
+            *costmap_cell = if cell != 0.0 {
+                COSTMAP_SEARCHED
+            } else {
+                COSTMAP_UNKNOWN
+            };
         };
-        costmap.set(Pos2 { x, y }, cell);
     });
 
     // Using lidar to insert dynamic obstacles
@@ -105,12 +102,12 @@ pub fn make_costmap_grid(
                 .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
         });
 
-    map.iter().for_each(|(x, y, &cell)| {
-        // Negative if don't want to go there, positive if want to go there
-        // Non-zero cells are explored therefore we won't go there
-        if cell == COSTMAP_OBSTACLE {
-            costmap.set(Pos2 { x, y }, COSTMAP_OBSTACLE);
-        };
+    costmap.iter_mut().for_each(|(x, y, costmap_cell)| {
+        if let Some(&cell) = map.get(Pos2 { x, y }) {
+            if cell == COSTMAP_OBSTACLE {
+                *costmap_cell = COSTMAP_OBSTACLE
+            }
+        }
     });
 
     costmap

@@ -1,7 +1,7 @@
 //! This module contains robot `search` behavior.
 
 use costmap::{COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE};
-use pathing::{smooth_path, PATH_PLANNER_DISTANCE_TOLERANCE};
+use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
@@ -10,7 +10,7 @@ use std::{
 
 use emath::{Pos2, Vec2};
 
-use crate::{params::COMMUNICATION_RANGE, LidarData};
+use crate::{params::COMMUNICATION_RANGE, LidarData, MapCell};
 
 use super::{
     cast_robot, common, debug,
@@ -152,7 +152,7 @@ impl Robot for SearchRobot {
 
     fn set_world(&mut self, world: Map) {
         let size = world.size();
-        self.map = convert_to_botbrain_map(&world);
+        self.map = convert_to_search_map(&world);
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
@@ -822,15 +822,15 @@ fn search(
     (robot.control_towards(target), msgs)
 }
 
-fn convert_to_botbrain_map(world: &Map) -> ScaledGrid<f32> {
+fn convert_to_search_map(world: &Map) -> ScaledGrid<f32> {
     let mut map = ScaledGrid::<f32>::new(world.width(), world.height(), world.scale());
     println!("Converting world to botbrain map");
-    for (x, y, cell) in world.iter() {
+    for (x, y, cell) in world.grid().iter() {
         let val = match cell {
-            super::MapCell::Free => 0.0,
-            super::MapCell::Obstacle => costmap::COSTMAP_OBSTACLE,
+            MapCell::Free => 0.0,
+            MapCell::Obstacle => costmap::COSTMAP_OBSTACLE,
         };
-        map.set(Pos2::new(x, y), val);
+        map.grid_mut().set(x, y, val);
     }
     map
 }
