@@ -146,8 +146,7 @@ pub fn find_a_star_path(
                 costmap_grid.grid_to_world(temp)
             };
             // A little clearance for the robot to move
-            let valid_pos = costmap::validate_pos(new_pos_world, clearance, costmap_grid);
-            if !valid_pos {
+            if !costmap::validate_pos(new_pos_world, clearance, costmap_grid) {
                 continue; // obstacle
             }
 

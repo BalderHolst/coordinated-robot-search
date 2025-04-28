@@ -519,11 +519,11 @@ impl SearchRobot {
     }
 
     fn path_planning(&mut self) -> Option<Vec2> {
-        if self.path_fails > 100 {
+        if self.path_fails > 1000 {
             self.path_fails = 0;
             self.path_planner_goal = None;
             self.path_planner_path = vec![];
-            // println!("[{}] Pathing failed too many times", self.id.as_u32());
+            println!("[{}] Pathing failed too many times", self.id.as_u32());
         }
 
         // Logic to find goal or change to exploring mode when reached
@@ -707,7 +707,7 @@ impl SearchRobot {
 
             let target = (self.path_planner_path[0] - self.pos).normalized();
 
-            match costmap::validate_line(line, &self.costmap_grid) {
+            match costmap::validate_thick_line(line, ROBOT_OBSTACLE_CLEARANCE, &self.costmap_grid) {
                 true => {
                     self.path_fails = 0;
                     Ok(target)
