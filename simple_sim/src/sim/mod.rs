@@ -24,7 +24,7 @@ use robot_pool::RobotThreadPool;
 use crate::{
     cli::ScenarioArgs,
     scenario::Scenario,
-    world::{self, Cell, World},
+    world::{Cell, World},
 };
 
 const SPEED_MULTIPLIER: f32 = 1.0;
@@ -444,7 +444,7 @@ impl Simulator {
                 ..Default::default()
             });
 
-            robot.set_world(world::convert_to_botbrain_map(&sim.world));
+            robot.set_world(crate::world::convert_to_botbrain_map(&sim.world));
             robot.get_debug_soup_mut().activate();
             robot.input_pose(pose);
             sim.robots.push(robot);
