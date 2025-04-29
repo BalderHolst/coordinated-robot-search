@@ -135,6 +135,9 @@ pub fn run_scenario_headless(
 
     let mut coverage_data = Vec::with_capacity(steps);
 
+    let mut prev_msgs = 0;
+    let mut msgs_data = Vec::with_capacity(steps);
+
     let mut prev_bytes = 0;
     let mut msg_bytes_data = Vec::with_capacity(steps);
 
@@ -158,6 +161,11 @@ pub fn run_scenario_headless(
             (sim.state.diagnostics.bytes_sent - prev_bytes) as f64 / SIMULATION_DT as f64;
         prev_bytes = sim.state.diagnostics.bytes_sent;
         msg_bytes_data.push(new_bytes);
+
+        let new_msgs = sim.state.diagnostics.msgs_sent - prev_msgs;
+        prev_msgs = sim.state.diagnostics.msgs_sent;
+        let new_msgs = new_msgs as f64 / SIMULATION_DT as f64;
+        msgs_data.push(new_msgs);
 
         // Store robot data
         for (n, robot_state) in sim.state.robot_states.iter().enumerate() {
@@ -196,6 +204,9 @@ pub fn run_scenario_headless(
     big_schema.push(Field::new("msg-bytes", DataType::Float64, false));
     cols.push(Arc::new(Float64Array::from(msg_bytes_data)));
 
+    big_schema.push(Field::new("msg-count", DataType::Float64, false));
+    cols.push(Arc::new(Float64Array::from(msgs_data)));
+
     // Add robot data
     for robot in robot_data {
         let robot_batch = robot.into_batch();
@@ -233,6 +244,7 @@ pub struct SimState {
 #[derive(Clone)]
 pub struct SimDiagnostics {
     // Total number of bytes sent
+    pub msgs_sent: u64,
     pub bytes_sent: u128,
     pub coverage_grid: ScaledGrid<bool>,
     world: World,
@@ -301,6 +313,7 @@ impl Simulator {
             diagnostics: SimDiagnostics {
                 coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
                 world: world.clone(),
+                msgs_sent: 0,
                 bytes_sent: 0,
             },
         };
@@ -414,17 +427,16 @@ impl Simulator {
                 botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
                     diagnostics.coverage_grid.set_shape(shape, true)
                 }
-                botbrain::MessageKind::CamDiff {
-                    cone,
-                    lidar: _,
-                    diff: _,
-                } => diagnostics.coverage_grid.set_cone(cone, true),
+                botbrain::MessageKind::CamDiff { cone, diff: _ } => {
+                    diagnostics.coverage_grid.set_cone(cone, true)
+                }
                 botbrain::MessageKind::Debug(_) => {}
             }
         }
 
         // Update total bytes sent
         for msg in &self.pending_msgs {
+            self.state.diagnostics.msgs_sent += 1;
             if let Ok(bytes) = msg.encode() {
                 let bytes_sent = &mut self.state.diagnostics.bytes_sent;
                 *bytes_sent = bytes_sent.wrapping_add(bytes.len() as u128);

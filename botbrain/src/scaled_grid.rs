@@ -255,6 +255,54 @@ impl<C: Clone + Default> ScaledGrid<C> {
             }
         });
     }
+
+    pub fn cast_ray(
+        &self,
+        from: Pos2,
+        angle: f32,
+        max_range: f32,
+        should_stop: impl Fn(&C) -> bool,
+    ) -> RayCastResult<C> {
+        let step_size = self.scale() * 0.5;
+        let direction = Vec2::angled(angle);
+
+        let mut distance = 0.0;
+
+        while distance < max_range {
+            let pos = from + direction * distance;
+
+            let cell = self.get(pos);
+
+            // Check for collisions with the world
+            if let Some(cell) = cell {
+                if should_stop(cell) {
+                    return RayCastResult::Hit(distance, cell);
+                }
+            } else {
+                return RayCastResult::OutOfBounds(distance);
+            }
+
+            distance += step_size;
+        }
+
+        RayCastResult::OutOfRange(max_range)
+    }
+}
+
+pub enum RayCastResult<'a, C> {
+    Hit(f32, &'a C),
+    OutOfRange(f32),
+    OutOfBounds(f32),
+}
+
+impl<C> RayCastResult<'_, C> {
+    pub fn distance(&self) -> f32 {
+        match self {
+            RayCastResult::Hit(distance, _)
+            | RayCastResult::OutOfRange(distance)
+            | RayCastResult::OutOfBounds(distance) => *distance,
+        }
+    }
 }
 
 fn linspace(start: f32, end: f32, n: usize) -> impl Iterator<Item = f32> {

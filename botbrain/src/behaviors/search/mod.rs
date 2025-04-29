@@ -95,7 +95,7 @@ pub struct SearchRobot {
     pub lidar: LidarData,
 
     /// The map navigating in
-    pub map: ScaledGrid<f32>,
+    pub map: Map,
 
     /// For sending/receiving messages
     pub postbox: Postbox,
@@ -152,7 +152,7 @@ impl Robot for SearchRobot {
 
     fn set_world(&mut self, world: Map) {
         let size = world.size();
-        self.map = convert_to_search_map(&world);
+        self.map = world;
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
@@ -210,6 +210,7 @@ impl SearchRobot {
         self.last_search_grid_update = time;
 
         common::update_search_grid(
+            &self.map,
             &mut self.search_grid,
             self.id,
             self.pos,
@@ -478,7 +479,7 @@ impl SearchRobot {
             DebugType::Grid(self.frontiers_grid.clone()),
         );
 
-        soup.add("Grids", "Map", DebugType::Grid(self.map.clone()));
+        soup.add("Grids", "Map", DebugType::Map(self.map.clone()));
 
         let mode = match &self.robot_mode {
             RobotMode::Exploring => 0,

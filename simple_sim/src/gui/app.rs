@@ -648,6 +648,38 @@ impl App {
 
                         Self::draw_grid_image(&mut self.textures, name, painter, canvas, image);
                     }
+                    DebugType::Map(map) => {
+                        let (min, max) = self.world.bounds();
+                        let min = self.cam.world_to_viewport(min);
+                        let max = self.cam.world_to_viewport(max);
+                        let canvas = Rect::from_min_max(min, max);
+
+                        const UNCERTAIN_COLOR: Color32 = Color32::WHITE;
+                        const WARM_COLOR: Color32 = Color32::YELLOW;
+                        const HOT_COLOR: Color32 = Color32::RED;
+
+                        const THRESHOLD: f32 = 10.0;
+
+                        fn ease_out_quart(c: f32) -> f32 {
+                            1. - f32::powi(1. - c, 4)
+                        }
+
+                        let image = utils::grid_to_image(map.grid(), |c| {
+                            let c = match c {
+                                botbrain::MapCell::Free => 0.0,
+                                botbrain::MapCell::Obstacle => 100.0,
+                            };
+                            match c {
+                                c if c > 0.0 => {
+                                    WARM_COLOR.lerp_to_gamma(HOT_COLOR, ease_out_quart(c / 100.0))
+                                }
+                                _ => UNCERTAIN_COLOR,
+                            }
+                            .gamma_multiply((c.abs() / THRESHOLD).min(1.0))
+                        });
+
+                        Self::draw_grid_image(&mut self.textures, name, painter, canvas, image);
+                    }
                 }
             }
         }

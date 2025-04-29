@@ -2,7 +2,7 @@ use std::{collections::BTreeMap, sync::Arc};
 
 use emath::{Pos2, Vec2};
 
-use crate::scaled_grid::ScaledGrid;
+use crate::{scaled_grid::ScaledGrid, Map};
 
 #[derive(Clone)]
 struct InnerSoup {
@@ -151,6 +151,8 @@ pub enum DebugType {
     Number(f32),
 
     Int(i32),
+
+    Map(Map),
 
     Grid(ScaledGrid<f32>),
 }

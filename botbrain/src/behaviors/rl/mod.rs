@@ -46,6 +46,8 @@ pub struct RlRobot<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
 
     pub postbox: Postbox,
 
+    pub map: super::Map,
+
     /// Grid containing probabilities of objects in the environment.
     pub search_grid: ScaledGrid<f32>,
 
@@ -136,6 +138,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B
             cam: CamData::default(),
             lidar: LidarData::default(),
             postbox: Default::default(),
+            map: Default::default(),
             search_grid: Default::default(),
             last_search_grid_update: Default::default(),
             search_gradient: Default::default(),
@@ -191,6 +194,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
         self.last_search_grid_update = time;
 
         common::update_search_grid(
+            &self.map,
             &mut self.search_grid,
             self.id,
             self.pos,

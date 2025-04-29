@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 import os
 import subprocess
@@ -272,6 +273,15 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 
     if isinstance(results, Result): results = [results]
 
+    fig = plt.figure(figsize=(16, 9))
+
+    gs = gridspec.GridSpec(3, 1, figure=fig)
+
+    fig.subplots_adjust(hspace=1)
+    byte_ax = fig.add_subplot(gs[0, 0])
+    count_ax = fig.add_subplot(gs[1, 0])
+    size_ax = fig.add_subplot(gs[2, 0])
+
     for result in results:
         df = result.df()
         desc = result.desc()
@@ -283,22 +293,54 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
         # Calculate rolling average
         df = df.with_columns(pl.col("bytes-per-robot").rolling_mean(60).alias("bytes-per-robot-smooth"))
 
-        plt.scatter(df["time"], df["bytes-per-robot"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
-        plt.scatter(df["time"], df["bytes-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
+        byte_ax.scatter(df["time"], df["bytes-per-robot"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
+        byte_ax.scatter(df["time"], df["bytes-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
 
         print(f"Median bytes sent per robot: {df["bytes-per-robot-smooth"].median():.2f} bytes per second")
 
+        # Plot the number of messages sent
+        msgs_per_robot = df["msg-count"] / len(desc["robots"])
+        df = df.with_columns(msgs_per_robot.alias("msg-count-per-robot"))
+        df = df.with_columns(pl.col("msg-count-per-robot").rolling_mean(60).alias("msg-count-per-robot-smooth"))
+
+        count_ax.scatter(df["time"], df["msg-count"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
+        count_ax.scatter(df["time"], df["msg-count-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
+
+        # Plot the size of the messages sent
+
+        # Accumulate the message sizes as a rolling sum
+        total_msgs_sent = df["msg-count"].cum_sum().alias("total-msgs-sent")
+        total_bytes_sent = df["msg-bytes"].cum_sum().alias("total-bytes-sent")
+        avg_msg_size = df["msg-bytes"] / df["msg-count"]
+        df = df.with_columns(total_msgs_sent)
+        df = df.with_columns(total_bytes_sent)
+        df = df.with_columns(avg_msg_size.alias("avg-msg-size"))
+
+        size_ax.scatter(df["time"], df["avg-msg-size"], label="Average Message Size", marker="o", alpha=0.5, s=0.5)
+
+
+        # print(f"Median message size: {df["avg-msg-size-smooth"].median():.2f} bytes")
+
     if title is None: title = "Data transfer per robot over time"
 
-    plt.xlabel("Time (s)")
-    plt.ylabel("Bytes per Second per Robot")
-    plt.title(title)
-    plt.legend()
+
+    byte_ax.set_xlabel("Time (s)")
+    byte_ax.set_ylabel("Bytes per Second per Robot")
+    byte_ax.set_title(title)
+
+    count_ax.set_xlabel("Time (s)")
+    count_ax.set_ylabel("Messages per Second per Robot")
+    count_ax.set_title("Messages sent per second per robot")
+
+    size_ax.set_xlabel("Time (s)")
+    size_ax.set_ylabel("Average Message Size (bytes)")
+    size_ax.set_title("Average message size")
+
+    fig.legend()
 
     output_file = os.path.join(plot_dir(), output_file)
 
-    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
-    plt.close()
+    fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
 
     print(f"Plot saved to '{relpath(output_file)}'")
 

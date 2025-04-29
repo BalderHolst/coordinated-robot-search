@@ -40,15 +40,8 @@ impl RobotId {
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MessageKind {
-    ShapeDiff {
-        shape: Shape,
-        diff: f32,
-    },
-    CamDiff {
-        cone: Cone,
-        lidar: LidarData,
-        diff: f32,
-    },
+    ShapeDiff { shape: Shape, diff: f32 },
+    CamDiff { cone: Cone, diff: f32 },
     Debug(String),
 }
 
@@ -68,8 +61,6 @@ impl MessageKind {
         Self::try_from(bytes)
     }
 }
-
-const COMPRESS_LEVEL: u8 = 6;
 
 #[cfg(feature = "bin-msgs")]
 impl TryFrom<Vec<u8>> for MessageKind {
@@ -353,7 +344,7 @@ impl Postbox {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
 pub enum MapCell {
     /// The cell is free
     #[default]

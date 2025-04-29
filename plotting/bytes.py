@@ -5,7 +5,7 @@ if __name__ == "__main__":
         title=f"non-compressed",
         world="simple_sim/worlds/objectmap/medium_obstacles.ron",
         behavior="search",
-        duration=100,
+        duration=20,
         robots=[
             bp.Robot(x=4, y=4),
             bp.Robot(x=4, y=6),
