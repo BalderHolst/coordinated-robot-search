@@ -29,9 +29,15 @@ pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
 /// Constructs a path using straight line or A* algorithm as backup
 pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
     find_straight_path(robot_pos, goal, costmap_grid).or_else(|| {
-        find_a_star_path(robot_pos, goal, ROBOT_OBSTACLE_CLEARANCE, costmap_grid).or_else(|| {
+        find_a_star_path(
+            robot_pos,
+            goal,
+            ROBOT_OBSTACLE_CLEARANCE * 2.0,
+            costmap_grid,
+        )
+        .or_else(|| {
             println!("Trying with smaller a-star clearance");
-            find_a_star_path(robot_pos, goal, params::RADIUS, costmap_grid)
+            find_a_star_path(robot_pos, goal, ROBOT_OBSTACLE_CLEARANCE, costmap_grid)
         })
     })
 }

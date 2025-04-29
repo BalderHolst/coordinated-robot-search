@@ -102,6 +102,14 @@ pub fn make_costmap_grid(
                 .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
         });
 
+    map.iter().for_each(|(x, y, &cell)| {
+        // Negative if don't want to go there, positive if want to go there
+        // Non-zero cells are explored therefore we won't go there
+        if cell == COSTMAP_OBSTACLE {
+            costmap.set(Pos2 { x, y }, COSTMAP_OBSTACLE);
+        };
+    });
+
     costmap.iter_mut().for_each(|(x, y, costmap_cell)| {
         if let Some(&cell) = map.get(Pos2 { x, y }) {
             if cell == COSTMAP_OBSTACLE {
