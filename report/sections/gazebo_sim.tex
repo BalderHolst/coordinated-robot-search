@@ -1,8 +1,40 @@
 \section{Gazebo Simulation}
+To validate the robot behavior models works in real environments a more realistic simulation is required.
+This section will describe the setup of the simulation and the software used to create it.
+
+\subsection{ROS2}\label{sub:ros_2}
 % About ros (launch files, nodes, etc)
+For real-world implemnetation, ROS2 (Robot Operating System) is a good choice. ROS2 provides tools and a lot of packages to interact with hardware and communicate with other 
+ROS2 nodes (programs).
+ROS2 has the concept of nodes, which are programs that can be run on a computer. These nodes can communicate with each other through topics, services, and actions.
+In context of this project each robot is a node, where the behavior modes is run. Also namespaces can be made, to group related nodes and topics together. 
+It will allow each robot to have their own namespace with topic and nodes like AMCL, Tranform Frames, LiDAR, camera, etc.
+
+\subsection{ROS2 integration}\label{sub:ros_integration}
 % Gazebo setup with ros integration
+For a more realistic simulation, Gazebo (version Harmonic) is used. Gazebo provides packages to interop with the ros2 through a brigde.
+The tutlebot 4 is modeled in a URDF file.
+
+\subsection{Localization}\label{sub:localization} 
+For unknwon environments, methods like Simultaneous Localization and Mapping (SLAM) is required. Here localization and creation of the map is performed
+as the robot moves around the environment.
+This project assumes that the robot already has an avaliabe map to use for localization. 
+Using a package from the ROS2 ecosystem, called nav2, we can use their implemnetation of a Adaptive Monte-Carlo Localizer (AMCL) to localize the robot.
+The AMCL algorithm works by reading the LiDAR from the robot. Then is compares the readings to a map to find the best estimate of the robot's position and orientation using a particle filter.
+
 % Object detection
-% AMCL
-% bot brain integration
-    % Custom message
-    % Debugging? (rviz visualization)
+\subsection{Object detection}\label{sub:object_detection}
+To find the search object a simple object detection system is used. The video of the of the simulated or real-world camera is fed into
+
+\subsection{Botbrain Integration}\label{sub:botbrain_integration}
+As in \textit{Simple Sim} the robots needs to communicate their observation to each other. For this a custom ROS2 message type is created. 
+\begin{minted}{bash}
+  #file: AgentMessage.msg
+  uint32 sender_id
+  byte[] data
+\end{minted}
+This message type only includes a sender\_id of the robot sending the message. This is for basic filtering to only read messages from other robots.
+The data field is a byte array that can be used to store any data the robot wants to send. Therefore data is serialized and deserialized in the agents using internals in the botbrain.
+
+\subsubsection{Debugging}\label{sec:debugging_rviz}
+Botbrain exposes the debug soup which collect predefined data from the internals of botbrain. This data can be read from the robots and converted to suitable data types for visualization in rviz2.
