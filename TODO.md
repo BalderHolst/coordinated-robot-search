@@ -16,7 +16,7 @@
 - [x] Tune pathing
 - [x] Use robot angle when pathing
 - [x] Repath if lidar sees obstacle
-- [] Use lidar again for search algorithms
+- [ ] Use lidar again for search algorithms
 
 #### Tune Simulations
 
@@ -26,8 +26,8 @@
 
 #### Benchmarks
 
-- [ ] Measure data transfer
-- [ ] Plot data transfer
+- [x] Measure data transfer
+- [x] Plot data transfer
 - [ ] Measure "robot spread" as a parameter
 - [ ] Plot "robot spread"
 - [ ] Measure performance
