@@ -135,6 +135,9 @@ pub fn run_scenario_headless(
 
     let mut coverage_data = Vec::with_capacity(steps);
 
+    let mut prev_bytes = 0;
+    let mut msg_bytes_data = Vec::with_capacity(steps);
+
     let start_time = Instant::now();
     let mut last_print = start_time;
 
@@ -149,6 +152,12 @@ pub fn run_scenario_headless(
         // Calculate and store coverage
         let coverage = sim.state.diagnostics.coverage();
         coverage_data.push(coverage);
+
+        // Calculate and store bytes sent
+        let new_bytes =
+            (sim.state.diagnostics.bytes_sent - prev_bytes) as f64 / SIMULATION_DT as f64;
+        prev_bytes = sim.state.diagnostics.bytes_sent;
+        msg_bytes_data.push(new_bytes);
 
         // Store robot data
         for (n, robot_state) in sim.state.robot_states.iter().enumerate() {
@@ -183,6 +192,9 @@ pub fn run_scenario_headless(
 
     big_schema.push(Field::new("coverage", DataType::Float32, false));
     cols.push(Arc::new(Float32Array::from(coverage_data)));
+
+    big_schema.push(Field::new("msg-bytes", DataType::Float64, false));
+    cols.push(Arc::new(Float64Array::from(msg_bytes_data)));
 
     // Add robot data
     for robot in robot_data {
@@ -220,6 +232,8 @@ pub struct SimState {
 
 #[derive(Clone)]
 pub struct SimDiagnostics {
+    // Total number of bytes sent
+    pub bytes_sent: u128,
     pub coverage_grid: ScaledGrid<bool>,
     world: World,
 }
@@ -287,6 +301,7 @@ impl Simulator {
             diagnostics: SimDiagnostics {
                 coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
                 world: world.clone(),
+                bytes_sent: 0,
             },
         };
 
@@ -391,8 +406,9 @@ impl Simulator {
             .try_iter()
             .collect::<Vec<botbrain::Message>>();
 
-        // Update diagnostics
         let diagnostics = &mut self.state.diagnostics;
+
+        // Update coverage grid
         for msg in &self.pending_msgs {
             match &msg.kind {
                 botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
@@ -404,6 +420,14 @@ impl Simulator {
                     diff: _,
                 } => diagnostics.coverage_grid.set_cone(cone, true),
                 botbrain::MessageKind::Debug(_) => {}
+            }
+        }
+
+        // Update total bytes sent
+        for msg in &self.pending_msgs {
+            if let Ok(bytes) = msg.encode() {
+                let bytes_sent = &mut self.state.diagnostics.bytes_sent;
+                *bytes_sent = bytes_sent.wrapping_add(bytes.len() as u128);
             }
         }
 

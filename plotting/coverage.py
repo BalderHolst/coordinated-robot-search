@@ -9,7 +9,7 @@ def main():
 
     results: list[bp.Result] = []
 
-    for n in range(1, 3):
+    for n in range(1, 10):
         print(f"Running simulation with {n} robots")
         robots = [
                 bp.Robot(

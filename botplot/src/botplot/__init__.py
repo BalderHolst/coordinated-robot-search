@@ -199,7 +199,15 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
     fig.savefig(out_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
 
 
-def run_sim(name: str, scenario: Scenario | str, headless: bool = True, use_cache=True) -> Result:
+def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, verbose=False) -> Result:
+
+    match scenario:
+        case Scenario():
+            name = scenario.title
+        case str():
+            name = scenario.replace("/", "-")
+        case _:
+            raise ValueError("Scenario must be either a string or a Scenario object.")
 
     hash = hashlib.sha256((name + str(scenario)).encode()).hexdigest()
 
@@ -248,17 +256,52 @@ def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
 
     if title is None: title = "Coverage over time"
 
-    plt.xlabel("Time (s)")
-    plt.ylabel("Coverage (%)")
+    plt.xlabel(r"Time (s)")
+    plt.ylabel(r"Coverage (\%)")
     plt.title(title)
     plt.legend()
 
     output_file = os.path.join(plot_dir(), output_file)
 
-    plt.savefig(output_file)
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
     plt.close()
 
     print(f"Plot saved to '{relpath(output_file)}'")
+
+def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
+
+    if isinstance(results, Result): results = [results]
+
+    for result in results:
+        df = result.df()
+        desc = result.desc()
+
+        # Calculate bytes sent per robot
+        bytes_per_robot = df["msg-bytes"] / len(desc["robots"])
+        df = df.with_columns(bytes_per_robot.alias("bytes-per-robot"))
+
+        # Calculate rolling average
+        df = df.with_columns(pl.col("bytes-per-robot").rolling_mean(60).alias("bytes-per-robot-smooth"))
+
+        plt.scatter(df["time"], df["bytes-per-robot"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
+        plt.scatter(df["time"], df["bytes-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
+
+        print(f"Median bytes sent per robot: {df["bytes-per-robot-smooth"].median():.2f} bytes per second")
+
+    if title is None: title = "Data transfer per robot over time"
+
+    plt.xlabel("Time (s)")
+    plt.ylabel("Bytes per Second per Robot")
+    plt.title(title)
+    plt.legend()
+
+    output_file = os.path.join(plot_dir(), output_file)
+
+    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    plt.close()
+
+    print(f"Plot saved to '{relpath(output_file)}'")
+
 
 def plot_paths(result: Result, title: str, segments=1):
     df = result.df()
