@@ -78,6 +78,7 @@
                 rust-bin.stable.latest.default
                 (python3.withPackages (ps: with ps; [
                     polars
+                    numpy
                     matplotlib
                 ]))
                 cargo-hack    # Check feature combinations

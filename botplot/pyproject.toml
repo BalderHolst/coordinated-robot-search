@@ -9,6 +9,7 @@ description = "Simple package for running and plotting simulator data"
 dependencies = [
     "polars",
     "matplotlib"
+    "numpy",
 ]
 
 [tool.setuptools]

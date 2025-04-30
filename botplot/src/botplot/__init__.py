@@ -1,12 +1,15 @@
+import os
+import subprocess
+import json
+import hashlib
+from math import sqrt
+from dataclasses import dataclass
+
+import polars as pl
+import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
-import os
-import subprocess
-from dataclasses import dataclass
-import polars as pl
-import json
-import hashlib
 
 plt.rcParams.update({
     "text.usetex": True,        # Use LaTeX to render all text
@@ -100,8 +103,8 @@ class World:
 
 @dataclass
 class Result:
-    dataframe: str
-    description: str
+    dataframe_file: str
+    description_file: str
 
     @classmethod
     def from_stem(cls, stem: str) -> "Result":
@@ -119,20 +122,61 @@ class Result:
         return cls(dataframe, description)
 
     def df(self) -> pl.DataFrame:
-        return pl.read_ipc(self.dataframe)
+        return pl.read_ipc(self.dataframe_file)
+
+    def df_with_spread(self) -> pl.DataFrame:
+        desc = self.desc()
+        df = self.df()
+
+        # Add spread column
+        spread   = pl.Series("spread-sd", [0.0] * len(df))
+        center_x = pl.Series("center_x",  [0.0] * len(df))
+        center_y = pl.Series("center_y",  [0.0] * len(df))
+
+        n = len(desc["robots"])
+
+        for i in range(len(df)):
+
+            total_x = 0.0
+            total_y = 0.0
+
+            for id in range(n):
+                x = df[f"robot_{id}/x"][i]
+                y = df[f"robot_{id}/y"][i]
+                total_x += x
+                total_y += y
+
+            mu_x = total_x / n
+            mu_y = total_y / n
+
+            center_x[i] = mu_x
+            center_y[i] = mu_y
+
+            total_dist = 0.0
+            for id in range(n):
+                x = df[f"robot_{id}/x"][i]
+                y = df[f"robot_{id}/y"][i]
+                dist = sqrt((x - mu_x) ** 2 + (y - mu_y) ** 2)
+                total_dist += dist
+
+            spread[i] = total_dist / n
+
+        df = df.with_columns([center_x, center_y, spread])
+
+        return df
 
     def desc(self) -> dict:
-        with open(self.description) as f:
+        with open(self.description_file) as f:
             return json.load(f)
 
     def paths(self) -> tuple[str, str]:
         """Returns the releative paths to the data and description files."""
-        data_path = os.path.relpath(self.dataframe, os.path.curdir)
-        desc_path = os.path.relpath(self.description, os.path.curdir)
+        data_path = os.path.relpath(self.dataframe_file, os.path.curdir)
+        desc_path = os.path.relpath(self.description_file, os.path.curdir)
         return data_path, desc_path
 
     def world(self) -> World:
-        return World(self.description, self.desc()["world"])
+        return World(self.description_file, self.desc()["world"])
 
 def relpath(path: str) -> str:
     """Returns the relative path to the given path."""
@@ -246,6 +290,11 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
 
     return Result(data_file, desc_file)
 
+def save_figure(fig, output_file: str):
+    fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    plt.close(fig)
+    print(f"Plot saved to '{relpath(output_file)}'")
+
 def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
 
     if isinstance(results, Result): results = [results]
@@ -340,9 +389,18 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 
     output_file = os.path.join(plot_dir(), output_file)
 
-    fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    save_figure(fig, output_file)
 
-    print(f"Plot saved to '{relpath(output_file)}'")
+def plot_spread(result: Result, title: str):
+    df = result.df_with_spread()
+
+    fig, ax = plt.subplots()
+
+    ax.plot(df["time"], df["spread-sd"], label="Spread")
+
+    file = os.path.join(plot_dir(), f"{title}.png")
+
+    save_figure(fig, file)
 
 
 def plot_paths(result: Result, title: str, segments=1):

@@ -18,4 +18,4 @@ if __name__ == "__main__":
 
     res = bp.run_sim(scenario)
 
-    bp.plot_paths(res, "paths", 10)
+    bp.plot_spread(res, "spread")
