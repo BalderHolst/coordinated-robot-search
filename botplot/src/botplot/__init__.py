@@ -6,10 +6,14 @@ from math import sqrt
 from dataclasses import dataclass
 
 import polars as pl
-import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+
+from botplot.colors import COLORS
+
+mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
 
 plt.rcParams.update({
     "text.usetex": True,        # Use LaTeX to render all text

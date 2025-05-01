@@ -48,7 +48,7 @@
                 shellHook = ''
                     export SIMULATOR="$(pwd)/simple_sim/target/release/simple_sim"
                     export DATA_DIR="$(pwd)/data"
-                    export PLOT_DIR="$(pwd)/report/figures/plot"
+                    export PLOT_DIR="$(pwd)/plot"
                 '';
                 buildPhase = ''
                     latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex || true
@@ -78,7 +78,6 @@
                 rust-bin.stable.latest.default
                 (python3.withPackages (ps: with ps; [
                     polars
-                    numpy
                     matplotlib
                 ]))
                 cargo-hack    # Check feature combinations
@@ -122,7 +121,7 @@
                 export SIMULATOR="$(pwd)/simple_sim/target/release/simple_sim"
                 export TRAINER="$(pwd)/trainer/target/release/trainer"
                 export DATA_DIR="$(pwd)/data"
-                export PLOT_DIR="$(pwd)/report/figures/plot"
+                export PLOT_DIR="$(pwd)/plot"
 
                 export PYTHONPATH="$PYTHONPATH:$(pwd)/botplot/src/"
             '';
