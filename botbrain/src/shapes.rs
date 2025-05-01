@@ -5,9 +5,11 @@ use std::f32::consts::PI;
 use emath::Pos2;
 use serde::{Deserialize, Serialize};
 
+/// A simple geometric shape
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(untagged)] // FIX: Figure out why this crashes in ros_agent
+#[allow(missing_docs)]
 pub enum Shape {
     Circle(Circle),
     Cone(Cone),
@@ -16,6 +18,7 @@ pub enum Shape {
 }
 
 impl Shape {
+    /// Area of the shape
     pub fn area(&self) -> f32 {
         match self {
             Shape::Circle(circle) => PI * circle.radius.powi(2),
@@ -26,43 +29,58 @@ impl Shape {
     }
 }
 
+/// A geometric circle
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Circle {
+    /// Center of the circle
     pub center: Pos2,
+    /// Radius of the circle
     pub radius: f32,
 }
 
+/// A geometric cone
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Cone {
+    /// "Tip" of the cone
     pub center: Pos2,
+    /// Radius of the cone
     pub radius: f32,
+    /// Angle that the cone points towards in radians
     pub angle: f32,
+    /// Field of view of the cone in degrees
     pub fov: f32,
 }
 
+/// A line between two points
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct Line {
+    /// Start point
     pub start: Pos2,
+    /// End point
     pub end: Pos2,
 }
 
 impl Line {
+    /// Cartesian length of the line
     pub fn length(&self) -> f32 {
         (self.end - self.start).length()
     }
 }
 
+/// A [Line] with a width
 #[cfg_attr(feature = "bin-msgs", repr(C))]
 #[cfg_attr(feature = "bin-msgs", derive(bytemuck::Pod, bytemuck::Zeroable))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Serialize, Deserialize)]
 pub struct WideLine {
+    /// Line
     pub line: Line,
+    /// Width of the line
     pub width: f32,
 }
 

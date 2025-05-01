@@ -1,3 +1,5 @@
+//! Data structures for lidar data
+
 use serde::{Deserialize, Serialize};
 
 use crate::utils::normalize_angle;
@@ -16,9 +18,10 @@ pub struct LidarPoint {
 /// Data from the lidar. Points have angles within the range [-PI, PI].
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct LidarData(pub Vec<LidarPoint>);
+pub struct LidarData(Vec<LidarPoint>);
 
 impl LidarData {
+    /// Creates a new [LidarData] instance from a vector of points
     pub fn new(mut points: Vec<LidarPoint>) -> Self {
         points
             .iter_mut()
@@ -27,14 +30,17 @@ impl LidarData {
         Self(points)
     }
 
+    /// Iterate over the points in the lidar data
     pub fn points(&self) -> impl Iterator<Item = &LidarPoint> {
         self.0.iter()
     }
 
+    /// Consume the lidar data and return its points
     pub fn into_points(self) -> Vec<LidarPoint> {
         self.0
     }
 
+    /// Get only the data within a given field of view
     pub fn within_fov(&self, fov: f32) -> Self {
         let range = -fov / 2.0..fov / 2.0;
         let points: Vec<_> = self
@@ -81,6 +87,7 @@ impl LidarData {
         }
     }
 
+    /// Get the longest ray in the lidar data. Returns `None` if there are no points.
     pub fn shortest_ray(&self) -> Option<LidarPoint> {
         self.points()
             .max_by(|a, b| a.distance.total_cmp(&b.distance))

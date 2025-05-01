@@ -69,7 +69,7 @@ pub(crate) fn update_search_line(search_grid: &mut SearchGrid, line: &Line, diff
 
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn update_search_grid(
-    world: &Map,
+    map: &Map,
     search_grid: &mut SearchGrid,
     id: RobotId,
     pos: Pos2,
@@ -82,7 +82,7 @@ pub(crate) fn update_search_grid(
 ) {
     const CAM_MULTPLIER: f32 = 20.0;
 
-    process_search_messages(world, search_grid, postbox, others);
+    process_search_messages(map, search_grid, postbox, others);
 
     // Cool down the search grid within the view of the camera
     {
@@ -104,53 +104,29 @@ pub(crate) fn update_search_grid(
     // Heat up the search grid in the direction of the search items
     // detected by the camera
     {
-        let cam = cam.clone();
-        match cam {
-            CamData::Cone(cam_cone) => {
-                let diff = CAM_MULTPLIER * cam_cone.probability * multiplier;
-                let lidar = lidar.within_fov(params::CAM_FOV);
-                update_search_cone(search_grid, &cam_cone.cone, &lidar, diff);
-                postbox.post(Message {
-                    sender_id: id,
-                    kind: MessageKind::CamDiff {
-                        cone: cam_cone.cone,
-                        diff,
-                    },
-                });
-            }
-            CamData::Points(cam_points) => {
-                for cam_point in cam_points {
-                    let angle = angle + cam_point.angle;
-                    let dir = Vec2::angled(angle);
-                    let start = pos;
-                    let end = start + dir * params::CAM_RANGE;
-                    let line = Line { start, end };
-
-                    let diff = CAM_MULTPLIER * cam_point.probability * multiplier;
-
-                    update_search_line(search_grid, &line, diff);
-                    postbox.post(Message {
-                        sender_id: id,
-                        kind: MessageKind::ShapeDiff {
-                            shape: Shape::Line(line),
-                            diff,
-                        },
-                    });
-                }
-            }
-        }
+        let cam_data = cam.clone();
+        let diff = CAM_MULTPLIER * cam_data.probability * multiplier;
+        let lidar = lidar.within_fov(params::CAM_FOV);
+        update_search_cone(search_grid, &cam_data.cone, &lidar, diff);
+        postbox.post(Message {
+            sender_id: id,
+            kind: MessageKind::CamDiff {
+                cone: cam_data.cone,
+                diff,
+            },
+        });
     }
 }
 
 const INFER_RAYS: usize = 7;
-fn infer_lidar(world: &Map, robot_pos: Pos2, robot_angle: f32) -> LidarData {
+fn infer_lidar(map: &Map, robot_pos: Pos2, robot_angle: f32) -> LidarData {
     let step = params::CAM_FOV / INFER_RAYS as f32;
 
     let angles = (0..INFER_RAYS).map(|i| -params::CAM_FOV / 2.0 + step * i as f32 + step / 2.0);
 
     let points: Vec<LidarPoint> = angles
         .map(|angle| {
-            let distance = world
+            let distance = map
                 .cast_ray(
                     robot_pos,
                     angle + robot_angle,
@@ -163,11 +139,11 @@ fn infer_lidar(world: &Map, robot_pos: Pos2, robot_angle: f32) -> LidarData {
         })
         .collect();
 
-    LidarData(points)
+    LidarData::new(points)
 }
 
 fn process_search_messages(
-    world: &Map,
+    map: &Map,
     search_grid: &mut SearchGrid,
     postbox: &mut Postbox,
     others: &mut HashMap<RobotId, (Pos2, f32)>,
@@ -194,7 +170,7 @@ fn process_search_messages(
 
                 others.insert(msg.sender_id, (pos, angle));
 
-                let lidar = infer_lidar(world, pos, angle);
+                let lidar = infer_lidar(map, pos, angle);
 
                 // Update the search grid based on the camera data
                 update_search_cone(search_grid, cone, &lidar, *diff);

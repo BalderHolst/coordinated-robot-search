@@ -1,3 +1,5 @@
+//! A 2D grid of cells with a scale indexed by floating point values
+
 use std::fmt::Debug;
 
 use emath::{Pos2, Vec2};
@@ -19,12 +21,7 @@ pub struct ScaledGrid<C: Clone + Default> {
 
 impl<C: Clone + Default> Default for ScaledGrid<C> {
     fn default() -> Self {
-        Self {
-            grid: Grid::default(),
-            width: 0.0,
-            height: 0.0,
-            cell_size: 1.0,
-        }
+        Self::empty()
     }
 }
 
@@ -39,6 +36,16 @@ impl<C: Clone + Default> ScaledGrid<C> {
             width,
             height,
             cell_size,
+        }
+    }
+
+    /// Create an empty grid of zero size
+    pub fn empty() -> Self {
+        Self {
+            grid: Grid::empty(),
+            width: 0.0,
+            height: 0.0,
+            cell_size: 1.0,
         }
     }
 
@@ -97,13 +104,13 @@ impl<C: Clone + Default> ScaledGrid<C> {
         &mut self.grid
     }
 
-    /// Convert a world position to the underlying grid position
-    pub fn world_to_grid(&self, pos: Pos2) -> Pos2 {
+    /// Convert a scaled grid position to the underlying grid position
+    pub fn pos_to_grid(&self, pos: Pos2) -> Pos2 {
         ((pos + self.size() / 2.0) / self.cell_size).floor()
     }
 
-    /// Convert an underlying grid position to a world position
-    pub fn grid_to_world(&self, pos: Pos2) -> Pos2 {
+    /// Convert an underlying grid position to a scaled grid position
+    pub fn grid_to_pos(&self, pos: Pos2) -> Pos2 {
         (pos + Vec2::splat(0.5)) * self.cell_size - self.size() / 2.0
     }
 
@@ -116,7 +123,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
         {
             return None;
         }
-        let pos = self.world_to_grid(pos);
+        let pos = self.pos_to_grid(pos);
         debug_assert!(pos.x >= 0.0);
         debug_assert!(pos.y >= 0.0);
         let x = pos.x as usize;
@@ -135,7 +142,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
         {
             return;
         }
-        let pos = self.world_to_grid(pos);
+        let pos = self.pos_to_grid(pos);
         debug_assert!(pos.x >= 0.0);
         debug_assert!(pos.y >= 0.0);
         let x = pos.x as usize;
@@ -147,6 +154,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
         }
     }
 
+    /// Iterate over the cells in the grid
     pub fn iter(&self) -> impl Iterator<Item = (f32, f32, &C)> {
         self.grid.iter().map(move |(x, y, cell)| {
             let x = x as f32 * self.cell_size - self.width / 2.0;
@@ -155,6 +163,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
         })
     }
 
+    /// Iterate over the cells in the grid *mutably*
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (f32, f32, &mut C)> + '_ {
         self.grid.iter_mut().map(|(x, y, cell)| {
             let x = x as f32 * self.cell_size - self.width / 2.0;
@@ -184,18 +193,19 @@ impl<C: Clone + Default> ScaledGrid<C> {
     /// Set the cells in a line to a value
     pub fn set_line(&mut self, start: Pos2, end: Pos2, width: f32, cell: C) {
         let width = width / self.cell_size;
-        let start = self.world_to_grid(start);
-        let end = self.world_to_grid(end);
+        let start = self.pos_to_grid(start);
+        let end = self.pos_to_grid(end);
         self.grid.set_line(start, end, width, cell);
     }
 
     /// Set the cells in a circle to a value
     pub fn set_circle(&mut self, center: Pos2, radius: f32, cell: C) {
         let radius = radius / self.cell_size;
-        let center = self.world_to_grid(center);
+        let center = self.pos_to_grid(center);
         self.grid.set_circle(center, radius, cell);
     }
 
+    /// Set a cone of cells to a value
     pub fn set_cone(&mut self, cone: &Cone, cell: C) {
         let Cone {
             center,
@@ -204,7 +214,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
             fov,
         } = *cone;
         let radius = radius / self.cell_size;
-        let center = self.world_to_grid(center);
+        let center = self.pos_to_grid(center);
         self.grid.set_cone(center, radius, angle, fov, cell);
     }
 
@@ -212,10 +222,10 @@ impl<C: Clone + Default> ScaledGrid<C> {
     pub fn iter_circle(&self, circle: &Circle) -> impl Iterator<Item = Pos2> + '_ {
         let Circle { center, radius } = circle;
         let radius = radius / self.cell_size;
-        let center = self.world_to_grid(*center);
+        let center = self.pos_to_grid(*center);
         self.grid
             .iter_circle(center, radius)
-            .map(move |(x, y)| self.grid_to_world(Pos2::new(x as f32, y as f32)))
+            .map(move |(x, y)| self.grid_to_pos(Pos2::new(x as f32, y as f32)))
     }
 
     /// Iterate over cells within a [Cone]
@@ -238,11 +248,11 @@ impl<C: Clone + Default> ScaledGrid<C> {
     /// Iterate over cells within a [Line]
     pub fn iter_line(&self, line: &Line) -> impl Iterator<Item = Pos2> + '_ {
         let Line { start, end } = line;
-        let start = self.world_to_grid(*start);
-        let end = self.world_to_grid(*end);
+        let start = self.pos_to_grid(*start);
+        let end = self.pos_to_grid(*end);
         self.grid
             .iter_line(start, end)
-            .map(move |(x, y)| self.grid_to_world(Pos2::new(x as f32, y as f32)))
+            .map(move |(x, y)| self.grid_to_pos(Pos2::new(x as f32, y as f32)))
     }
 
     /// Maskes out the ScaledGrid cells
@@ -256,6 +266,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
         });
     }
 
+    /// Cast a ray from a position in a given direction
     pub fn cast_ray(
         &self,
         from: Pos2,
@@ -273,7 +284,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
 
             let cell = self.get(pos);
 
-            // Check for collisions with the world
+            // Check for collisions with the grid
             if let Some(cell) = cell {
                 if should_stop(cell) {
                     return RayCastResult::Hit(distance, cell);
@@ -289,13 +300,20 @@ impl<C: Clone + Default> ScaledGrid<C> {
     }
 }
 
+/// The result of a ray cast
 pub enum RayCastResult<'a, C> {
+    /// The ray hit an object
     Hit(f32, &'a C),
+
+    /// The ray reached the maximum range
     OutOfRange(f32),
+
+    /// The ray reached outside the bounds of the grid
     OutOfBounds(f32),
 }
 
 impl<C> RayCastResult<'_, C> {
+    /// Get the distance of the ray cast
     pub fn distance(&self) -> f32 {
         match self {
             RayCastResult::Hit(distance, _)
@@ -311,6 +329,7 @@ fn linspace(start: f32, end: f32, n: usize) -> impl Iterator<Item = f32> {
 }
 
 impl ScaledGrid<f32> {
+    /// Add another grid to this grid by sampling the other grid at each cell in this grid
     pub fn add_sampled_grid(&mut self, other: &ScaledGrid<f32>, weight: f32) {
         let grid = &mut self.grid;
         for (grid_y, y) in
@@ -329,13 +348,12 @@ impl ScaledGrid<f32> {
         }
     }
 
+    /// Create a new grid from a stack of grids
     pub fn from_stack(stack: &[&Self], width: f32, height: f32, cell_size: f32) -> Self {
         let mut grid = Self::new(width, height, cell_size);
-
         stack.iter().for_each(|&other| {
             grid.add_sampled_grid(other, 1.0);
         });
-
         grid
     }
 }
@@ -358,8 +376,8 @@ mod tests {
     fn test_position_conversions() {
         let grid = ScaledGrid::<f32>::new(10.0, 10.0, 1.0);
         let world_pos = Pos2::new(1.5, 1.5);
-        let grid_pos = grid.world_to_grid(world_pos);
-        let world_pos2 = grid.grid_to_world(grid_pos);
+        let grid_pos = grid.pos_to_grid(world_pos);
+        let world_pos2 = grid.grid_to_pos(grid_pos);
 
         assert_eq!(grid_pos, Pos2::new(6.0, 6.0));
         assert_eq!(world_pos, world_pos2);

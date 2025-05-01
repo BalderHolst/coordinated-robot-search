@@ -20,7 +20,7 @@ use crate::{
 
 use super::camera::Camera;
 use botbrain::{
-    debug_soup::{DebugSoup, DebugType},
+    debug_soup::{DebugItem, DebugSoup},
     RobotPose,
 };
 use eframe::{
@@ -443,7 +443,7 @@ impl App {
                 let color = theme.pallete(n);
                 let data = &**data;
                 match data {
-                    DebugType::Vector(vec) => {
+                    DebugItem::Vector(vec) => {
                         let end = robot_pos + self.cam.scaled(*vec);
                         painter.arrow(
                             robot_pos,
@@ -451,7 +451,7 @@ impl App {
                             Stroke::new(self.cam.scaled(0.03), color),
                         );
                     }
-                    DebugType::Vectors(vecs) => {
+                    DebugItem::Vectors(vecs) => {
                         for vec in vecs {
                             let end = robot_pos + self.cam.scaled(*vec);
                             painter.arrow(
@@ -461,7 +461,7 @@ impl App {
                             );
                         }
                     }
-                    DebugType::WeightedVectors(vecs) => {
+                    DebugItem::WeightedVectors(vecs) => {
                         let max_weight = vecs.iter().map(|(_, w)| w.abs()).sum::<f32>();
                         for (vec, weight) in vecs {
                             let alpha = weight / max_weight;
@@ -474,7 +474,7 @@ impl App {
                             );
                         }
                     }
-                    DebugType::VectorField(field) => {
+                    DebugItem::VectorField(field) => {
                         for (pos, vec) in field {
                             let pos = self.cam.world_to_viewport(*pos);
                             let end = pos + self.cam.scaled(*vec);
@@ -485,24 +485,24 @@ impl App {
                             );
                         }
                     }
-                    DebugType::Radius(radius) => {
+                    DebugItem::Radius(radius) => {
                         painter.circle_stroke(
                             robot_pos,
                             self.cam.scaled(*radius),
                             Stroke::new(self.cam.scaled(0.02), color),
                         );
                     }
-                    DebugType::Point(p) => {
+                    DebugItem::Point(p) => {
                         let p = self.cam.world_to_viewport(*p);
                         painter.circle_filled(p, self.cam.scaled(0.05), color);
                     }
-                    DebugType::Points(ps) => {
+                    DebugItem::Points(ps) => {
                         for p in ps {
                             let p = self.cam.world_to_viewport(*p);
                             painter.circle_filled(p, self.cam.scaled(0.03), color);
                         }
                     }
-                    DebugType::WeightedPoints(ps) => {
+                    DebugItem::WeightedPoints(ps) => {
                         let max_weight =
                             ps.iter()
                                 .map(|(_, w)| w)
@@ -524,7 +524,7 @@ impl App {
                             painter.circle_filled(p, self.cam.scaled(0.03), color);
                         }
                     }
-                    DebugType::NumberPoints(ps) => {
+                    DebugItem::NumberPoints(ps) => {
                         let font_id = FontId {
                             size: self.cam.scaled(0.08),
                             family: FontFamily::Monospace,
@@ -540,7 +540,7 @@ impl App {
                             );
                         }
                     }
-                    DebugType::Number(n) => {
+                    DebugItem::Number(n) => {
                         let font_id = FontId {
                             size: self.cam.scaled(0.2),
                             family: FontFamily::Monospace,
@@ -558,7 +558,7 @@ impl App {
                         );
                         numbers += 1;
                     }
-                    DebugType::Int(n) => {
+                    DebugItem::Int(n) => {
                         let font_id = FontId {
                             size: self.cam.scaled(0.2),
                             family: FontFamily::Monospace,
@@ -576,7 +576,7 @@ impl App {
                         );
                         numbers += 1;
                     }
-                    DebugType::RobotRays(rays) => {
+                    DebugItem::RobotRays(rays) => {
                         for (angle, distance) in rays {
                             let color =
                                 Hsva::new(distance / self.world.width() * 2.0, 0.8, 0.8, 0.5);
@@ -589,7 +589,7 @@ impl App {
                             );
                         }
                     }
-                    DebugType::RobotLine(points) => {
+                    DebugItem::RobotLine(points) => {
                         let points = points
                             .iter()
                             .map(|p| {
@@ -600,7 +600,7 @@ impl App {
                             .collect();
                         painter.line(points, PathStroke::new(self.cam.scaled(0.01), color));
                     }
-                    DebugType::GlobalLine(positions) => {
+                    DebugItem::GlobalLine(positions) => {
                         let positions = positions
                             .iter()
                             .map(|p| self.cam.world_to_viewport(*p))
@@ -608,7 +608,7 @@ impl App {
 
                         painter.line(positions, PathStroke::new(self.cam.scaled(0.01), color));
                     }
-                    DebugType::Grid(grid) => {
+                    DebugItem::Grid(grid) => {
                         let (min, max) = self.world.bounds();
                         let min = self.cam.world_to_viewport(min);
                         let max = self.cam.world_to_viewport(max);
@@ -648,7 +648,7 @@ impl App {
 
                         Self::draw_grid_image(&mut self.textures, name, painter, canvas, image);
                     }
-                    DebugType::Map(map) => {
+                    DebugItem::Map(map) => {
                         let (min, max) = self.world.bounds();
                         let min = self.cam.world_to_viewport(min);
                         let max = self.cam.world_to_viewport(max);

@@ -1,3 +1,4 @@
+/// Implementation of a robot using reinforcement learning robots.
 pub mod action;
 pub mod network;
 pub mod robots;
@@ -16,7 +17,7 @@ use crate::{
     Robot, RobotId, RobotPose, Vec2,
 };
 
-use super::{common, params, DebugType};
+use super::{common, params, DebugItem};
 
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 const SEARCH_GRID_SCALE: f32 = 0.20;
@@ -80,8 +81,8 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, 
         self.id = id;
     }
 
-    fn set_world(&mut self, world: super::Map) {
-        let size = world.size();
+    fn set_map(&mut self, map: super::Map) {
+        let size = map.size();
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
     }
 
@@ -214,11 +215,11 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
             self.lidar.clone(),
             &self.search_grid,
         );
-        self.debug("Search Gradient", "Vector", DebugType::Vector(g));
-        self.debug("Search Gradient", "x", DebugType::Number(g.x));
-        self.debug("Search Gradient", "y", DebugType::Number(g.y));
-        self.debug("Search Gradient", "length", DebugType::Number(g.length()));
-        self.debug("Search Gradient", "angle", DebugType::Number(g.angle()));
+        self.debug("Search Gradient", "Vector", DebugItem::Vector(g));
+        self.debug("Search Gradient", "x", DebugItem::Number(g.x));
+        self.debug("Search Gradient", "y", DebugItem::Number(g.y));
+        self.debug("Search Gradient", "length", DebugItem::Number(g.length()));
+        self.debug("Search Gradient", "angle", DebugItem::Number(g.angle()));
         self.search_gradient = g;
     }
 
@@ -226,9 +227,9 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
         if !self.debug_enabled() {
             return;
         }
-        self.debug("", "Search Grid", DebugType::Grid(self.search_grid.clone()));
+        self.debug("", "Search Grid", DebugItem::Grid(self.search_grid.clone()));
 
         let raw_lidar = self.lidar.points().map(|p| (p.angle, p.distance)).collect();
-        self.debug("", "Lidar", DebugType::RobotRays(raw_lidar));
+        self.debug("", "Lidar", DebugItem::RobotRays(raw_lidar));
     }
 }

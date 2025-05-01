@@ -2,9 +2,10 @@ use std::f32::consts::PI;
 
 use botbrain::{
     behaviors::BehaviorFn,
-    camera::{CamData, CamPoint},
+    camera::CamData,
     lidar::{LidarData, LidarPoint},
     params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE},
+    shapes::Cone,
     Pos2, Robot, RobotPose, Vec2,
 };
 use eframe::emath::normalized_angle;
@@ -100,7 +101,7 @@ pub fn step_agent(
         let angle_step = CAM_FOV / (CAMERA_RAYS - 1) as f32;
         let points = (0..CAMERA_RAYS)
             .filter_map(|n| {
-                let angle = n as f32 * angle_step - CAM_FOV / 2.0;
+                let angle = normalized_angle(n as f32 * angle_step - CAM_FOV / 2.0);
                 let (distance, cell) = cast_ray(
                     world,
                     agents,
@@ -113,48 +114,39 @@ pub fn step_agent(
                 match cell {
                     Some(Cell::SearchItem) => {
                         let probability = (CAM_RANGE - distance) / CAM_RANGE;
-                        Some((n, CamPoint { angle, probability }))
+                        Some((angle, distance, probability))
                     }
                     _ => None,
                 }
             })
             .collect::<Vec<_>>();
 
-        // Consolidate points next to each other
-        {
-            let mut sparse_points = vec![];
-            let mut adjacant = vec![];
-
-            let consolidate_points = |adjacant: &mut Vec<_>, sparse_points: &mut Vec<_>| {
-                if adjacant.is_empty() {
-                    return;
-                }
-
-                let mut avg_point = adjacant.iter().fold(
-                    CamPoint {
-                        angle: 0.0,
-                        probability: 0.0,
-                    },
-                    |a: CamPoint, (_, b): &(usize, CamPoint)| CamPoint {
-                        angle: a.angle + b.angle,
-                        probability: a.probability + b.probability,
-                    },
-                );
-                avg_point.probability /= adjacant.len() as f32;
-                avg_point.angle /= adjacant.len() as f32;
-                sparse_points.push(avg_point);
-                adjacant.clear();
-            };
-
-            for (n, point) in points {
-                match adjacant.last() {
-                    None => adjacant.push((n, point)),
-                    Some((last_n, _)) if *last_n == n - 1 => adjacant.push((n, point)),
-                    Some(_) => consolidate_points(&mut adjacant, &mut sparse_points),
-                }
+        // TODO: Check that this actually works...
+        // TODO: Do we need to input an empty CamData if there are no points?
+        if !points.is_empty() {
+            let mut min_angle = f32::MAX;
+            let mut max_angle = f32::MIN;
+            let mut total_prop = 0.0;
+            let mut total_distance = 0.0;
+            for (a, d, p) in &points {
+                min_angle = min_angle.min(*a);
+                max_angle = max_angle.max(*a);
+                total_prop += p;
+                total_distance += d;
             }
-            consolidate_points(&mut adjacant, &mut sparse_points);
-            robot.input_cam(CamData::Points(sparse_points));
+            let span = (max_angle - min_angle).abs();
+            let avg_angle = (min_angle + max_angle) / 2.0;
+            let avg_distance = total_distance / points.len() as f32;
+            let avg_probability = total_prop / points.len() as f32;
+            robot.input_cam(CamData {
+                cone: Cone {
+                    center: state.pose.pos,
+                    radius: avg_distance,
+                    angle: avg_angle,
+                    fov: span,
+                },
+                probability: avg_probability,
+            });
         }
     }
 

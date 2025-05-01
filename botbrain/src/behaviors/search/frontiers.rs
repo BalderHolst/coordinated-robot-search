@@ -49,7 +49,7 @@ pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool 
 /// Finds the frontiers from the robot position using the costmap
 pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSet<(usize, usize)> {
     let robot_pos = {
-        let tmp = costmap_grid.world_to_grid(robot_pos);
+        let tmp = costmap_grid.pos_to_grid(robot_pos);
         (tmp.x as usize, tmp.y as usize)
     };
 
@@ -190,13 +190,13 @@ pub fn evaluate_frontier_regions(
                         // Very bad to be on the robot pos
                         return None;
                     }
-                    let pos_world = {
+                    let pos_map = {
                         let temp = Pos2::new(pos.0 as f32, pos.1 as f32);
-                        costmap_grid.grid_to_world(temp)
+                        costmap_grid.grid_to_pos(temp)
                     };
 
                     let is_valid =
-                        costmap::validate_pos(pos_world, ROBOT_OBSTACLE_CLEARANCE, costmap_grid);
+                        costmap::validate_pos(pos_map, ROBOT_OBSTACLE_CLEARANCE, costmap_grid);
                     if !is_valid {
                         // Very bad to be too close to obstacles
                         return None;
@@ -205,8 +205,8 @@ pub fn evaluate_frontier_regions(
                     let size = region.len();
 
                     let frontier_angle = Vec2::new(
-                        pos_world.x - robot_pos.0 as f32,
-                        pos_world.y - robot_pos.1 as f32,
+                        pos_map.x - robot_pos.0 as f32,
+                        pos_map.y - robot_pos.1 as f32,
                     )
                     .angle();
                     let angle_to_target =
@@ -247,7 +247,7 @@ pub fn evaluate_frontiers(
 ) -> Option<Pos2> {
     // For working with grid coordinates
     let robot_pos_grid = {
-        let tmp = costmap_grid.world_to_grid(robot_pos);
+        let tmp = costmap_grid.pos_to_grid(robot_pos);
         (tmp.x as usize, tmp.y as usize)
     };
 
@@ -255,7 +255,7 @@ pub fn evaluate_frontiers(
     let goal = {
         let goal_grid =
             evaluate_frontier_regions(robot_pos_grid, robot_angle, frontier_regions, costmap_grid)?;
-        costmap_grid.grid_to_world(Pos2::new(goal_grid.0 as f32, goal_grid.1 as f32))
+        costmap_grid.grid_to_pos(Pos2::new(goal_grid.0 as f32, goal_grid.1 as f32))
     };
     Some(goal)
 }

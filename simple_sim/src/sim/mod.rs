@@ -13,7 +13,7 @@ use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 use botbrain::{
     self,
     behaviors::{Behavior, Time},
-    debug_soup::{DebugSoup, DebugType},
+    debug_soup::{DebugItem, DebugSoup},
     messaging::{Message, MessageKind},
     scaled_grid::ScaledGrid,
     Control, Pos2, RobotId, RobotPose,
@@ -98,7 +98,7 @@ impl RobotData {
         self.speed.push(control.speed);
 
         let mode = match state.soup.get("", "mode").map(|t| (*t).clone()) {
-            Some(DebugType::Int(mode)) => mode,
+            Some(DebugItem::Int(mode)) => mode,
             _ => 0,
         };
 
@@ -394,7 +394,7 @@ impl Simulator {
         {
             let mut robot = (self.behavior.create_fn())();
             robot.set_id(id);
-            robot.set_world(crate::world::convert_to_botbrain_map(&self.world));
+            robot.set_map(crate::world::convert_to_botbrain_map(&self.world));
             robot.get_debug_soup_mut().activate();
             robot.input_pose(robot_pose);
             self.robots.push(robot);
@@ -496,7 +496,7 @@ impl Simulator {
                 ..Default::default()
             });
 
-            robot.set_world(crate::world::convert_to_botbrain_map(&sim.world));
+            robot.set_map(crate::world::convert_to_botbrain_map(&sim.world));
             robot.get_debug_soup_mut().activate();
             robot.input_pose(pose);
             sim.robots.push(robot);

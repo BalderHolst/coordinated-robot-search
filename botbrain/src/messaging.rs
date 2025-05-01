@@ -1,3 +1,5 @@
+//! Internal messaging system for [botbrain] robots.
+
 use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
@@ -11,8 +13,24 @@ use crate::{
 #[cfg_attr(feature = "bin-msgs", derive(bincode::Encode, bincode::Decode))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MessageKind {
-    ShapeDiff { shape: Shape, diff: f32 },
-    CamDiff { cone: Cone, diff: f32 },
+    /// A message containing any shape and a diff value to update the search grid of a robot
+    ShapeDiff {
+        /// Where the diff should be applied
+        shape: Shape,
+        /// The difference in "heat"
+        diff: f32,
+    },
+
+    /// A message containing a cone corresponding to he camera fov
+    /// and a diff value to update the search grid of a robot
+    CamDiff {
+        /// The camera's view cone
+        cone: Cone,
+        /// The difference in "heat"
+        diff: f32,
+    },
+
+    /// A message an arbitrary debug string
     Debug(String),
 }
 
@@ -25,9 +43,12 @@ fn bincode_config() -> bincode::config::Configuration {
 
 #[cfg(feature = "bin-msgs")]
 impl MessageKind {
+    /// Encode a [MessageKind] to a byte array
     pub fn encode(self) -> Result<Vec<u8>, bincode::error::EncodeError> {
         self.try_into()
     }
+
+    /// Decode a byte array to a [MessageKind]
     pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
         Self::try_from(bytes)
     }
@@ -64,9 +85,12 @@ pub struct Message {
 
 #[cfg(feature = "bin-msgs")]
 impl Message {
+    /// Encode a [Message] to a byte array
     pub fn encode(&self) -> Result<Vec<u8>, bincode::error::EncodeError> {
         bincode::encode_to_vec(self, bincode_config())
     }
+
+    /// Decode a byte array to a [Message]
     pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
         bincode::decode_from_slice(bytes.as_slice(), bincode_config()).map(|(msg, _)| msg)
     }
@@ -109,7 +133,7 @@ fn test_msg_serialization() {
     assert_eq!(msg, msg_decoded);
 }
 
-/// Manages incoming and outgoing messages
+/// Manages incoming and outgoing messages for a robot
 #[derive(Clone, Default)]
 pub struct Postbox {
     incoming_msg: Vec<Message>,
@@ -118,6 +142,7 @@ pub struct Postbox {
 }
 
 impl Postbox {
+    /// Create a new postbox
     pub fn new() -> Self {
         Self::default()
     }

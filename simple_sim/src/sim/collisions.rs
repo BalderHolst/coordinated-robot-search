@@ -24,14 +24,14 @@ pub fn resolve_robot_collisions(me: &mut RobotState, all: &[RobotState]) {
 pub fn resolve_world_collisions(robot_state: &mut RobotState, world: &World) {
     // Look in a circle around the robot
     let radius = DIAMETER / 2.0 * 1.4 / world.scale();
-    let center = world.world_to_grid(robot_state.pose.pos);
+    let center = world.pos_to_grid(robot_state.pose.pos);
     let mut nudge = Vec2::ZERO;
     let mut nudgers = 0;
     let grid = world.grid();
     for (x, y) in grid.iter_circle(center, radius) {
         let cell = grid.get(x, y);
         if matches!(cell, Some(Cell::Wall) | None) {
-            let cell_center = world.grid_to_world(Pos2 {
+            let cell_center = world.grid_to_pos(Pos2 {
                 x: x as f32,
                 y: y as f32,
             });

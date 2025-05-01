@@ -42,7 +42,7 @@ which is the only way for outside crates to interact with a robot’s internal s
         \begin{minted}[autogobble]{rust}
             pub trait Robot {
                 fn set_id(&mut self, id: RobotId);            // Set the id of the robot
-                fn set_world(&mut self, world: Map); // The world the robot is operating in
+                fn set_map(&mut self, world: Map); // The world the robot is operating in
 
                 fn input_pose(&mut self, pose: RobotPose);    // Input the angle of the robot
                 fn input_cam(&mut self, cam: CamData);        // Input data from the camera

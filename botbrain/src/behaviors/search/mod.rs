@@ -18,7 +18,7 @@ use super::{
     scaled_grid::ScaledGrid,
     shapes::{Circle, Line},
     utils::normalize_angle,
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, DebugType, Map, Postbox, Robot,
+    BehaviorFn, BehaviorOutput, CamData, Control, DebugItem, DebugSoup, Map, Postbox, Robot,
     RobotId, RobotPose, RobotRef,
 };
 
@@ -144,9 +144,9 @@ impl Robot for SearchRobot {
         self.id = id;
     }
 
-    fn set_world(&mut self, world: Map) {
-        let size = world.size();
-        self.map = world;
+    fn set_map(&mut self, map: Map) {
+        let size = map.size();
+        self.map = map;
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
         self.proximity_grid = ScaledGrid::new(size.x, size.y, PROXIMITY_GRID_SCALE);
         self.costmap_grid = ScaledGrid::new(size.x, size.y, COSTMAP_GRID_SCALE);
@@ -339,8 +339,8 @@ impl SearchRobot {
         );
         let g = g * GRADIENT_WEIGHT;
 
-        self.debug("Gradient", "Search Cells", DebugType::NumberPoints(cells));
-        self.debug("Gradient", "Search Gradient", DebugType::Vector(g));
+        self.debug("Gradient", "Search Cells", DebugItem::NumberPoints(cells));
+        self.debug("Gradient", "Search Gradient", DebugItem::Vector(g));
 
         // let g_len = g.length();
         // if g_len < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
@@ -365,16 +365,16 @@ impl SearchRobot {
         );
         let g = g * GRADIENT_WEIGHT;
 
-        self.debug("Gradient", "Proximity Gradient", DebugType::Vector(g));
+        self.debug("Gradient", "Proximity Gradient", DebugItem::Vector(g));
         self.debug(
             "Gradient",
             "Proximity Gradient Range",
-            DebugType::Radius(PROXIMITY_GRADIENT_RANGE),
+            DebugItem::Radius(PROXIMITY_GRADIENT_RANGE),
         );
         self.debug(
             "",
             "Communication Range",
-            DebugType::Radius(params::COMMUNICATION_RANGE),
+            DebugItem::Radius(params::COMMUNICATION_RANGE),
         );
         g
     }
@@ -384,9 +384,7 @@ impl SearchRobot {
         let mut lidar_contribution = Vec2::ZERO;
         {
             let mut total_weight: f32 = 0.0;
-            let LidarData(points) = self.lidar.clone();
-
-            for point in points {
+            for point in self.lidar.points() {
                 let distance = point.distance.clamp(0.0, LIDAR_OBSTACLE_RANGE);
                 let weight = -(1.0 - distance / LIDAR_OBSTACLE_RANGE).powi(2);
                 lidar_contribution += Vec2::angled(point.angle + self.angle) * weight;
@@ -402,13 +400,13 @@ impl SearchRobot {
             self.debug(
                 "Sensors",
                 "Lidar Obstacle Range",
-                DebugType::Radius(LIDAR_OBSTACLE_RANGE),
+                DebugItem::Radius(LIDAR_OBSTACLE_RANGE),
             );
 
             self.debug(
                 "Sensors",
                 "Lidar Contribution",
-                DebugType::Vector(lidar_contribution),
+                DebugItem::Vector(lidar_contribution),
             );
         }
         lidar_contribution
@@ -441,7 +439,7 @@ impl SearchRobot {
         soup.add(
             "",
             "Other Positions",
-            DebugType::VectorField(
+            DebugItem::VectorField(
                 self.others
                     .values()
                     .map(|(pos, angle)| (*pos, Vec2::angled(*angle) * params::DIAMETER / 2.0))
@@ -452,28 +450,28 @@ impl SearchRobot {
         soup.add(
             "Grids",
             "Search Grid",
-            DebugType::Grid(self.search_grid.clone()),
+            DebugItem::Grid(self.search_grid.clone()),
         );
 
         soup.add(
             "Grids",
             "Proximity Grid",
-            DebugType::Grid(self.proximity_grid.clone()),
+            DebugItem::Grid(self.proximity_grid.clone()),
         );
 
         soup.add(
             "Grids",
             "Costmap Grid",
-            DebugType::Grid(self.costmap_grid.clone()),
+            DebugItem::Grid(self.costmap_grid.clone()),
         );
 
         soup.add(
             "Grids",
             "Frontiers",
-            DebugType::Grid(self.frontiers_grid.clone()),
+            DebugItem::Grid(self.frontiers_grid.clone()),
         );
 
-        soup.add("Grids", "Map", DebugType::Map(self.map.clone()));
+        soup.add("Grids", "Map", DebugItem::Map(self.map.clone()));
 
         let mode = match &self.robot_mode {
             RobotMode::Exploring => 0,
@@ -481,7 +479,7 @@ impl SearchRobot {
             RobotMode::ProximityPathing => 2,
         };
 
-        soup.add("", "mode", DebugType::Int(mode));
+        soup.add("", "mode", DebugItem::Int(mode));
 
         if matches!(
             self.robot_mode,
@@ -490,7 +488,7 @@ impl SearchRobot {
             self.show_path();
             let goal = self.path_planner_goal.unwrap_or(Pos2 { x: 0.0, y: 0.0 });
             self.get_debug_soup_mut()
-                .add("Planner", "Goal", DebugType::Point(goal));
+                .add("Planner", "Goal", DebugItem::Point(goal));
         }
     }
 }
@@ -559,7 +557,7 @@ impl SearchRobot {
             }
         }
 
-        // Don't stop pathing if there are no other robots in world
+        // Don't stop pathing if there are no other robots in map
         if !self.others.is_empty() && self.robot_mode != RobotMode::ProximityPathing {
             match self.proximity_grid.get(self.pos) {
                 // 0.0 means we are outside the proximity grid
@@ -608,13 +606,13 @@ impl SearchRobot {
                     self.get_debug_soup_mut().add(
                         "Planner",
                         "Masked Costmap",
-                        DebugType::Grid(masked_costmap.clone()),
+                        DebugItem::Grid(masked_costmap.clone()),
                     );
 
                     // self.get_debug_soup_mut().add(
                     //     "Planner",
                     //     "Masked frontiers",
-                    //     DebugType::Grid(masked_costmap.clone()),
+                    //     DebugItem::Grid(masked_costmap.clone()),
                     // );
 
                     // let frontier_len = frontiers.len();
@@ -630,7 +628,7 @@ impl SearchRobot {
                             self.get_debug_soup_mut().add(
                                 "Planner",
                                 "Goal",
-                                DebugType::Point(goal),
+                                DebugItem::Point(goal),
                             );
 
                             self.robot_mode = RobotMode::ProximityPathing;
@@ -726,11 +724,11 @@ impl SearchRobot {
             path.push(self.pos);
             path.extend(self.path_planner_path.iter().cloned());
             // let smooth_path = smooth_path(path.clone(), &self.costmap_grid);
-            soup.add("Planner", "Goal Path", DebugType::GlobalLine(path));
+            soup.add("Planner", "Goal Path", DebugItem::GlobalLine(path));
             // soup.add(
             //     "Planner",
             //     "Smooth Goal Path",
-            //     DebugType::GlobalLine(smooth_path),
+            //     DebugItem::GlobalLine(smooth_path),
             // );
         }
     }
@@ -741,7 +739,7 @@ impl SearchRobot {
             self.frontiers_grid.grid_mut().set(*x, *y, -10.0);
         }
         let robot_pos = {
-            let tmp = self.frontiers_grid.world_to_grid(self.pos);
+            let tmp = self.frontiers_grid.pos_to_grid(self.pos);
             (tmp.x as usize, tmp.y as usize)
         };
         let mut frontier_regions =
@@ -760,7 +758,7 @@ impl SearchRobot {
                         let idx = idx as f32;
                         let pos = self
                             .frontiers_grid
-                            .grid_to_world(Pos2::new(*x as f32, *y as f32));
+                            .grid_to_pos(Pos2::new(*x as f32, *y as f32));
                         (pos, idx)
                     })
                     .collect::<Vec<_>>()
@@ -777,14 +775,14 @@ impl SearchRobot {
         self.get_debug_soup_mut().add(
             "Planner",
             "Frontier Regions Index",
-            DebugType::NumberPoints(frontier_regions_index),
+            DebugItem::NumberPoints(frontier_regions_index),
         );
 
         if let Some(best) = best {
             let pos = Pos2::new(best.0 as f32, best.1 as f32);
-            let pos = self.frontiers_grid.grid_to_world(pos);
+            let pos = self.frontiers_grid.grid_to_pos(pos);
             self.get_debug_soup_mut()
-                .add("Planner", "Frontier Target", DebugType::Point(pos));
+                .add("Planner", "Frontier Target", DebugItem::Point(pos));
         }
     }
 }
@@ -803,13 +801,13 @@ fn search(
     update(robot, time);
 
     let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
-    robot.debug("", "Forward Bias", DebugType::Vector(forward_bias));
+    robot.debug("", "Forward Bias", DebugItem::Vector(forward_bias));
 
     let mut target = Vec2::ZERO;
     target += forward_bias;
     let target = contributions(robot, &target);
 
-    robot.debug("", "Target", DebugType::Vector(target.unwrap_or_default()));
+    robot.debug("", "Target", DebugItem::Vector(target.unwrap_or_default()));
 
     robot.postbox.clean();
 
@@ -922,7 +920,7 @@ mod behaviors {
                 // robot.get_debug_soup_mut().add(
                 //     "Planner",
                 //     "Coverage",
-                //     DebugType::Number(crate::get_coverage(&robot.search_grid, &robot.map)),
+                //     DebugItem::Number(crate::get_coverage(&robot.search_grid, &robot.map)),
                 // );
                 target
             },

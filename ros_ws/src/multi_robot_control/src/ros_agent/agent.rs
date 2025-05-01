@@ -94,7 +94,7 @@ impl RosAgent {
 
         // Set world size
         let world = util::ros2_map_to_botbrain_map(&map.map);
-        robot.set_world(world);
+        robot.set_map(world);
 
         // Publish to map_overlay
         let map_overlay_pub = node

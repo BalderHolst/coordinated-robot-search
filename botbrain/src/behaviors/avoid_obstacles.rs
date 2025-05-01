@@ -31,7 +31,7 @@ impl Robot for AvoidObstaclesRobot {
         self.id = id;
     }
 
-    fn set_world(&mut self, _world: Map) {}
+    fn set_map(&mut self, _map: Map) {}
 
     fn get_postbox(&self) -> &Postbox {
         &self.postbox

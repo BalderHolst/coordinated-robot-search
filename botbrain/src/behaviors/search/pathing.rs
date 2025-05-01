@@ -99,11 +99,11 @@ pub fn find_a_star_path(
 
     // Do all A* stuff in the grid space to avoid working with floats
     let robot_pos = {
-        let tmp = costmap_grid.world_to_grid(robot_pos);
+        let tmp = costmap_grid.pos_to_grid(robot_pos);
         (tmp.x as usize, tmp.y as usize)
     };
     let goal = {
-        let tmp = costmap_grid.world_to_grid(goal);
+        let tmp = costmap_grid.pos_to_grid(goal);
         (tmp.x as usize, tmp.y as usize)
     };
 
@@ -149,7 +149,7 @@ pub fn find_a_star_path(
 
             let new_pos_world = {
                 let temp = Pos2::new(new_pos.0 as f32, new_pos.1 as f32);
-                costmap_grid.grid_to_world(temp)
+                costmap_grid.grid_to_pos(temp)
             };
             // A little clearance for the robot to move
             if !costmap::validate_pos(new_pos_world, clearance, costmap_grid) {
@@ -174,7 +174,7 @@ pub fn find_a_star_path(
     final_path
         .and_then(|path| {
             path.into_iter()
-                .map(|(x, y)| Some(costmap_grid.grid_to_world(Pos2::new(x as f32, y as f32))))
+                .map(|(x, y)| Some(costmap_grid.grid_to_pos(Pos2::new(x as f32, y as f32))))
                 .collect()
         })
         .map(|path| smooth_path(path, costmap_grid))

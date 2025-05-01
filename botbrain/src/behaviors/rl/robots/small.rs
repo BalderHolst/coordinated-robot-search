@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::behaviors::rl::network;
-use crate::{behaviors::BehaviorOutput, debug_soup::DebugType, Robot, RobotRef};
+use crate::{behaviors::BehaviorOutput, debug_soup::DebugItem, Robot, RobotRef};
 
 use crate::behaviors::rl::{
     action::{self, Action},
@@ -41,7 +41,7 @@ impl<B: Backend, A: Action, N: network::Network<B, St, A>> RlRobot<B, St, A, N> 
         self.debug(
             "",
             "Interpolated Lidar",
-            DebugType::RobotRays(interpolated_lidar),
+            DebugItem::RobotRays(interpolated_lidar),
         );
     }
 }

@@ -1,3 +1,5 @@
+//! Simple 2D fixed size grid for storing generic cells
+
 use std::fmt::Debug;
 
 use emath::{normalized_angle, Pos2};
@@ -12,11 +14,7 @@ pub struct Grid<C: Clone + Default> {
 
 impl<C: Clone + Default> Default for Grid<C> {
     fn default() -> Self {
-        Self {
-            cells: vec![],
-            width: 0,
-            height: 0,
-        }
+        Self::empty()
     }
 }
 
@@ -27,6 +25,15 @@ impl<C: Clone + Default> Grid<C> {
             cells: vec![C::default(); width * height],
             width,
             height,
+        }
+    }
+
+    /// Create an empty grid of zero size
+    pub fn empty() -> Self {
+        Self {
+            cells: vec![],
+            width: 0,
+            height: 0,
         }
     }
 
@@ -45,6 +52,7 @@ impl<C: Clone + Default> Grid<C> {
         (self.width, self.height)
     }
 
+    /// Get a mutable reference to the cell at the given position. Returns `None` if the position is out of bounds.
     pub fn get_mut(&mut self, x: usize, y: usize) -> Option<&mut C> {
         if x >= self.width || y >= self.height {
             return None;
@@ -110,6 +118,7 @@ impl<C: Clone + Default> Grid<C> {
         });
     }
 
+    /// Set a cone of cells on the grid
     pub fn set_cone(&mut self, center: Pos2, radius: f32, angle: f32, fov: f32, cell: C) {
         self.iter_cone(center, radius, angle, fov)
             .for_each(|(x, y)| {
@@ -117,6 +126,7 @@ impl<C: Clone + Default> Grid<C> {
             });
     }
 
+    /// Iterate over coordinates within a cone
     pub fn iter_cone(
         &mut self,
         center: Pos2,

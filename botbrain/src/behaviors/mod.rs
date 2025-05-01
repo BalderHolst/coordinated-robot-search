@@ -18,10 +18,18 @@ use {
 
 use super::*;
 
+/// A function that runs a behavior on a robot.
+/// Takes a robot and a time and returns a control signal and a list of messages.
+pub type BehaviorFn = fn(&mut RobotRef, Time) -> BehaviorOutput;
+
+/// A function that creates a new robot.
+pub type CreateFn = fn() -> RobotRef;
+
+/// The current time since the creation of the robot
 pub type Time = Duration;
+
+/// The output of a [BehaviorFn].
 pub type BehaviorOutput = (Control, Vec<Message>);
-pub type BehaviorFn = fn(&mut Box<dyn Robot>, Time) -> BehaviorOutput;
-pub type CreateFn = fn() -> Box<dyn Robot>;
 
 #[cfg(feature = "rl")]
 type MyBackend = burn::backend::Wgpu;
@@ -30,13 +38,24 @@ type MyBackend = burn::backend::Wgpu;
 #[cfg_attr(feature = "cli", derive(clap::ValueEnum))]
 #[derive(Clone, Debug)]
 pub enum RobotKind {
+    /// Very dumb robot that uses no state
     Dumb,
+
+    /// Robot that only uses its lidar
     AvoidObstacles,
+
+    /// Robot capable of searching an environment for an object
     Search,
+
+    /// Reinforcement learning using only polar coordinates in its input state
     #[cfg(feature = "rl")]
     PolarRl,
+
+    /// A reinforcement learning robot using a small network
     #[cfg(feature = "rl")]
     SmallRl,
+
+    /// Reinforcement learning using only the minimal state, action and network to avoid obstacles
     #[cfg(feature = "rl")]
     MinimalRl,
 }
@@ -57,6 +76,27 @@ impl RobotKind {
         }
     }
 
+    /// Get the behavior function for the robot kind. Panics if the behavior is not found.
+    pub fn get_behavior_fn(&self, behavior_name: &str) -> BehaviorFn {
+        self.menu()
+            .iter()
+            .find(|(name, _)| *name == behavior_name)
+            .map(|(_, f)| *f)
+            .unwrap_or_else(|| {
+                panic!(
+                    "Behavior {} not found for robot kind {}. Valid behaviors: [{}]",
+                    behavior_name,
+                    self.get_name(),
+                    self.menu()
+                        .iter()
+                        .map(|(name, _)| *name)
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            })
+    }
+
+    /// Get the function used to create a new robot corresponding to the robot kind
     pub fn create_fn(&self) -> CreateFn {
         match &self {
             RobotKind::Dumb => || Box::new(dumb::DumbRobot::default()),
@@ -79,6 +119,7 @@ impl RobotKind {
         }
     }
 
+    /// Get the name of the robot kind
     pub fn get_name(&self) -> &'static str {
         match self {
             RobotKind::Dumb => "dumb",
@@ -111,6 +152,7 @@ pub struct Behavior {
 }
 
 impl Behavior {
+    /// Create a new behavior from a robot kind and a behavior function.
     pub fn new(
         robot_kind: RobotKind,
         behavior_name: &'static str,
@@ -124,6 +166,7 @@ impl Behavior {
         }
     }
 
+    #[allow(missing_docs)]
     pub fn from_raw(
         robot_name: &'static str,
         behavior_name: &'static str,
@@ -138,6 +181,7 @@ impl Behavior {
         }
     }
 
+    /// Rename a behavior into a new one.
     pub fn with_name(self, name: &'static str) -> Self {
         Self {
             behavior_name: name,
@@ -169,6 +213,7 @@ impl Behavior {
 
 #[cfg(feature = "cli")]
 impl Behavior {
+    /// Get the list of all possible behavior names.
     pub fn behavior_names() -> Vec<String> {
         RobotKind::value_variants()
             .iter()
@@ -181,6 +226,7 @@ impl Behavior {
             .collect::<Vec<_>>()
     }
 
+    /// Parse a string into a behavior on the format "{robot}:{behavior}".
     pub fn parse(s: &str) -> Result<Self, String> {
         let Some((robot_kind_name, behavior_name)) = s.split_once(':') else {
             let robot_kind = RobotKind::from_str(s, true).map_err(|_| {
