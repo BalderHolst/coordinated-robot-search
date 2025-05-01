@@ -20,7 +20,7 @@ use crate::{
 
 use super::camera::Camera;
 use botbrain::{
-    debug::{DebugSoup, DebugType},
+    debug_soup::{DebugSoup, DebugType},
     RobotPose,
 };
 use eframe::{

@@ -13,13 +13,17 @@ use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 use botbrain::{
     self,
     behaviors::{Behavior, Time},
-    debug::{DebugSoup, DebugType},
+    debug_soup::{DebugSoup, DebugType},
+    messaging::{Message, MessageKind},
     scaled_grid::ScaledGrid,
     Control, Pos2, RobotId, RobotPose,
 };
 
 #[cfg(not(feature = "single-thread"))]
 use robot_pool::RobotThreadPool;
+
+#[cfg(feature = "single-thread")]
+use botbrain::Robot;
 
 use crate::{
     cli::ScenarioArgs,
@@ -295,15 +299,15 @@ pub struct Simulator {
     pub behavior: Behavior,
     world: World,
     dt: f32,
-    msg_send_rx: mpsc::Receiver<botbrain::Message>,
-    msg_send_tx: mpsc::Sender<botbrain::Message>,
-    pending_msgs: Vec<botbrain::Message>,
+    msg_send_rx: mpsc::Receiver<Message>,
+    msg_send_tx: mpsc::Sender<Message>,
+    pending_msgs: Vec<Message>,
 
     #[cfg(not(feature = "single-thread"))]
     pool: RobotThreadPool,
 
     #[cfg(feature = "single-thread")]
-    robots: Vec<Box<dyn botbrain::Robot>>,
+    robots: Vec<Box<dyn Robot>>,
 }
 
 impl Simulator {
@@ -432,23 +436,20 @@ impl Simulator {
         }
 
         // Collect all pending messages
-        self.pending_msgs = self
-            .msg_send_rx
-            .try_iter()
-            .collect::<Vec<botbrain::Message>>();
+        self.pending_msgs = self.msg_send_rx.try_iter().collect::<Vec<Message>>();
 
         let diagnostics = &mut self.state.diagnostics;
 
         // Update coverage grid
         for msg in &self.pending_msgs {
             match &msg.kind {
-                botbrain::MessageKind::ShapeDiff { shape, diff: _ } => {
+                MessageKind::ShapeDiff { shape, diff: _ } => {
                     diagnostics.coverage_grid.set_shape(shape, true)
                 }
-                botbrain::MessageKind::CamDiff { cone, diff: _ } => {
+                MessageKind::CamDiff { cone, diff: _ } => {
                     diagnostics.coverage_grid.set_cone(cone, true)
                 }
-                botbrain::MessageKind::Debug(_) => {}
+                MessageKind::Debug(_) => {}
             }
         }
 
@@ -480,16 +481,13 @@ struct StepArgs {
     world: World,
     time: Time,
     dt: f32,
-    msg_send_tx: mpsc::Sender<botbrain::Message>,
-    pending_msgs: Vec<botbrain::Message>,
+    msg_send_tx: mpsc::Sender<Message>,
+    pending_msgs: Vec<Message>,
 }
 #[cfg(feature = "single-thread")]
 #[allow(unused)]
 impl Simulator {
-    pub fn with_robots(
-        sim_args: SimArgs,
-        robots: Vec<(RobotPose, Box<dyn botbrain::Robot>)>,
-    ) -> Self {
+    pub fn with_robots(sim_args: SimArgs, robots: Vec<(RobotPose, Box<dyn Robot>)>) -> Self {
         let mut sim = Self::new(sim_args);
         for (pose, mut robot) in robots {
             sim.state.robot_states.push(RobotState {
@@ -506,11 +504,11 @@ impl Simulator {
         sim
     }
 
-    pub fn robots(&self) -> &[Box<dyn botbrain::Robot>] {
+    pub fn robots(&self) -> &[Box<dyn Robot>] {
         &self.robots
     }
 
-    pub fn robots_mut(&mut self) -> &mut [Box<dyn botbrain::Robot>] {
+    pub fn robots_mut(&mut self) -> &mut [Box<dyn Robot>] {
         &mut self.robots
     }
 }

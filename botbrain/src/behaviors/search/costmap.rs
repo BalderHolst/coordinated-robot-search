@@ -2,9 +2,10 @@ use emath::{Pos2, Vec2};
 
 use crate::{
     behaviors::ScaledGrid,
+    lidar::{LidarData, LidarPoint},
     params::LIDAR_RANGE,
     shapes::{Circle, Line},
-    LidarData, LidarPoint, Map, MapCell,
+    Map, MapCell,
 };
 
 pub(super) const COSTMAP_GRID_SCALE: f32 = 0.2;

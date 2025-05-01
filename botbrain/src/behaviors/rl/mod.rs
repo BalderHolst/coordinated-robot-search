@@ -12,8 +12,8 @@ use network::{Model, Network, TrainedNetwork};
 use state::State;
 
 use crate::{
-    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Map, Postbox, Robot,
-    RobotId, RobotPose, Vec2,
+    debug_soup::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Map, Postbox,
+    Robot, RobotId, RobotPose, Vec2,
 };
 
 use super::{common, params, DebugType};

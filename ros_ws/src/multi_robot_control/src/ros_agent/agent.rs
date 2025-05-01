@@ -12,7 +12,7 @@ use crate::{
     util,
     vision::{camera_info::CameraInfo, object_detection::ObjectDetection},
 };
-use botbrain::{CamCone, CamData, Pos2, Vec2, debug::DebugType, shapes::Cone};
+use botbrain::{CamCone, CamData, Pos2, Vec2, debug_soup::DebugType, shapes::Cone};
 use futures::StreamExt;
 use opencv::highgui;
 use r2r::{

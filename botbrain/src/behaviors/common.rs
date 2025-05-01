@@ -3,10 +3,13 @@ use std::collections::HashMap;
 use emath::{Pos2, Vec2};
 
 use crate::{
+    camera::CamData,
+    lidar::{LidarData, LidarPoint},
+    messaging::{Message, MessageKind, Postbox},
     params,
     scaled_grid::ScaledGrid,
     shapes::{Circle, Cone, Line, Shape},
-    CamData, LidarData, LidarPoint, Map, MapCell, Message, MessageKind, Postbox, RobotId,
+    Map, MapCell, RobotId,
 };
 
 type SearchGrid = ScaledGrid<f32>;

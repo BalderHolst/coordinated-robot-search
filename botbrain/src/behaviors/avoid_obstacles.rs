@@ -1,11 +1,16 @@
 use std::{f32::consts::PI, time::Duration};
 
-use crate::{cast_robot, LidarPoint, MessageKind};
-
-use super::{
-    BehaviorFn, BehaviorOutput, CamData, Control, DebugSoup, LidarData, Map, Postbox, Robot,
-    RobotId, RobotPose,
+use crate::{
+    behaviors::BehaviorOutput,
+    camera::CamData,
+    cast_robot,
+    debug_soup::DebugSoup,
+    lidar::{LidarData, LidarPoint},
+    messaging::{MessageKind, Postbox},
+    Control, Map, Robot, RobotId, RobotPose,
 };
+
+use super::BehaviorFn;
 
 pub const MENU: &[(&str, BehaviorFn)] = &[("avoid-closest", avoid_closest)];
 

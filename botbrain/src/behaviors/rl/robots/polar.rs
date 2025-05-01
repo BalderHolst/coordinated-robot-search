@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use crate::behaviors::rl::network;
-use crate::{behaviors::BehaviorOutput, debug::DebugType, Robot, RobotRef};
+use crate::{behaviors::BehaviorOutput, debug_soup::DebugType, Robot, RobotRef};
 
 use crate::behaviors::rl::{
     action::{self, Action},

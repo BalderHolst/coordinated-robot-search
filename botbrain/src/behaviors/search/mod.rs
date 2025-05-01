@@ -13,7 +13,7 @@ use emath::{Pos2, Vec2};
 use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
-    cast_robot, common, debug,
+    cast_robot, common, debug_soup,
     params::{self},
     scaled_grid::ScaledGrid,
     shapes::{Circle, Line},
@@ -434,9 +434,9 @@ impl SearchRobot {
         let soup = &mut self.debug_soup;
 
         let lidar = &self.lidar;
-        debug::common_routines::show_lidar(soup, lidar);
+        debug_soup::common_routines::show_lidar(soup, lidar);
 
-        debug::common_routines::show_cam_range(soup, lidar);
+        debug_soup::common_routines::show_cam_range(soup, lidar);
 
         soup.add(
             "",

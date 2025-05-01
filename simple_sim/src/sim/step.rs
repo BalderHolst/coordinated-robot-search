@@ -2,8 +2,10 @@ use std::f32::consts::PI;
 
 use botbrain::{
     behaviors::BehaviorFn,
+    camera::{CamData, CamPoint},
+    lidar::{LidarData, LidarPoint},
     params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE},
-    CamData, CamPoint, Pos2, RobotPose, Vec2,
+    Pos2, Robot, RobotPose, Vec2,
 };
 use eframe::emath::normalized_angle;
 
@@ -15,7 +17,7 @@ use super::{
 
 pub fn step_agent(
     state: &mut RobotState,
-    robot: &mut Box<dyn botbrain::Robot>,
+    robot: &mut Box<dyn Robot>,
     args: &StepArgs,
     behavior_fn: BehaviorFn,
 ) {
@@ -86,11 +88,11 @@ pub fn step_agent(
                     LIDAR_RANGE,
                     &[Cell::SearchItem],
                 );
-                botbrain::LidarPoint { angle, distance }
+                LidarPoint { angle, distance }
             })
             .collect();
 
-        robot.input_lidar(botbrain::LidarData::new(points));
+        robot.input_lidar(LidarData::new(points));
     }
 
     // Update robot camera
@@ -111,7 +113,7 @@ pub fn step_agent(
                 match cell {
                     Some(Cell::SearchItem) => {
                         let probability = (CAM_RANGE - distance) / CAM_RANGE;
-                        Some((n, botbrain::CamPoint { angle, probability }))
+                        Some((n, CamPoint { angle, probability }))
                     }
                     _ => None,
                 }

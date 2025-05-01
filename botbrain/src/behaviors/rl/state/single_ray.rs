@@ -2,7 +2,8 @@ use burn::prelude::*;
 
 use crate::{
     behaviors::rl::{action::Action, network::Network, RlRobot},
-    params, LidarPoint,
+    lidar::LidarPoint,
+    params,
 };
 
 use super::State;
