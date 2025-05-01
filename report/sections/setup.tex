@@ -26,12 +26,12 @@ For this project a differential drive robot with camera, lidar, odometry and com
     \begin{center}
         \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
     \end{center}
-    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote Ros 2 communication through topics. Square boxes are Rust crates while green circles are Ros 2 nodes. Notice that the core library \texttt{botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
+    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are Ros 2 nodes. Notice that the core library \texttt{botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
 \end{figure}
 
 
 The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
-simulator, and a ROS2 environment.
+simulator, and a ROS 2 environment.
 
 \subsection{Robot Behavior}
 The robot behaviors are implemented in the botbrain rust crate. This crate defines the Robot interface
@@ -72,7 +72,7 @@ Separating the robot state from its behavior allows multiple behaviors for the s
 
 \subsection{Using Rust}
 % TODO: Describe how we integrated with colcon
-The {\color{red} functionality} of this project is entirely written in rust. Although this choice was mostly due to preference, it does have a few benefits, but has also been a {\color{red} disadvantage} at times. Ros 2 {\color{red} does not officially support Rust} and it can therefore be a bit tricky to integrate with Ros 2 and \texttt{colcon}. To use Ros 2 from Rust, a library by the name \texttt{r2r} was used {\color{red}[CITE]}, which provides bindings for the Ros 2 api and generates code for Ros 2 message types. It works great although compile times are a bit long.
+The {\color{red} functionality} of this project is entirely written in rust. Although this choice was mostly due to preference, it does have a few benefits, but has also been a {\color{red} disadvantage} at times. ROS 2 {\color{red} does not officially support Rust} and it can therefore be a bit tricky to integrate with ROS2 and \texttt{Colcon}. To use ROS2 from Rust, a library by the name \texttt{r2r} was used {\color{red}[CITE]}, which provides bindings for the ROS2 API and generates code for ROS2 message types. It works great although compile times are a bit long.
 
 % TODO: Take a look at this again...
 An advantage of writing everything in Rust is the robustness and correctness of the code. The rust compiler ensures that undefined behavior is impossible and enforces a very strict type system where object lifetimes are verified at compile time. We can therefore, with a say that the code will not do anything unexpected.
@@ -94,7 +94,7 @@ As opposed to a simulator to real world comparison, this project uses a simulato
     \begin{subfigure}[b]{0.45\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/gazebo_sim.png}
-        \caption{Gazebo + Ros2 Simulator}
+        \caption{Gazebo + ROS 2 Simulator}
     \end{subfigure}
     \caption{Screenshots the simulators. {\color{red} add description what is on the screenshots}}
     \label{fig:simulators}

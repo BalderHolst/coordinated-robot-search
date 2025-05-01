@@ -68,7 +68,7 @@ struct Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Max-heap ordering
+        // Min-heap order
         other
             .priority
             .cmp(&self.priority)

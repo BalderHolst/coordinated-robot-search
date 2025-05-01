@@ -26,7 +26,7 @@ Each robot has a "search grid" which is continuously updated by observations by 
 
 \begin{figure}[h]
     \begin{center}
-        % TODO: Actully create figure
+        % TODO: Actually create figure
         \includegraphics[width=0.45\textwidth]{./figures/search-gradient.png}
     \end{center}
     \caption{How the search gradient is calculated}
@@ -101,7 +101,7 @@ The robot should stay withing communication range of the other robots, to assure
     \caption{Example of a proximity grid}\label{fig:proximity-grid}
 \end{figure}
 
-The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is halv colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying withing the main network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the calculating. In the situation that the robot is the only link between the main network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
+The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying withing the main network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the calculating. In the situation that the robot is the only link between the main network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
 
 \begin{figure}[h]
     \begin{center}
@@ -133,41 +133,55 @@ The grid is calculated by the largest network of connected robots and "coloring"
 % TODO: Add a nice figure
 
 \subsection{Global Planner}
-In some situations, the robot may not be able explore new area because of the limited area used for calculating the gradient of the serach grid.
+In some situations, the robot may not be able explore new area because of the limited area used for calculating the gradient of the search grid.
 In the case the search gradient is too small we can do a more expensive operation to guide the robot to a more rewarding area.
-In other situations, where computational resources are not limited, the robot can solely rely on the pathing algoritms for control.
+In other situations, where computational resources are not limited, the robot can solely rely on the pathing algorithms for control.
 
-The general setup of the planner is explained in the follow subsections:
+The general setup of the planner is as follows:
+\begin{enumerate}
+  \item Make costmap, see \cref{sec:costmap}.
+  \item Find frontiers and regions, see \cref{sec:frontier_exploration}.
+  \item Evaluate frontiers and their regions to find a goal, see \cref{sec:frontier_exploration}.
+  \item Find a path using straight line or A-star, see \cref{sec:path_planning}.
+  \item Follow path until goal is reached or until path is invalidated, see \cref{sec:path_following}.
+\end{enumerate}
+
 \subsubsection{Costmap}\label{sec:costmap}
 First a way of representing the area already search and obstacles in the world is needed. 
 The costmap has a resolution of $0.2m$ and is represented as a grid of cells.
 \begin{itemize}
   \item Data from the search grid is transferred to the costmap. Covered cells is set to searched and other cells are set to unknown.
   \item Obstacles in in world map is set to obstacles in the costmap.
-  \item Last lidar data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
+  \item Last LIDAR data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
 \end{itemize}
 
 % TODO: Show cost map and example of a planned route
 \subsubsection{Frontier Exploration}\label{sec:frontier_exploration}
-From the costmap, a way to find a suitable goal is required. This project uses frontier exploration to find all the frontiers. A frontier is a cell that seperates seached and unknown areas. The frontiers are found via a breadth first search fron the postion of the robot. This is done to avoid searching the whole costmap which leads to faster goal generation. When the frontiers is found, they are grouped into regions. 
+From the costmap, a way to find a suitable goal is required. This project uses frontier exploration to find all the frontiers. A frontier is a cell that separates searched and unknown areas. The frontiers are found via a breadth first search from the position of the robot. This is done to avoid searching the whole costmap which leads to faster goal generation. When the frontiers is found, they are grouped into regions. 
 Lastly the frontiers and their region are evaluated based on 3 parameters:
 \begin{enumerate}
   \item Frontier region size.
   \item Frontier distance to the robot.
   \item How much the robot should turn to face the frontier.
 \end{enumerate}
-The distance from the frontier to the nearest obstacles also has to be furter than a parameter specifying the clearence the robot should have to obstacles.
+The distance from the frontier to the nearest obstacles also has to be further than a parameter specifying the clearance the robot should have to obstacles.
 % TODO: Evaluate the used parameters.
-\subsubsection{A-star path planning}\label{sec:a_star}
-Once a goal has been generated, a path to that goal needs to be generated. First a stright line to the goal is made. If this path can be validated, meaning the clearance to obstacles is uphold, the robot will simply follow this path.
-I situations where this clearance can't be validated, the a-star algorithm is used.
-The a-star algorithm uses the distance
-The a-star algorithm is implemented as a max-heap, where the 
-% TODO: Explain A-star and straight line path generation
+
+\subsubsection{Path planning}\label{sec:path_planning}
+Once a goal has been generated, a path to that goal needs to be generated. First a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is uphold, the robot will simply follow this path.
+I situations where this clearance can't be validated, the A-star algorithm is used.
+The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far.
+The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells needs to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is uphold.
+
 \subsubsection{Path following}\label{sec:path_following}
-% TODO: How do we follow and validate the path?
-\subsubsection{Pathing errors}\label{sec:pathing_errors}
-Looser restriction on the clearence of the generated path.
-Use a combination of pathing vectors and lidar contribution to follow path byt not hit obstacles and other robots.
-% TODO: Explain pathing fails here or in A-star subsubsection.
-% TODO: Pathing outside the proxtimity grid.
+The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered as visited and therefore removed from the list.
+
+Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to not hit other robots and obstacles.
+If this validation fails, the target vector to the next position is still used but the contribution from the LIDAR is added. This allows the robot to follow the path while not hitting obstacles. 
+Still there is situations where new circumstances simply does not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail another goal will generated.
+
+Pathing errors:
+
+Looser restriction on the clearance of the generated path.
+Use a combination of pathing vectors and LIDAR contribution to follow path but not hit obstacles and other robots.
+% TODO: Pathing outside the proximity grid.
