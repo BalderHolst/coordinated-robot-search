@@ -12,7 +12,7 @@ use network::{Model, Network, TrainedNetwork};
 use state::State;
 
 use crate::{
-    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Postbox, Robot,
+    debug::DebugSoup, scaled_grid::ScaledGrid, CamData, Control, LidarData, Map, Postbox, Robot,
     RobotId, RobotPose, Vec2,
 };
 
@@ -25,52 +25,50 @@ const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 /// The frequency at which the robot reacts to the environment
 pub const REACT_HZ: f32 = 2.0;
 
-type MyBackend = burn::backend::Wgpu;
-
 #[derive(Clone)]
 pub struct RlRobot<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     /// The id of the robot
-    pub id: RobotId,
+    id: RobotId,
 
     /// The position of the robot
-    pub pos: Pos2,
+    pos: Pos2,
 
     /// The angle of the robot
-    pub angle: f32,
+    angle: f32,
 
     /// The data from the camera. Angles and probability of objects.
-    pub cam: CamData,
+    cam: CamData,
 
     /// The data from the lidar. Distance to objects.
     pub lidar: LidarData,
 
-    pub postbox: Postbox,
+    postbox: Postbox,
 
-    pub map: super::Map,
+    map: Map,
 
     /// Grid containing probabilities of objects in the environment.
-    pub search_grid: ScaledGrid<f32>,
+    search_grid: ScaledGrid<f32>,
 
-    pub search_gradient: Vec2,
+    search_gradient: Vec2,
 
     /// The time of the last search grid update
-    pub last_search_grid_update: Duration,
+    last_search_grid_update: Duration,
 
     /// Other robots and their positions
-    pub others: HashMap<RobotId, (Pos2, f32)>,
+    others: HashMap<RobotId, (Pos2, f32)>,
 
     /// Debug object and their names. Used for visualization.
-    pub debug_soup: DebugSoup,
+    debug_soup: DebugSoup,
 
     /// The neural network used to control the robot. It is protexted by a `RwLock` to allow multiple threads to read the model and
     /// for the model to be dynamically updated when training.
     pub model: network::BotModel<B, S, A, N>,
 
     /// Last time the robot reacted to the environment
-    pub last_control_update: Duration,
+    last_control_update: Duration,
 
     /// The current control signal
-    pub control: Control,
+    control: Control,
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, S, A, N> {

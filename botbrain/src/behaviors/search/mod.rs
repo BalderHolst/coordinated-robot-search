@@ -10,7 +10,7 @@ use std::{
 
 use emath::{Pos2, Vec2};
 
-use crate::{params::COMMUNICATION_RANGE, LidarData, MapCell};
+use crate::{params::COMMUNICATION_RANGE, LidarData};
 
 use super::{
     cast_robot, common, debug,
@@ -64,7 +64,7 @@ const ROBOT_SPACING: f32 = 2.0;
 const ROBOT_OBSTACLE_CLEARANCE: f32 = params::DIAMETER;
 
 #[derive(Clone, Debug, Default, PartialEq)]
-pub enum RobotMode {
+enum RobotMode {
     #[default]
     Exploring,
     Pathing,
@@ -72,73 +72,67 @@ pub enum RobotMode {
 }
 
 #[derive(Clone, Default)]
-pub struct SearchRobot {
+pub(crate) struct SearchRobot {
     /// The id of the robot
-    pub id: RobotId,
+    id: RobotId,
 
     /// The position of the robot
-    pub pos: Pos2,
-
-    /// The velocity of the robot
-    pub vel: f32,
+    pos: Pos2,
 
     /// The angle of the robot
-    pub angle: f32,
-
-    /// The angular velocity of the robot
-    pub avel: f32,
+    angle: f32,
 
     /// The data from the camera. Angles and probability of objects.
-    pub cam: CamData,
+    cam: CamData,
 
     /// The data from the lidar. Distance to objects.
-    pub lidar: LidarData,
+    lidar: LidarData,
 
     /// The map navigating in
-    pub map: Map,
+    map: Map,
 
     /// For sending/receiving messages
-    pub postbox: Postbox,
+    postbox: Postbox,
 
     /// Grid containing probabilities of objects in the environment.
-    pub search_grid: ScaledGrid<f32>,
+    search_grid: ScaledGrid<f32>,
 
     /// The time of the last search grid update
-    pub last_search_grid_update: Duration,
+    last_search_grid_update: Duration,
 
     /// Grid containing position preferences for the robot based on
     /// the positions of other robots
-    pub proximity_grid: ScaledGrid<f32>,
+    proximity_grid: ScaledGrid<f32>,
 
     /// The time of the last proximity grid update
-    pub last_proximity_grid_update: Duration,
+    last_proximity_grid_update: Duration,
 
     /// Grid containing the costmap for path planning
-    pub costmap_grid: ScaledGrid<f32>,
+    costmap_grid: ScaledGrid<f32>,
 
     /// The time of the last costmap grid update
-    pub last_costmap_grid_update: Duration,
+    last_costmap_grid_update: Duration,
 
     /// Frontiers
-    pub frontiers_grid: ScaledGrid<f32>,
+    frontiers_grid: ScaledGrid<f32>,
 
     /// The goal of the path planner
-    pub path_planner_goal: Option<Pos2>,
+    path_planner_goal: Option<Pos2>,
 
     /// The path planned by the robot
-    pub path_planner_path: Vec<Pos2>,
+    path_planner_path: Vec<Pos2>,
 
     /// The path planned by the robot
-    pub path_fails: u16,
+    path_fails: u16,
 
     /// Other robots and their positions
-    pub others: HashMap<RobotId, (Pos2, f32)>,
+    others: HashMap<RobotId, (Pos2, f32)>,
 
     /// Debug object and their names. Used for visualization.
     /// Set to `None` to disable debug visualization.
-    pub debug_soup: DebugSoup,
+    debug_soup: DebugSoup,
 
-    pub robot_mode: RobotMode,
+    robot_mode: RobotMode,
 }
 
 impl Robot for SearchRobot {
@@ -420,7 +414,7 @@ impl SearchRobot {
         lidar_contribution
     }
 
-    pub fn control_towards(&self, target: Option<Vec2>) -> Control {
+    fn control_towards(&self, target: Option<Vec2>) -> Control {
         if let Some(target) = target {
             let angle_error = normalize_angle(self.angle - target.angle());
             let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
@@ -821,19 +815,6 @@ fn search(
 
     let msgs = robot.postbox.empty();
     (robot.control_towards(target), msgs)
-}
-
-fn convert_to_search_map(world: &Map) -> ScaledGrid<f32> {
-    let mut map = ScaledGrid::<f32>::new(world.width(), world.height(), world.scale());
-    println!("Converting world to botbrain map");
-    for (x, y, cell) in world.grid().iter() {
-        let val = match cell {
-            MapCell::Free => 0.0,
-            MapCell::Obstacle => costmap::COSTMAP_OBSTACLE,
-        };
-        map.grid_mut().set(x, y, val);
-    }
-    map
 }
 
 mod behaviors {

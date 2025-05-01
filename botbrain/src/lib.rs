@@ -1,5 +1,3 @@
-#![allow(dead_code)] // TODO: remove
-
 use std::{any::Any, collections::HashSet};
 
 #[cfg(feature = "rl")]
@@ -450,35 +448,4 @@ fn cast_robot<T: Robot + 'static>(robot: &mut Box<dyn Robot>) -> &mut T {
         .any_mut()
         .downcast_mut()
         .expect("We should always be downcasting to the correct robot")
-}
-
-/// Returns the coverage in the search grid from 0.0-1.0
-/// The map should represent free space and obstacles.
-/// Only free space is considered in the coverage calculation.
-fn get_coverage(search_grid: &ScaledGrid<f32>, map: &Map) -> f32 {
-    let mut grid = search_grid.clone();
-    let obstable_value = -10000.0;
-    map.iter().for_each(|(x, y, cell)| {
-        if *cell == MapCell::Obstacle {
-            grid.set(Pos2 { x, y }, obstable_value); // Just fill with non-zoro value
-        }
-    });
-    let mut total_cells = 0;
-    let covered_cells = grid
-        .iter()
-        .map(|(_x, _y, cell)| {
-            if *cell != obstable_value {
-                total_cells += 1;
-                if *cell != 0.0 {
-                    1 // Count cell as covered
-                } else {
-                    0
-                }
-            } else {
-                0
-            }
-        })
-        .sum::<i32>();
-
-    covered_cells as f32 / total_cells as f32
 }

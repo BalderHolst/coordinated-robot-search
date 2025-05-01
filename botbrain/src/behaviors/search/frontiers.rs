@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use core::f32;
 use std::{
     cmp::Ordering,
@@ -16,8 +14,7 @@ use crate::{
 
 use super::{
     costmap::{self, COSTMAP_SEARCHED, COSTMAP_UNKNOWN},
-    pathing::{self, NEIGHBORS_4},
-    ROBOT_OBSTACLE_CLEARANCE,
+    pathing, ROBOT_OBSTACLE_CLEARANCE,
 };
 
 const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.2;
@@ -141,7 +138,7 @@ pub fn make_frontier_regions(
 }
 
 /// Find the closest pos in the best frontier region to go to
-fn find_frontiers_region_closest_pos(
+fn _find_frontiers_region_closest_pos(
     robot_pos: (usize, usize),
     frontier_region: &[(usize, usize)],
 ) -> (usize, usize) {
@@ -225,7 +222,7 @@ pub fn evaluate_frontier_regions(
         .collect();
 
     let best_frontier = frontiers.into_iter().max_by(
-        |&(dist_1, size_1, turn_1, pos_1), &(dist_2, size_2, turn_2, pos_2)| {
+        |&(dist_1, size_1, turn_1, _pos_1), &(dist_2, size_2, turn_2, _pos_2)| {
             let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (size_1 as f32 / biggest_frontier as f32)
                 + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - dist_1 / furthest_frontier)
                 + FRONTIER_REGION_TURN_WEIGHT * (1.0 - turn_1 / PI);
