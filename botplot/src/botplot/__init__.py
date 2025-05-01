@@ -402,6 +402,18 @@ def plot_spread(result: Result, title: str):
 
     save_figure(fig, file)
 
+def plot_performance(result: Result, title: str, max=None):
+    df = result.df()
+
+    fig, ax = plt.subplots()
+
+    ax.plot(df["time"], df["step-time"] * 1000, label="Average Step Time [ms]")
+
+    ax.set_ylim(0, max)
+
+    file = os.path.join(plot_dir(), f"{title}.png")
+
+    save_figure(fig, file)
 
 def plot_paths(result: Result, title: str, segments=1):
     df = result.df()

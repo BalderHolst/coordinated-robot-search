@@ -28,9 +28,9 @@
 
 - [x] Measure data transfer
 - [x] Plot data transfer
-- [ ] Measure "robot spread" as a parameter
-- [ ] Plot "robot spread"
-- [ ] Measure performance
+- [x] Measure "robot spread" as a parameter
+- [x] Plot "robot spread"
+- [x] Measure performance
 
 #### Reinforcement Learning
 

@@ -135,6 +135,8 @@ pub fn run_scenario_headless(
 
     let mut coverage_data = Vec::with_capacity(steps);
 
+    let mut step_time_data = Vec::with_capacity(steps);
+
     let mut prev_msgs = 0;
     let mut msgs_data = Vec::with_capacity(steps);
 
@@ -172,6 +174,8 @@ pub fn run_scenario_headless(
             robot_data[n].push_state(robot_state, &robot_state.control);
         }
 
+        step_time_data.push(sim.state.diagnostics.avg_step_time);
+
         if sim.state.time.as_secs_f32() >= scenario.duration {
             break;
         }
@@ -206,6 +210,9 @@ pub fn run_scenario_headless(
 
     big_schema.push(Field::new("msg-count", DataType::Float64, false));
     cols.push(Arc::new(Float64Array::from(msgs_data)));
+
+    big_schema.push(Field::new("step-time", DataType::Float32, false));
+    cols.push(Arc::new(Float32Array::from(step_time_data)));
 
     // Add robot data
     for robot in robot_data {
@@ -246,6 +253,7 @@ pub struct SimDiagnostics {
     // Total number of bytes sent
     pub msgs_sent: u64,
     pub bytes_sent: u128,
+    pub avg_step_time: f32,
     pub coverage_grid: ScaledGrid<bool>,
     world: World,
 }
@@ -315,6 +323,7 @@ impl Simulator {
                 world: world.clone(),
                 msgs_sent: 0,
                 bytes_sent: 0,
+                avg_step_time: 0.0,
             },
         };
 
@@ -394,7 +403,8 @@ impl Simulator {
         #[cfg(not(feature = "single-thread"))]
         {
             // Move the robot states to the robot pool
-            let agents = std::mem::replace(&mut self.state.robot_states, Vec::with_capacity(0));
+            let len = self.state.robot_states.len();
+            let agents = std::mem::replace(&mut self.state.robot_states, Vec::with_capacity(len));
 
             // Construct the input for the thread pool function
             let input = agents.into_iter().map(|a| (a.id, a)).collect::<Vec<_>>();
@@ -402,8 +412,16 @@ impl Simulator {
             // Process the agents and robots in parallel
             let outputs = self.pool.process(input, args);
 
-            // Move the agents and robots back to the simulator
-            self.state.robot_states = outputs.into_iter().map(|(_, s)| s).collect();
+            let mut avg_step_time = 0.0;
+            for (_id, diag, state) in outputs {
+                // Update the robot state
+                self.state.robot_states.push(state);
+
+                // Update the diagnostics
+                avg_step_time += diag.step_time;
+            }
+            self.state.diagnostics.avg_step_time =
+                avg_step_time / self.state.robot_states.len() as f32;
         }
 
         #[cfg(feature = "single-thread")]
@@ -495,4 +513,9 @@ impl Simulator {
     pub fn robots_mut(&mut self) -> &mut [Box<dyn botbrain::Robot>] {
         &mut self.robots
     }
+}
+
+#[derive(Clone, Default)]
+pub struct StepDiagnostic {
+    pub step_time: f32,
 }

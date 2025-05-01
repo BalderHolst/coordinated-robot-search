@@ -14,10 +14,10 @@ use botbrain::{
 
 use crate::world::{self, World};
 
-use super::{step::step_agent, RobotState, StepArgs};
+use super::{step::step_agent, RobotState, StepArgs, StepDiagnostic};
 
 type WorkerInput = (RobotId, RobotState, Arc<StepArgs>);
-type WorkerOutput = (RobotId, RobotState);
+type WorkerOutput = (RobotId, StepDiagnostic, RobotState);
 
 pub struct RobotThreadPool {
     threads: usize,
@@ -82,9 +82,11 @@ impl RobotThreadPool {
                                     }
                                 };
 
+                            let start = std::time::Instant::now();
                             step_agent(&mut state, robot, &args, ctx.behavior_fn);
+                            let step_time = start.elapsed().as_secs_f32();
 
-                            output_tx.send((id, state)).unwrap();
+                            output_tx.send((id, StepDiagnostic { step_time }, state)).unwrap();
                         }
                     })
                 };
@@ -121,7 +123,7 @@ impl RobotThreadPool {
         &self,
         inputs: Vec<(RobotId, RobotState)>,
         args: Arc<StepArgs>,
-    ) -> Vec<(RobotId, RobotState)> {
+    ) -> Vec<WorkerOutput> {
         let len = inputs.len();
 
         for (id, state) in inputs {
@@ -133,10 +135,13 @@ impl RobotThreadPool {
 
         let mut results = BTreeMap::new();
         for _ in 0..len {
-            let (id, state) = self.output_channel.recv().unwrap();
-            results.insert(id, state);
+            let (id, diag, state) = self.output_channel.recv().unwrap();
+            results.insert(id, (diag, state));
         }
-        results.into_iter().collect()
+        results
+            .into_iter()
+            .map(|(id, (diag, state))| (id, diag, state))
+            .collect()
     }
 }
 
