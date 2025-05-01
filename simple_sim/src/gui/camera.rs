@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use eframe::egui::{Key, Pos2, Rect, Response, Ui, Vec2};
 
 use crate::{bind_down, bind_pressed};
@@ -46,6 +44,7 @@ impl Camera {
         }
     }
 
+    #[allow(unused)]
     pub fn pos(&self) -> Pos2 {
         self.view.pos
     }
@@ -58,6 +57,7 @@ impl Camera {
         self.view = self.home.clone();
     }
 
+    #[allow(unused)]
     pub fn origin(&self) -> Pos2 {
         self.world_to_viewport(Pos2::ZERO)
     }

@@ -517,5 +517,6 @@ impl Simulator {
 
 #[derive(Clone, Default)]
 pub struct StepDiagnostic {
+    #[allow(unused)]
     pub step_time: f32,
 }
