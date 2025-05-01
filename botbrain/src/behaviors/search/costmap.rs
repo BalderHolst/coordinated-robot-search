@@ -85,6 +85,22 @@ pub fn make_costmap_grid(
         };
     });
 
+    map.iter().for_each(|(x, y, &cell)| {
+        // Negative if don't want to go there, positive if want to go there
+        // Non-zero cells are explored therefore we won't go there
+        if cell == MapCell::Obstacle {
+            costmap.set(Pos2 { x, y }, COSTMAP_OBSTACLE);
+        };
+    });
+
+    costmap.iter_mut().for_each(|(x, y, costmap_cell)| {
+        if let Some(&cell) = map.get(Pos2 { x, y }) {
+            if cell == MapCell::Obstacle {
+                *costmap_cell = COSTMAP_OBSTACLE
+            }
+        }
+    });
+
     // Using lidar to insert dynamic obstacles
     lidar
         .points()
@@ -101,22 +117,6 @@ pub fn make_costmap_grid(
                 // Negative if don't want to go there, positive if want to go there
                 .set_circle(circle.center, circle.radius, COSTMAP_DYNAMIC_OBSTACLE);
         });
-
-    map.iter().for_each(|(x, y, &cell)| {
-        // Negative if don't want to go there, positive if want to go there
-        // Non-zero cells are explored therefore we won't go there
-        if cell == MapCell::Obstacle {
-            costmap.set(Pos2 { x, y }, COSTMAP_OBSTACLE);
-        };
-    });
-
-    costmap.iter_mut().for_each(|(x, y, costmap_cell)| {
-        if let Some(&cell) = map.get(Pos2 { x, y }) {
-            if cell == MapCell::Obstacle {
-                *costmap_cell = COSTMAP_OBSTACLE
-            }
-        }
-    });
 
     costmap
 }
