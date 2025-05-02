@@ -8,6 +8,10 @@ use crate::{
 
 use super::State;
 
+/// Minimal state representation using only the shortest lidar ray
+///
+/// This is used as a proof of concept for the RL agent as it can
+/// learn to avoid obstacles.
 #[derive(Debug, Clone)]
 pub struct RayState(LidarPoint);
 

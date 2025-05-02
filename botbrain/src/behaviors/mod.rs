@@ -205,7 +205,7 @@ impl Behavior {
         (self.create_fn)()
     }
 
-    /// Get the name of the behavior and robot. Format: "<robot>:<behavior>".
+    /// Get the name of the behavior and robot. Format: "{robot}:{behavior}".
     pub fn name(&self) -> String {
         format!("{}:{}", self.robot_name, self.behavior_name)
     }

@@ -11,6 +11,10 @@ use crate::{
 
 use super::{utils::ArrayWriter, RlRobot, State};
 
+/// RL State representation using a mix of coordinate types
+///
+/// [`super::PolarState`] tries to use polar coordinates for everything
+/// to make it easier for the model to learn parameter relationships.
 #[derive(Debug, Clone)]
 pub struct SmallState {
     pos: Pos2,
@@ -41,7 +45,7 @@ impl SmallState {
         data
     }
 
-    pub fn lidar_data(&self) -> [f32; Self::LIDAR_RAYS] {
+    fn lidar_data(&self) -> [f32; Self::LIDAR_RAYS] {
         let mut data = [0.0; Self::LIDAR_RAYS];
         for (i, (_, d)) in self.lidar_rays().iter().enumerate() {
             data[i] = *d;
@@ -49,15 +53,15 @@ impl SmallState {
         data
     }
 
-    pub fn pose_data(&self) -> [f32; Self::POSE_SIZE] {
+    fn pose_data(&self) -> [f32; Self::POSE_SIZE] {
         [self.pos.x, self.pos.y, self.angle]
     }
 
-    pub fn search_gradient_data(&self) -> [f32; Self::SEARCH_GRADIENT_SIZE] {
+    fn search_gradient_data(&self) -> [f32; Self::SEARCH_GRADIENT_SIZE] {
         [self.search_gradient.x, self.search_gradient.y]
     }
 
-    pub fn group_data(&self) -> [f32; Self::GROUP_SIZE] {
+    fn group_data(&self) -> [f32; Self::GROUP_SIZE] {
         [
             self.group_center.x,
             self.group_center.y,

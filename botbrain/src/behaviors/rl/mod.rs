@@ -1,3 +1,13 @@
+//! Implementation of Reinforcement Learning (RL) robots
+//!
+//! The [`RlRobot`] struct is highly generic. Which makes it
+//! possible to compose and reuse the state, actions and network types.
+//!
+//! States, actions and networks are defined in their own submodules.
+//!
+//! Robots are defined in the [`robots`] module, and are a specialization
+//! of the [`RlRobot`] struct.
+
 /// Implementation of a robot using reinforcement learning robots.
 pub mod action;
 pub mod network;
@@ -26,6 +36,7 @@ const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
 /// The frequency at which the robot reacts to the environment
 pub const REACT_HZ: f32 = 2.0;
 
+/// The generic RL robot struct
 #[derive(Clone)]
 pub struct RlRobot<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     /// The id of the robot
@@ -153,6 +164,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Default for RlRobot<B
 }
 
 impl<B: Backend, S: State, A: Action, N: TrainedNetwork<B, S, A>> RlRobot<B, S, A, N> {
+    /// Creates a new RL robot with a trained model.
     pub fn new_trained() -> Self {
         Self {
             model: network::BotModel::new_trained_model(&Default::default()),
@@ -162,8 +174,17 @@ impl<B: Backend, S: State, A: Action, N: TrainedNetwork<B, S, A>> RlRobot<B, S, 
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
+    /// Creates a new RL robot with a new random model.
     pub fn new_network(device: &B::Device) -> N {
         N::init(device)
+    }
+
+    /// Creates a new controlled RL robot
+    pub fn new_controlled() -> Self {
+        Self {
+            model: network::BotModel::new_controlled(A::default()),
+            ..Default::default()
+        }
     }
 
     /// Get the state used as input to the neural network
@@ -176,13 +197,6 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
         let input = self.state().to_tensor(&Default::default());
         let action = self.model.action(input);
         self.control = action.control();
-    }
-
-    pub fn new_controlled() -> Self {
-        Self {
-            model: network::BotModel::new_controlled(A::default()),
-            ..Default::default()
-        }
     }
 
     fn update_search_grid(&mut self, time: Duration) {
@@ -206,7 +220,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> RlRobot<B, S, A, N> {
         );
     }
 
-    pub fn update_search_gradient(&mut self) {
+    fn update_search_gradient(&mut self) {
         let (g, _) = common::gradient(
             self.pos,
             self.angle,

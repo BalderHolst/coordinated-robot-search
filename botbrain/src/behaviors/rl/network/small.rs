@@ -1,3 +1,5 @@
+//! Implementation of [`SmallNetwork`].
+
 use burn::{
     nn::{Linear, LinearConfig},
     prelude::*,
@@ -8,6 +10,7 @@ use crate::behaviors::rl::{action::Action, state::State};
 
 use super::{soft_update_linear, AutodiffNetwork, Network};
 
+/// A small neural network with one hidden layer.
 #[derive(Debug, Module)]
 pub struct SmallNetwork<B: Backend> {
     linear1: Linear<B>,

@@ -11,6 +11,7 @@ use crate::{
 
 use super::{utils::ArrayWriter, RlRobot, State};
 
+/// RL State representation using polar coordinates
 #[derive(Debug, Clone)]
 pub struct PolarState {
     pos: Pos2,
@@ -42,7 +43,7 @@ impl PolarState {
         data
     }
 
-    pub fn lidar_data(&self) -> [f32; Self::LIDAR_RAYS + Self::SHORTEST_RAY_SIZE] {
+    fn lidar_data(&self) -> [f32; Self::LIDAR_RAYS + Self::SHORTEST_RAY_SIZE] {
         let mut data = [0.0; Self::LIDAR_RAYS + 2];
         for (i, (_, d)) in self.lidar_rays().iter().enumerate() {
             data[i] = *d;
@@ -55,7 +56,7 @@ impl PolarState {
         data
     }
 
-    pub fn pose_data(&self) -> [f32; Self::POSE_SIZE] {
+    fn pose_data(&self) -> [f32; Self::POSE_SIZE] {
         let towards_origin = -self.pos.to_vec2();
         [
             towards_origin.angle() - self.angle,
@@ -64,13 +65,13 @@ impl PolarState {
         ]
     }
 
-    pub fn search_gradient_data(&self) -> [f32; Self::SEARCH_GRADIENT_SIZE] {
+    fn search_gradient_data(&self) -> [f32; Self::SEARCH_GRADIENT_SIZE] {
         let angle = self.search_gradient.angle() - self.angle;
         let length = self.search_gradient.length();
         [angle, length]
     }
 
-    pub fn group_data(&self) -> [f32; Self::GROUP_SIZE] {
+    fn group_data(&self) -> [f32; Self::GROUP_SIZE] {
         let group_center_angle = self.group_center.angle() - self.angle;
         let group_center_length = self.group_center.length();
         let group_spread_angle = self.group_spread.angle() - self.angle;

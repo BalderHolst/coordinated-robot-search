@@ -1,3 +1,5 @@
+//! Implementation of [`TinyNet`].
+
 use burn::{
     prelude::*,
     tensor::{activation, backend::AutodiffBackend},
@@ -8,6 +10,7 @@ use crate::behaviors::rl::{action::Action, state::State};
 
 use super::{soft_update_linear, AutodiffNetwork, Network};
 
+/// A tiny neural network with one hidden layer.
 #[derive(Debug, Module)]
 pub struct TinyNet<B: Backend> {
     linear1: Linear<B>,

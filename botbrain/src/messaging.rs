@@ -1,4 +1,4 @@
-//! Internal messaging system for [botbrain] robots.
+//! Internal messaging system for `botbrain` robots.
 
 use std::collections::HashSet;
 

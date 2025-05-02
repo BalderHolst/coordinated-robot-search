@@ -1,3 +1,5 @@
+//! State spaces for the RL agent
+
 mod polar;
 mod single_ray;
 mod small;
@@ -6,11 +8,17 @@ use burn::prelude::*;
 
 use super::{action::Action, network::Network, RlRobot};
 
+/// The state space for the RL agent
 pub trait State: Clone + Send + 'static {
+    /// The number of dimensions in the state space
     const SIZE: usize;
+
+    /// Construct an RL state from a robot
     fn from_robot<B: Backend, A: Action, N: Network<B, Self, A>>(
         robot: &RlRobot<B, Self, A, N>,
     ) -> Self;
+
+    /// Convert the state to a tensor
     fn to_tensor<B: Backend>(&self, device: &B::Device) -> Tensor<B, 1>;
 }
 
@@ -19,7 +27,7 @@ pub use polar::PolarState;
 pub use single_ray::RayState;
 pub use small::SmallState;
 
-pub mod utils {
+mod utils {
     pub struct ArrayWriter<'a> {
         data: &'a mut [f32],
         cursor: usize,

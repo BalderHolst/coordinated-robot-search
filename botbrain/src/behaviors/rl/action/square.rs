@@ -2,6 +2,9 @@ use crate::{params, Control};
 
 use super::Action;
 
+/// Action space containing a set amount of speeds and steers.
+///
+/// The action space is a square grid of size `SPEEDS` x `STEERS`.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct SquareAction<const SPEEDS: usize, const STEERS: usize>(usize);
 

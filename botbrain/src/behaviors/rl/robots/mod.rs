@@ -1,3 +1,5 @@
+//! Implements specifications of [`super::RlRobot`] with different state, action and network types.
+
 use std::time::Duration;
 
 use crate::{behaviors::BehaviorOutput, cast_robot, RobotRef};
@@ -10,6 +12,7 @@ use super::{action::Action, network::Network, state::State, RlRobot, REACT_HZ};
 
 use burn::prelude::*;
 
+/// The behavior function for a generic RL robot
 pub fn run_robot<B: Backend, S: State, A: Action, N: Network<B, S, A>>(
     robot: &mut RobotRef,
     time: Duration,

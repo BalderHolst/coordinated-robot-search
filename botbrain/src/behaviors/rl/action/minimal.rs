@@ -2,7 +2,9 @@ use crate::{params, Control};
 
 use super::Action;
 
+/// The minimal action space.
 #[derive(Clone, Default)]
+#[allow(missing_docs)]
 pub enum MinimalAction {
     #[default]
     Straight,
