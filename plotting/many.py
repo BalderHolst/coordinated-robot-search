@@ -22,6 +22,8 @@ BEHAVIORS = [
 
 def main():
 
+    results = {}
+
     for behavior in BEHAVIORS:
         for n in range(3, len(ROBOTS)+1):
             print(f"=====> Running {behavior} with {n} robots <=====")
@@ -34,9 +36,11 @@ def main():
                 robots=ROBOTS[:n],
             )
 
-            res = bp.run_sim(scenario)
 
-            bp.plot_paths(res, f"many-{n}/{behavior}", 10)
+            results[f"many-{n}/{behavior}"] = bp.run_sim(scenario)
+
+    for name, result in results.items():
+        bp.plot_paths(result, name, 10)
 
 if __name__ == "__main__":
     main()
