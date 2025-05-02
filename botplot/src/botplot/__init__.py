@@ -11,6 +11,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
+from botplot.crate import RustCrate
+
 from botplot.colors import COLORS
 
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
@@ -20,6 +22,36 @@ plt.rcParams.update({
     "font.family": "serif",     # Set font family to serif
     "font.serif": ["Computer Modern Roman"],  # Default LaTeX font
 })
+
+GIT_DIR = ".git"
+def root_dir() -> str:
+    """Find the root directory of the project by looking for the .git directory."""
+    # Check if the current directory is the root
+    if os.path.exists(os.path.join(os.path.curdir, GIT_DIR)):
+        return os.path.curdir
+
+    # Traverse up the directory tree until we find the .git directory
+    current_dir = os.path.abspath(os.path.curdir)
+    while True:
+        if os.path.exists(os.path.join(current_dir, GIT_DIR)):
+            return current_dir
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            raise FileNotFoundError(f"{GIT_DIR} directory not found in any parent directories")
+        current_dir = parent_dir
+
+def relpath(path: str) -> str:
+    """Return the relative path to the given path from the current directory."""
+    return os.path.relpath(path, os.path.curdir)
+
+def repo_path(*path: str) -> str:
+    return os.path.join(root_dir(), *path)
+
+def data_dir(): return repo_path("data")
+def plot_dir(): return repo_path("plots")
+
+simulator = RustCrate(repo_path("simple_sim"))
+trainer   = RustCrate(repo_path("trainer"))
 
 @dataclass
 class Robot:
@@ -83,16 +115,13 @@ class World:
             if os.path.exists(img_file):
                 print(f"Using cached world image: {relpath(img_file)}")
             else:
-                proc = subprocess.run([trainer_file(),
-                                "world-to-img",
-                                "--input", desc_file,
-                                "--output", os.path.join(data_dir(), img_file),
-                                "--theme", "grayscale",
-                                "--force",
-                                ])
-                if proc.returncode != 0:
-                    print(f"Error: {proc.stderr}")
-                    exit(1)
+                trainer.run([
+                    "world-to-img",
+                    "--input", desc_file,
+                    "--output", os.path.join(data_dir(), img_file),
+                    "--theme", "grayscale",
+                    "--force",
+                ])
 
             return plt.imread(img_file)
 
@@ -183,38 +212,51 @@ class Result:
     def world(self) -> World:
         return World(self.description_file, self.desc()["world"])
 
-def relpath(path: str) -> str:
-    """Returns the relative path to the given path."""
-    return os.path.relpath(path, os.path.curdir)
+
+def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, verbose=False) -> Result:
+
+    match scenario:
+        case Scenario():
+            name = scenario.title
+        case str():
+            name = scenario.replace("/", "-")
+        case _:
+            raise ValueError("Scenario must be either a string or a Scenario object.")
+
+    hash = hashlib.sha256((name + str(scenario)).encode()).hexdigest()
+
+    stem = f"{name}-{hash}"
+    data_file = os.path.join(data_dir(), f"{stem}.ipc")
+    desc_file = os.path.join(data_dir(), f"{stem}.json")
+
+    if use_cache and os.path.exists(data_file) and os.path.exists(desc_file):
+        print(f"[INFO] Using cached result:")
+        print(f"    {stem}.ipc")
+        print(f"    {stem}.json")
+        return Result(data_file, desc_file)
 
 
-def env(var: str) -> str:
-    path = os.environ.get(var)
-    if not path:
-        print(f"Error: ${var} environment variable is not set.")
+    os.makedirs(os.path.dirname(data_file), exist_ok=True)
+
+    flags = ["-o", data_file, "--description", desc_file]
+    if headless: flags.append("--headless")
+
+    if isinstance(scenario, Scenario):
+        s = scenario.to_ron()
+        print(s)
+        simulator.run(["scenario", "-"] + flags, input=s, text=True)
+    elif isinstance(scenario, str):
+        if not os.path.exists(scenario):
+            print(f"Error: Scenario file '{scenario}' does not exist.")
+            exit(1)
+        simulator.run(["scenario", scenario] + flags)
+    else:
+        print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
         exit(1)
-    return path
 
-def env_dir(var: str) -> str:
-    path = env(var)
-    if not os.path.exists(path):
-        os.makedirs(path)
-    if not os.path.isdir(path):
-        print(f"Error: ${var} environment variable is not set to a directory path.")
-        exit(1)
-    return path
+    print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
 
-def env_file(var: str) -> str:
-    path = env(var)
-    if not os.path.isfile(path):
-        print(f"Error: ${var} environment variable is not set to a file path.")
-        exit(1)
-    return path
-
-def data_dir() -> str: return env_dir("DATA_DIR")
-def plot_dir() -> str: return env_dir("PLOT_DIR")
-def sim_file() -> str: return env_file("SIMULATOR")
-def trainer_file() -> str: return env_file("TRAINER")
+    return Result(data_file, desc_file)
 
 def world_plot(fig, ax, result: Result, title: str, out_file: str):
 
@@ -250,53 +292,6 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
 
     fig.savefig(out_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
-
-
-def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, verbose=False) -> Result:
-
-    match scenario:
-        case Scenario():
-            name = scenario.title
-        case str():
-            name = scenario.replace("/", "-")
-        case _:
-            raise ValueError("Scenario must be either a string or a Scenario object.")
-
-    hash = hashlib.sha256((name + str(scenario)).encode()).hexdigest()
-
-    # Get simulator binary from $SIMULATOR environment variable
-    simulator = sim_file()
-
-    stem = f"{name}-{hash}"
-    data_file = os.path.join(data_dir(), f"{stem}.ipc")
-    desc_file = os.path.join(data_dir(), f"{stem}.json")
-
-    if use_cache and os.path.exists(data_file) and os.path.exists(desc_file):
-        print(f"[INFO] Using cached result:")
-        print(f"    {stem}.ipc")
-        print(f"    {stem}.json")
-        return Result(data_file, desc_file)
-
-
-    os.makedirs(os.path.dirname(data_file), exist_ok=True)
-
-    flags = ["-o", data_file, "--description", desc_file]
-
-    if headless: flags.append("--headless")
-
-    if isinstance(scenario, Scenario):
-        s = scenario.to_ron()
-        print(s)
-        subprocess.run([simulator, "scenario", "-"] + flags, input=s, text=True)
-    elif isinstance(scenario, str):
-        subprocess.run([simulator, "scenario", scenario] + flags)
-    else:
-        print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
-        exit(1)
-
-    print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
-
-    return Result(data_file, desc_file)
 
 def save_figure(fig, output_file: str):
     fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)

@@ -26,7 +26,8 @@ def main():
             robots=robots,
         )
 
-        results.append(bp.run_sim(f"test/{n}", scenario))
+        res = bp.run_sim(scenario, f"test/{n}")
+        results.append(res)
 
     bp.plot_coverage(results, "coverage.png")
 

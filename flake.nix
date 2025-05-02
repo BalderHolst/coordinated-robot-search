@@ -118,11 +118,6 @@
                 # Set up git hooks
                 git config core.hooksPath .hooks
 
-                export SIMULATOR="$(pwd)/simple_sim/target/release/simple_sim"
-                export TRAINER="$(pwd)/trainer/target/release/trainer"
-                export DATA_DIR="$(pwd)/data"
-                export PLOT_DIR="$(pwd)/plot"
-
                 export PYTHONPATH="$PYTHONPATH:$(pwd)/botplot/src/"
             '';
 
