@@ -6,7 +6,7 @@
 % TODO: Describe the sensors available
 % TODO: Describe that we assume the robot to have some sort of communication method
 
-For this project a differential drive robot with camera, lidar, odometry and communication capabilities is assumed. Lidar and odometry are used for localization using AMCL as discussed later ({\color{red} DISCUSS THIS}), the camera is used to look for the search object and a global communication channel is needed for the robots to share data. To get realistic parameters and to make use of ready made 3D models, URDF files and robot parameters, the Turtlebot 4 \cite{tb4} was chosen as the target platform. It is, however, important to note that the software developed in this project will run on any robot satisfying the sensor and communication requirements by changing the parameters to match in the source code. The Turtlebot has all the required hardware apart from a {\color{red} designated communication unit}. As this project focuses on simulation, the simulator will be responsible for passing messages between robots as they are sent. The software implementation is therefore {\color{red} communication method agnostic} as long as the messages the robots send are received by the other robots.
+For this project a differential drive robot with camera, lidar, odometry and communication capabilities is assumed. Lidar and odometry are used for localization using AMCL as discussed later ({\color{red} DISCUSS THIS} in \cref{sub:localization}), the camera is used to look for the search object and a global communication channel is needed for the robots to share data. To get realistic parameters and to make use of ready made 3D models, URDF files and robot parameters, the Turtlebot 4 \cite{tb4} was chosen as the target platform. It is, however, important to note that the software developed in this project will run on any robot satisfying the sensor and communication requirements by changing the parameters to match in the source code. The Turtlebot has all the required hardware apart from a {\color{red} designated communication unit}. As this project focuses on simulation, the simulator will be responsible for passing messages between robots as they are sent. The software implementation is therefore {\color{red} communication method agnostic} as long as the messages the robots send are received by the other robots.
 
 % TODO: Maybe mark the sensors on the robot
 \begin{figure}[h]
@@ -26,7 +26,7 @@ For this project a differential drive robot with camera, lidar, odometry and com
     \begin{center}
         \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
     \end{center}
-    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are Ros 2 nodes. Notice that the core library \texttt{botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
+    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are Ros 2 nodes. Notice that the core library \texttt{Botbrain} is not part of the Ros 2 dependent code. It can therefore be used by the simple simulator without Ros 2.}\label{fig:}
 \end{figure}
 
 
@@ -34,7 +34,7 @@ The software is divided into three main parts, the robot behavior implementation
 simulator, and a ROS 2 environment.
 
 \subsection{Robot Behavior}
-The robot behaviors are implemented in the botbrain rust crate. This crate defines the Robot interface
+The robot behaviors are implemented in the Botbrain rust crate. This crate defines the Robot interface
 which is the only way for outside crates to interact with a robot’s internal state (see \cref{fig:robot-interface}).
 
 \begin{figure}[H]

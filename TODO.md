@@ -16,11 +16,11 @@
 - [x] Tune pathing
 - [x] Use robot angle when pathing
 - [x] Repath if lidar sees obstacle
-- [ ] Use lidar again for search algorithms
+- [x] Use lidar again for search algorithms
 
 #### Tune Simulations
 
-- [ ] Match robot parameters in simulations
+- [x] Match robot parameters in simulations
 - [ ] Create ROS2 data logger
 - [ ] Compare ROS2 and simple_sim output for same scenario
     - [ ] Create coverage logger node

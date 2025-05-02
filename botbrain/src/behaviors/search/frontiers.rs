@@ -17,9 +17,10 @@ use super::{
     pathing, ROBOT_OBSTACLE_CLEARANCE,
 };
 
+/// Size of the region the frontier is in.
 const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.2;
-const FRONTIER_REGION_DISTANCE_WEIGHT: f32 = 0.6;
-const FRONTIER_REGION_TURN_WEIGHT: f32 = 0.2;
+const FRONTIER_DISTANCE_WEIGHT: f32 = 0.6;
+const FRONTIER_TURN_WEIGHT: f32 = 0.2;
 
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
@@ -224,12 +225,12 @@ pub fn evaluate_frontier_regions(
     let best_frontier = frontiers.into_iter().max_by(
         |&(dist_1, size_1, turn_1, _pos_1), &(dist_2, size_2, turn_2, _pos_2)| {
             let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (size_1 as f32 / biggest_frontier as f32)
-                + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - dist_1 / furthest_frontier)
-                + FRONTIER_REGION_TURN_WEIGHT * (1.0 - turn_1 / PI);
+                + FRONTIER_DISTANCE_WEIGHT * (1.0 - dist_1 / furthest_frontier)
+                + FRONTIER_TURN_WEIGHT * (1.0 - turn_1 / PI);
 
             let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (size_2 as f32 / biggest_frontier as f32)
-                + FRONTIER_REGION_DISTANCE_WEIGHT * (1.0 - dist_2 / furthest_frontier)
-                + FRONTIER_REGION_TURN_WEIGHT * (1.0 - turn_2 / PI);
+                + FRONTIER_DISTANCE_WEIGHT * (1.0 - dist_2 / furthest_frontier)
+                + FRONTIER_TURN_WEIGHT * (1.0 - turn_2 / PI);
 
             weight1.partial_cmp(&weight2).unwrap_or(Ordering::Equal)
         },

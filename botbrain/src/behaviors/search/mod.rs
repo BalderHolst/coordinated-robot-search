@@ -917,11 +917,6 @@ mod behaviors {
                     // Make sure we stay in pathing mode always
                     robot.robot_mode = RobotMode::Pathing;
                 }
-                // robot.get_debug_soup_mut().add(
-                //     "Planner",
-                //     "Coverage",
-                //     DebugItem::Number(crate::get_coverage(&robot.search_grid, &robot.map)),
-                // );
                 target
             },
         )

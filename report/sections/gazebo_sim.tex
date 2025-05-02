@@ -1,40 +1,55 @@
 \section{Gazebo Simulation}
 To validate the robot behavior models works in real environments a more realistic simulation is required.
-This section will describe the setup of the simulation and the software used to create it.
+This project utilize Gazebo Harmonic, which is a 3D physics simulation capable of simulating various sensors like LiDAR and cameras.
+This section will describe the setup of the Sim-to-Real and the software used to create it.
 
 \subsection{ROS 2}\label{sub:ros_2}
 % About ROS 2 (launch files, nodes, etc)
-For real-world implemnetation, ROS 2 (Robot Operating System) is a good choice. ROS2 provides tools and a lot of packages to interact with hardware and communicate with other 
-ROS 2 nodes (programs).
-ROS 2 has the concept of nodes, which are programs that can be run on a computer. These nodes can communicate with each other through topics, services, and actions.
-In context of this project each robot is a node, where the behavior modes is run. Also namespaces can be made, to group related nodes and topics together. 
-It will allow each robot to have their own namespace with topic and nodes like AMCL, Tranform Frames, LiDAR, camera, etc.
+For real-world implementation, ROS 2 (Robot Operating System) is a good choice. The ROS 2 ecosystem provides tools, communication primitives, drivers, and a lot of packages to interact with hardware. ROS 2 is based on a publisher/subscriber model, where nodes publish data and other nodes subscribe to it.
+ROS 2 has the concept of nodes, which are executables running a specific task. These nodes can communicate with each other through topics, services, and actions.
 
-\subsection{ROS 2 integration}\label{sub:ros_2_integration}
-% Gazebo setup with ROS 2 integration
-For a more realistic simulation, Gazebo (version Harmonic) is used. Gazebo provides packages to interop with the ROS 2 through a brigde.
-The tutlebot 4 is modeled in a URDF file.
+In the context of this project each robot behavior runs their behavior in a node where it is assigned to a namespaces which makes it possible to group related nodes and topics together. 
+This makes it easy to separate tasks and data for each of the robots. Data can come from AMCL, Transform Frames, LiDAR, camera, etc.
+
+Gazebo also uses topics internally and can via a ros-gz-brigde share topics with ROS 2. This is how control inputs are passed to Gazebo and simulated sensor reading is passed to ROS 2.
+The Turtlebot 4 is modeled in a URDF file. Included in the URDF is necessary plugin specifications and settings for simulating camera, LiDAR etc. in Gazebo. The differential drive system for the Turtlebot 4 is handled by the Gazebo Diff Drive Plugin.
 
 \subsection{Localization}\label{sub:localization} 
-For unknwon environments, methods like Simultaneous Localization and Mapping (SLAM) is required. Here localization and creation of the map is performed
+Botbrain requires pose estimation to function, therefore localization in the world is needed.
+For unknown environments, methods like Simultaneous Localization and Mapping (SLAM) is required. Here localization and creation of the map is performed
 as the robot moves around the environment.
-This project assumes that the robot already has an avaliabe map to use for localization. 
-Using a package from the ROS 2 ecosystem, called nav2, we can use their implemnetation of a Adaptive Monte-Carlo Localizer (AMCL) to localize the robot.
-The AMCL algorithm works by reading the LiDAR from the robot. Then is compares the readings to a map to find the best estimate of the robot's position and orientation using a particle filter.
 
-% Object detection
+This project assumes that the robot already has an available map to use for localization. 
+Using a package from the ROS 2 ecosystem, called nav2, their implementation of a Adaptive Monte-Carlo Localizer (AMCL) is used to localize the robot.
+The AMCL algorithm works by using LiDAR data from the robot. Then is compares the readings to a map to find the best estimate of the robot's position and orientation using a particle filter. The result is an estimation of the pose with a covariance.
+
 \subsection{Object detection}\label{sub:object_detection}
-To find the search object a simple object detection system is used. The video of the of the simulated or real-world camera is fed into
+To find the search object a simple object detection system is used. The video of the of the simulated or real-world camera is subscribed to via a ROS 2 topic and then analysed. 
 
-\subsection{Botbrain Integration}\label{sub:botbrain_integration}
-As in \textit{Simple Sim} the robots needs to communicate their observation to each other. For this a custom ROS 2 message type is created. 
+The process is as follows where the search object is assumed to be a yellow ball:
+\begin{enumerate}
+  \item Convert image from BGR to HSV.
+  \item Mask out yellow colors. 
+  \item Find contours from the mask.
+  \item Make minimum enclosing circles from the contours.
+  \item Find average color of the circles.
+\end{enumerate}
+
+If no circles are found, nothing is interpreted as the search object. If multiple circles are found, the circle with the best average color is inputted as the search object.
+
+\subsection{Botbrain Integration}\label{sub:Botbrain_integration}
+As in \textit{Simple Sim} the robots needs to communicate their observations and positions to each other. For this a custom ROS 2 message type has been created, as seen here:
 \begin{minted}{bash}
   #file: AgentMessage.msg
   uint32 sender_id
   byte[] data
 \end{minted}
-This message type only includes a sender\_id of the robot sending the message. This is for basic filtering to only read messages from other robots.
-The data field is a byte array that can be used to store any data the robot wants to send. Therefore data is serialized and deserialized in the agents using internals in the botbrain.
 
-\subsubsection{Debugging}\label{sec:debugging_rviz}
-Botbrain exposes the debug soup which collect predefined data from the internals of botbrain. This data can be read from the robots and converted to suitable data types for visualization in rviz2.
+This message type only includes a sender\_id of the robot sending the message and the actual payload. This is for basic filtering to only read messages from other robots.
+The data field is a byte array that can be used to store any data the robot wants to send. Therefore data is serialized and deserialized in the agents using internal functions in the Botbrain.
+
+\subsubsection{Debugging and Visualization}\label{sec:debugging_rviz}
+Botbrain exposes the debug soup which collect predefined data from the internals of Botbrain. 
+In \textit{Simple Sim} this can be shown in the GUI itself, but using ROS 2 a visualization package called ROS Visualization 2 (RViz2) is used.
+RViz2 allow visualizing data from sensors, robots, and algorithms in real-time, making it an essential tool for debugging and monitoring.
+Botbrain specific data can be read from the robots and converted to suitable data types for visualization in Rviz2. Like in simple\_sim the search gird and costmap can be converted to the Occupancy Grid message.

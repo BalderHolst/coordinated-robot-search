@@ -1,5 +1,5 @@
 \section{Search Algorithms}search
-This section describes the development of a distributed algorithm which makes it possible for a group of robots to find a search item. These algorithms are implemented in the \texttt{botbrain} library.
+This section describes the development of a distributed algorithm which makes it possible for a group of robots to find a search item. These algorithms are implemented in the \texttt{Botbrain} library.
 
 This project explores two approaches for controlling the behavior of the robot swarm: A {\color{red} manually developed} algorithm and an algorithm based on reinforcement learning. The following sections will explore the development of these.
 
@@ -169,7 +169,7 @@ The distance from the frontier to the nearest obstacles also has to be further t
 
 \subsubsection{Path planning}\label{sec:path_planning}
 Once a goal has been generated, a path to that goal needs to be generated. First a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is uphold, the robot will simply follow this path.
-I situations where this clearance can't be validated, the A-star algorithm is used.
+In situations where this clearance can't be validated, the A-star algorithm is used.
 The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far.
 The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells needs to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is uphold.
 
