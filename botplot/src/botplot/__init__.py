@@ -70,6 +70,7 @@ class World:
         else: raise ValueError(f"World must be either a bitmap or an object world. Found keys: {self.data.keys()}")
 
     def img(self):
+
         if self.is_obj():
             desc_name = os.path.basename(self.file).replace(".json", "-desc.json")
             desc_file = os.path.join(data_dir(), desc_name)
@@ -244,6 +245,9 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
     ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
 
     plt.tight_layout()
+
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(out_file), exist_ok=True)
 
     fig.savefig(out_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
 

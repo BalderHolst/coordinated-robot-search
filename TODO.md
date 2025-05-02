@@ -23,6 +23,7 @@
 - [ ] Match robot parameters in simulations
 - [ ] Create ROS2 data logger
 - [ ] Compare ROS2 and simple_sim output for same scenario
+    - [ ] Create coverage logger node
 
 #### Benchmarks
 
