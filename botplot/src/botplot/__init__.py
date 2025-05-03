@@ -50,8 +50,9 @@ def repo_path(*path: str) -> str:
 def data_dir(): return repo_path("data")
 def plot_dir(): return repo_path("plots")
 
-simulator = RustCrate(repo_path("simple_sim"))
-trainer   = RustCrate(repo_path("trainer"))
+botbrain   = RustCrate(repo_path("botbrain"))
+simple_sim = RustCrate(repo_path("simple_sim"), dependencies=[botbrain])
+trainer    = RustCrate(repo_path("trainer"), dependencies=[simple_sim, botbrain])
 
 @dataclass
 class Robot:
@@ -118,7 +119,7 @@ class World:
                 trainer.run([
                     "world-to-img",
                     "--input", desc_file,
-                    "--output", os.path.join(data_dir(), img_file),
+                    "--output", img_file,
                     "--theme", "grayscale",
                     "--force",
                 ])
@@ -244,12 +245,12 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
         print(s)
-        simulator.run(["scenario", "-"] + flags, input=s, text=True)
+        simple_sim.run(["scenario", "-"] + flags, input=s, text=True)
     elif isinstance(scenario, str):
         if not os.path.exists(scenario):
             print(f"Error: Scenario file '{scenario}' does not exist.")
             exit(1)
-        simulator.run(["scenario", scenario] + flags)
+        simple_sim.run(["scenario", scenario] + flags)
     else:
         print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
         exit(1)
@@ -298,7 +299,7 @@ def save_figure(fig, output_file: str):
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
 
-def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
+def plot_coverage(results: list[Result] | Result, name: str, title=None):
 
     if isinstance(results, Result): results = [results]
 
@@ -314,12 +315,12 @@ def plot_coverage(results: list[Result] | Result, output_file: str, title=None):
     plt.title(title)
     plt.legend()
 
-    output_file = os.path.join(plot_dir(), output_file)
+    name = os.path.join(plot_dir(), f"{name}.png")
 
-    plt.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    plt.savefig(name, dpi=300, bbox_inches='tight', pad_inches=0.2)
     plt.close()
 
-    print(f"Plot saved to '{relpath(output_file)}'")
+    print(f"Plot saved to '{relpath(name)}'")
 
 def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 

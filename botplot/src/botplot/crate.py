@@ -1,16 +1,19 @@
 import subprocess
 import os
+from typing import Self
 
 class RustCrate:
     name: str
     path: str
+    dependencies: list[Self] = []
 
-    def __init__(self, path: str, name: str = None):
+    def __init__(self, path: str, name: str = None, dependencies: list[Self] = []):
         if name is None:
             name = os.path.basename(path)
 
         self.path = path
         self.name = name
+        self.dependencies = dependencies
 
     def compile(self, flags: list[str] = []):
         """Compile the Rust crate."""
@@ -25,6 +28,12 @@ class RustCrate:
 
     def needs_recompile(self) -> bool:
         """Check if any source files are newer than the build artifact."""
+
+        # Check if dependencies need recompilation
+        for dep in self.dependencies:
+            if dep.needs_recompile():
+                return True
+
         exe_path = self.executable()
         if not os.path.exists(exe_path):
             return True
