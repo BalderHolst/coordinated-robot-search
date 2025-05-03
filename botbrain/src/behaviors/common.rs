@@ -103,15 +103,14 @@ pub(crate) fn update_search_grid(
 
     // Heat up the search grid in the direction of the search items
     // detected by the camera
-    {
-        let cam_data = cam.clone();
-        let diff = CAM_MULTPLIER * cam_data.probability * multiplier;
+    for point in cam.points() {
+        let diff = CAM_MULTPLIER * point.probability * multiplier;
         let lidar = lidar.within_fov(params::CAM_FOV);
-        update_search_cone(search_grid, &cam_data.cone, &lidar, diff);
+        update_search_cone(search_grid, &point.cone, &lidar, diff);
         postbox.post(Message {
             sender_id: id,
             kind: MessageKind::CamDiff {
-                cone: cam_data.cone,
+                cone: point.cone,
                 diff,
             },
         });

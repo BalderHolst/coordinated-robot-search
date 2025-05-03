@@ -2,7 +2,7 @@ use std::f32::consts::PI;
 
 use botbrain::{
     behaviors::BehaviorFn,
-    camera::CamData,
+    camera::CamPoint,
     lidar::{LidarData, LidarPoint},
     params::{CAM_FOV, CAM_RANGE, DIAMETER, LIDAR_RANGE},
     shapes::Cone,
@@ -138,15 +138,18 @@ pub fn step_agent(
             let avg_angle = (min_angle + max_angle) / 2.0;
             let avg_distance = total_distance / points.len() as f32;
             let avg_probability = total_prop / points.len() as f32;
-            robot.input_cam(CamData {
-                cone: Cone {
-                    center: state.pose.pos,
-                    radius: avg_distance,
-                    angle: avg_angle,
-                    fov: span,
-                },
-                probability: avg_probability,
-            });
+            robot.input_cam(
+                vec![CamPoint {
+                    cone: Cone {
+                        center: state.pose.pos,
+                        radius: avg_distance,
+                        angle: avg_angle,
+                        fov: span,
+                    },
+                    probability: avg_probability,
+                }]
+                .into(),
+            );
         }
     }
 
