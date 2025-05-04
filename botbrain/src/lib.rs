@@ -86,7 +86,7 @@ pub mod messaging;
 pub mod params;
 pub mod scaled_grid;
 pub mod shapes;
-mod utils;
+pub mod utils;
 
 /// A trait representing a robot. This is the interface that all robots must implement.
 ///

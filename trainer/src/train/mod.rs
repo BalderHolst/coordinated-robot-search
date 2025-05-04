@@ -236,7 +236,7 @@ fn train<
             episode,
             eps,
             reward: episode_reward,
-            coverage: env.sim().state.diagnostics.coverage(),
+            coverage: env.sim().state.diagnostics.coverage_grid.coverage(),
             steps: episode_duration,
             sim_time: env.sim().state.time.as_secs_f32(),
             avg_loss: total_loss / episode_duration as f32,

@@ -14,9 +14,9 @@ use botbrain::{
     self,
     behaviors::{Behavior, Time},
     debug_soup::{DebugItem, DebugSoup},
-    messaging::{Message, MessageKind},
-    scaled_grid::ScaledGrid,
-    Control, Pos2, RobotId, RobotPose,
+    messaging::Message,
+    utils::CoverageGrid,
+    Control, RobotId, RobotPose,
 };
 
 #[cfg(not(feature = "single-thread"))]
@@ -25,11 +25,7 @@ use robot_pool::RobotThreadPool;
 #[cfg(feature = "single-thread")]
 use botbrain::Robot;
 
-use crate::{
-    cli::ScenarioArgs,
-    scenario::Scenario,
-    world::{Cell, World},
-};
+use crate::{cli::ScenarioArgs, scenario::Scenario, world::World};
 
 const SPEED_MULTIPLIER: f32 = 1.0;
 const STEER_MULTIPLIER: f32 = 1.0;
@@ -38,8 +34,6 @@ const LIDAR_RAYS: usize = 40;
 const CAMERA_RAYS: usize = 20;
 
 const SIMULATION_DT: f32 = 1.0 / 60.0;
-
-const COVERAGE_GRID_SCALE: f32 = 0.1;
 
 #[derive(Clone, Default)]
 struct RobotData {
@@ -159,7 +153,7 @@ pub fn run_scenario_headless(
         time_data.push(sim.state.time.as_secs_f64());
 
         // Calculate and store coverage
-        let coverage = sim.state.diagnostics.coverage();
+        let coverage = sim.state.diagnostics.coverage_grid.coverage();
         coverage_data.push(coverage);
 
         // Calculate and store bytes sent
@@ -258,31 +252,7 @@ pub struct SimDiagnostics {
     pub msgs_sent: u64,
     pub bytes_sent: u128,
     pub avg_step_time: f32,
-    pub coverage_grid: ScaledGrid<bool>,
-    world: World,
-}
-
-impl SimDiagnostics {
-    pub fn coverage(&self) -> f32 {
-        let mut total_area = 0;
-        let covered_cells = self
-            .coverage_grid
-            .iter()
-            .filter(|&(x, y, &covered)| {
-                if let Some(&cell) = self.world.get(Pos2 { x, y }) {
-                    if cell != Cell::Wall {
-                        total_area += 1;
-                        covered
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
-            })
-            .count();
-        covered_cells as f32 / total_area as f32
-    }
+    pub coverage_grid: CoverageGrid,
 }
 
 #[derive(Clone)]
@@ -323,8 +293,7 @@ impl Simulator {
             robot_states: vec![],
             time: Time::default(),
             diagnostics: SimDiagnostics {
-                coverage_grid: ScaledGrid::new(world.width(), world.height(), COVERAGE_GRID_SCALE),
-                world: world.clone(),
+                coverage_grid: CoverageGrid::new(crate::world::convert_to_botbrain_map(&world)),
                 msgs_sent: 0,
                 bytes_sent: 0,
                 avg_step_time: 0.0,
@@ -441,16 +410,8 @@ impl Simulator {
         let diagnostics = &mut self.state.diagnostics;
 
         // Update coverage grid
-        for msg in &self.pending_msgs {
-            match &msg.kind {
-                MessageKind::ShapeDiff { shape, diff: _ } => {
-                    diagnostics.coverage_grid.set_shape(shape, true)
-                }
-                MessageKind::CamDiff { cone, diff: _ } => {
-                    diagnostics.coverage_grid.set_cone(cone, true)
-                }
-                MessageKind::Debug(_) => {}
-            }
+        for pose in self.state.robot_states.iter().map(|r| r.pose.clone()) {
+            diagnostics.coverage_grid.mark_pose(pose);
         }
 
         // Update total bytes sent

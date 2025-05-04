@@ -128,7 +128,7 @@ impl<C: Clone + Default> Grid<C> {
 
     /// Iterate over coordinates within a cone
     pub fn iter_cone(
-        &mut self,
+        &self,
         center: Pos2,
         radius: f32,
         angle: f32,

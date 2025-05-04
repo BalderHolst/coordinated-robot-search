@@ -354,7 +354,7 @@ impl App {
             let canvas = Rect::from_min_max(min, max);
 
             let image = utils::grid_to_image(
-                self.sim_state.diagnostics.coverage_grid.grid(),
+                self.sim_state.diagnostics.coverage_grid.grid().grid(),
                 |c| match c {
                     true => Color32::LIGHT_GREEN.gamma_multiply(0.2),
                     false => Color32::TRANSPARENT,
@@ -942,7 +942,7 @@ impl eframe::App for App {
                     });
 
                     ui.separator();
-                    let coverage = self.sim_state.diagnostics.coverage();
+                    let coverage = self.sim_state.diagnostics.coverage_grid.coverage();
                     ui.toggle_value(
                         &mut self.global_opts.show_coverage_grid,
                         format!("Coverage: {:.2}%", coverage * 100.0),

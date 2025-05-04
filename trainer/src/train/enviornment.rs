@@ -208,12 +208,12 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
             });
 
         // TODO: Maybe store the last coverage instead of recalculating it here
-        let before_coverage = self.sim.state.diagnostics.coverage();
+        let before_coverage = self.sim.state.diagnostics.coverage_grid.coverage();
 
         // Step internal simulator
         self.sim.step_duration(1.0 / REACT_HZ);
 
-        let after_coverage = self.sim.state.diagnostics.coverage();
+        let after_coverage = self.sim.state.diagnostics.coverage_grid.coverage();
 
         if after_coverage > before_coverage {
             self.last_coverage_increase = self.sim.state.time.as_secs_f32();
