@@ -64,8 +64,13 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
             .map_err(|e| format!("Error reading world file: {e}"))?;
 
         let json = serde_json::to_string_pretty(&scenario).unwrap();
-        std::fs::write(desc_path, json)
-            .map_err(|e| format!("Could not write description file: {e}"))?;
+        std::fs::write(desc_path, json).map_err(|e| {
+            format!(
+                "Could not write description file to '{}': {}",
+                desc_path.display(),
+                e
+            )
+        })?;
     }
 
     let world = match &scenario.world {
@@ -93,11 +98,9 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     };
 
     if let Some(out_path) = scenario_args.output {
-        for out_path in out_path.split(':') {
-            let out_path = PathBuf::from(out_path);
-            if let Err(e) = save_batch(&mut data, &out_path) {
-                eprintln!("Failed to save data to '{}': {}", out_path.display(), e);
-            }
+        let out_path = PathBuf::from(out_path);
+        if let Err(e) = save_batch(&mut data, &out_path) {
+            eprintln!("Failed to save data to '{}': {}", out_path.display(), e);
         }
     }
 

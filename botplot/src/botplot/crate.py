@@ -26,19 +26,22 @@ class RustCrate:
     def executable(self) -> str:
         return os.path.join(self.path, "target", "release", self.name)
 
-    def needs_recompile(self) -> bool:
+    def needs_recompile(self, exe_path = None) -> bool:
         """Check if any source files are newer than the build artifact."""
 
-        # Check if dependencies need recompilation
-        for dep in self.dependencies:
-            if dep.needs_recompile():
-                return True
+        if exe_path is None:
+            exe_path = self.executable()
 
-        exe_path = self.executable()
+        # Check if the executable exists
         if not os.path.exists(exe_path):
             return True
 
         exe_mtime = os.path.getmtime(exe_path)
+
+        # Check if dependencies need recompilation
+        for dep in self.dependencies:
+            if dep.needs_recompile(exe_path=exe_path):
+                return True
 
         # Walk source files and check modification times
         for root, _, files in os.walk(self.path):

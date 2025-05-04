@@ -1,5 +1,4 @@
 import os
-import subprocess
 import json
 import hashlib
 from math import sqrt
@@ -22,6 +21,11 @@ plt.rcParams.update({
     "font.family": "serif",     # Set font family to serif
     "font.serif": ["Computer Modern Roman"],  # Default LaTeX font
 })
+
+mpl.rcParams['axes.edgecolor']   = '#888888'   # gray frame around the plot
+mpl.rcParams['xtick.color']      = '#555555'   # gray x ticks
+mpl.rcParams['ytick.color']      = '#555555'   # gray y ticks
+mpl.rcParams['axes.labelcolor']  = '#444444'   # gray axis labels
 
 GIT_DIR = ".git"
 def root_dir() -> str:
@@ -159,7 +163,17 @@ class Result:
     def df(self) -> pl.DataFrame:
         return pl.read_ipc(self.dataframe_file)
 
+    def df_with_spread_file(self) -> str:
+        stem = os.path.basename(self.dataframe_file).replace(".ipc", "")
+        return os.path.join(data_dir(), f"{stem}-with-spread.ipc")
+
     def df_with_spread(self) -> pl.DataFrame:
+
+        file = self.df_with_spread_file()
+        if os.path.exists(file):
+            print(f"Using cached spread file: {relpath(file)}")
+            return pl.read_ipc(file)
+
         desc = self.desc()
         df = self.df()
 
@@ -198,11 +212,17 @@ class Result:
 
         df = df.with_columns([center_x, center_y, spread])
 
+        # Save the dataframe with spread
+        df.write_ipc(file)
+
         return df
 
     def desc(self) -> dict:
         with open(self.description_file) as f:
             return json.load(f)
+
+    def title(self) -> str:
+        return self.desc()["title"]
 
     def paths(self) -> tuple[str, str]:
         """Returns the releative paths to the data and description files."""
@@ -229,6 +249,10 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
     stem = f"{name}-{hash}"
     data_file = os.path.join(data_dir(), f"{stem}.ipc")
     desc_file = os.path.join(data_dir(), f"{stem}.json")
+
+    # Ensure the directories exist
+    os.makedirs(os.path.dirname(data_file), exist_ok=True)
+    os.makedirs(os.path.dirname(desc_file), exist_ok=True)
 
     if use_cache and os.path.exists(data_file) and os.path.exists(desc_file):
         print(f"[INFO] Using cached result:")
@@ -292,14 +316,21 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
     # Make sure directory exists
     os.makedirs(os.path.dirname(out_file), exist_ok=True)
 
-    fig.savefig(out_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    save_figure(fig, out_file)
 
 def save_figure(fig, output_file: str):
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
     fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
 
-def plot_coverage(results: list[Result] | Result, name: str, title=None):
+def plot_coverage(results: list[Result] | Result, name: str, title=None, force=False):
+
+    file = os.path.join(plot_dir(), f"{name}.png")
+
+    if os.path.exists(file) and not force:
+        print(f"Plot already exists: '{relpath(file)}'.")
+        return
 
     if isinstance(results, Result): results = [results]
 
@@ -313,12 +344,10 @@ def plot_coverage(results: list[Result] | Result, name: str, title=None):
     plt.xlabel(r"Time (s)")
     plt.ylabel(r"Coverage (\%)")
     plt.title(title)
-    plt.legend()
 
-    name = os.path.join(plot_dir(), f"{name}.png")
+    if len(results) > 1: plt.legend()
 
-    plt.savefig(name, dpi=300, bbox_inches='tight', pad_inches=0.2)
-    plt.close()
+    save_figure(plt.gcf(), file)
 
     print(f"Plot saved to '{relpath(name)}'")
 
@@ -395,35 +424,59 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 
     save_figure(fig, output_file)
 
-def plot_spread(result: Result, title: str):
-    df = result.df_with_spread()
+def plot_spread(result: Result | list[Result], title: str, force=False):
+    file = os.path.join(plot_dir(), f"{title}.png")
+
+    if os.path.exists(file) and not force:
+        print(f"Plot already exists: '{relpath(file)}'.")
+        return
+
+    if isinstance(result, Result): result = [result]
 
     fig, ax = plt.subplots()
 
-    ax.plot(df["time"], df["spread-sd"], label="Spread")
+    for res in result:
+        df = res.df_with_spread()
+        ax.plot(df["time"], df["spread-sd"], label=res.title())
 
-    file = os.path.join(plot_dir(), f"{title}.png")
+    if len(result) > 1: ax.legend()
 
     save_figure(fig, file)
 
-def plot_performance(result: Result, title: str, max=None):
-    df = result.df()
+def plot_performance(result: Result | list[Result], title: str, max=None, force=False):
+    file = os.path.join(plot_dir(), f"{title}.png")
+
+    if os.path.exists(file) and not force:
+        print(f"Plot already exists: '{relpath(file)}'.")
+        return
+
+    if isinstance(result, Result): result = [result]
 
     fig, ax = plt.subplots()
 
-    ax.plot(df["time"], df["step-time"] * 1000, label="Average Step Time [ms]")
+    for res in result:
+        df = res.df()
+        ax.scatter(df["time"], df["step-time"] * 1000, marker="o", alpha=0.1, s=0.5, label=res.title())
+
+    if len(result) > 1: ax.legend()
 
     ax.set_ylim(0, max)
 
-    file = os.path.join(plot_dir(), f"{title}.png")
-
     save_figure(fig, file)
 
-def plot_paths(result: Result, title: str, segments=1):
+    plt.close(fig)
+
+def plot_paths(result: Result, title: str, segments=1, force=False):
     df = result.df()
     desc = result.desc()
 
     for seg in range(segments):
+        file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}-{seg + 1}-of-{segments}.png")
+
+        if os.path.exists(file) and not force:
+            print(f"Plot already exists: '{relpath(file)}'.")
+            continue
+
         fig, ax = plt.subplots()
 
         t = df["time"]
@@ -439,7 +492,7 @@ def plot_paths(result: Result, title: str, segments=1):
                 y_col = y_col[:end]
                 mode_col = mode_col[:end]
 
-                color = None
+                color = COLORS[i % len(COLORS)]
                 cursor = 0
 
                 start = 0
@@ -448,10 +501,14 @@ def plot_paths(result: Result, title: str, segments=1):
                 while cursor < len(mode_col):
                     while cursor < len(mode_col) and mode_col[cursor] == mode:
                         cursor += 1
-                    linestyle = '-' if mode == 0 else 'dotted'
-                    # print(f"{t_col[start]:.0f}s - {t_col[cursor-1]:.0f}s => mode: {mode}")
-                    line, = ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle=linestyle, color=color, alpha=0.8)
-                    if color is None: color = line.get_color()
+
+                    match mode:
+                        case 0:
+                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="-", color=color, alpha=1.0)
+                        case 1:
+                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="-", color=color, alpha=0.3)
+                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="dotted", color=color, alpha=1.0, linewidth=2)
+
                     start = cursor
                     if cursor < len(mode_col):
                         mode = mode_col[cursor]
@@ -473,9 +530,5 @@ def plot_paths(result: Result, title: str, segments=1):
             print(f"    => {e}")
             exit(1)
 
-        file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}-{seg + 1}-of-{segments}.png")
-
         world_plot(fig, ax, result, f"{title} (after {t[end-1]:.0f}s)", file)
 
-
-        print(f"Plot saved to '{relpath(file)}'")
