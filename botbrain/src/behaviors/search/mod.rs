@@ -32,6 +32,35 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
     ("no-proximity", behaviors::no_proximity),
     ("no-pathing", behaviors::no_pathing),
     ("pure-pathing", behaviors::pure_pathing),
+    // Experimental to test frontier exploration params
+    // s is size weight
+    // d is distance weight
+    // t is turn weight
+    // Weight are in percentages
+    (
+        "pure-pathing-s33-d33-t33",
+        behaviors::pure_pathing_s33_d33_t33,
+    ),
+    (
+        "pure-pathing-s10-d30-t60",
+        behaviors::pure_pathing_s10_d30_t60,
+    ),
+    (
+        "pure-pathing-s80-d10-t10",
+        behaviors::pure_pathing_s80_d10_t10,
+    ),
+    (
+        "pure-pathing-s10-d80-t10",
+        behaviors::pure_pathing_s10_d80_t10,
+    ),
+    (
+        "pure-pathing-s10-d10-t80",
+        behaviors::pure_pathing_s10_d10_t80,
+    ),
+    (
+        "pure-pathing-s20-d60-t20",
+        behaviors::pure_pathing_s20_d60_t20,
+    ),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -115,6 +144,9 @@ pub(crate) struct SearchRobot {
 
     /// Frontiers
     frontiers_grid: ScaledGrid<f32>,
+
+    /// Frontier evaluation weights
+    frontier_evaluation_weights: frontiers::FrontierEvaluationWeights,
 
     /// The goal of the path planner
     path_planner_goal: Option<Pos2>,
@@ -546,8 +578,13 @@ impl SearchRobot {
                 }
             }
 
-            match frontiers::evaluate_frontiers(self.pos, self.angle, frontiers, &self.costmap_grid)
-            {
+            match frontiers::evaluate_frontiers(
+                self.pos,
+                self.angle,
+                self.frontier_evaluation_weights,
+                frontiers,
+                &self.costmap_grid,
+            ) {
                 Some(goal) => self.path_planner_goal = Some(goal),
                 None => {
                     // Should only happen in the beginning
@@ -620,6 +657,7 @@ impl SearchRobot {
                     match frontiers::evaluate_frontiers(
                         self.pos,
                         self.angle,
+                        self.frontier_evaluation_weights,
                         frontiers,
                         &masked_costmap,
                     ) {
@@ -768,6 +806,7 @@ impl SearchRobot {
         let best = frontiers::evaluate_frontier_regions(
             robot_pos,
             self.angle,
+            self.frontier_evaluation_weights,
             frontier_regions,
             &self.costmap_grid,
         );
@@ -913,6 +952,152 @@ mod behaviors {
             },
             |robot, _target| {
                 let target = robot.path_planning();
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+
+    // Experimental
+    pub fn pure_pathing_s33_d33_t33(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.3333,
+                    frontier_distance: 0.3333,
+                    frontier_turn: 0.3333,
+                };
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+    pub fn pure_pathing_s10_d30_t60(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.1,
+                    frontier_distance: 0.3,
+                    frontier_turn: 0.6,
+                };
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+    pub fn pure_pathing_s80_d10_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.8,
+                    frontier_distance: 0.1,
+                    frontier_turn: 0.1,
+                };
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+    pub fn pure_pathing_s10_d80_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.1,
+                    frontier_distance: 0.8,
+                    frontier_turn: 0.1,
+                };
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+    pub fn pure_pathing_s10_d10_t80(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.1,
+                    frontier_distance: 0.1,
+                    frontier_turn: 0.8,
+                };
+                if robot.robot_mode == RobotMode::Exploring {
+                    // Make sure we stay in pathing mode always
+                    robot.robot_mode = RobotMode::Pathing;
+                }
+                target
+            },
+        )
+    }
+    pub fn pure_pathing_s20_d60_t20(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+            },
+            |robot, _target| {
+                let target = robot.path_planning();
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.2,
+                    frontier_distance: 0.6,
+                    frontier_turn: 0.2,
+                };
                 if robot.robot_mode == RobotMode::Exploring {
                     // Make sure we stay in pathing mode always
                     robot.robot_mode = RobotMode::Pathing;

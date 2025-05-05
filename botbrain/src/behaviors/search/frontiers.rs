@@ -17,10 +17,27 @@ use super::{
     pathing, ROBOT_OBSTACLE_CLEARANCE,
 };
 
-/// Size of the region the frontier is in.
-const FRONTIER_REGION_SIZE_WEIGHT: f32 = 0.2;
-const FRONTIER_DISTANCE_WEIGHT: f32 = 0.6;
-const FRONTIER_TURN_WEIGHT: f32 = 0.2;
+/// Weights for frontier evaluation
+/// Higher weights means more importance
+#[derive(Clone, Copy)]
+pub(super) struct FrontierEvaluationWeights {
+    /// Weight for the size of the frontier region
+    pub frontier_region_size: f32,
+    /// Weight for the distance to the frontier
+    pub frontier_distance: f32,
+    /// Weight for the turn to the frontier
+    pub frontier_turn: f32,
+}
+
+impl Default for FrontierEvaluationWeights {
+    fn default() -> Self {
+        Self {
+            frontier_region_size: 0.2,
+            frontier_distance: 0.6,
+            frontier_turn: 0.2,
+        }
+    }
+}
 
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
@@ -138,37 +155,11 @@ pub fn make_frontier_regions(
     regions
 }
 
-/// Find the closest pos in the best frontier region to go to
-fn _find_frontiers_region_closest_pos(
-    robot_pos: (usize, usize),
-    frontier_region: &[(usize, usize)],
-) -> (usize, usize) {
-    frontier_region
-        .iter()
-        .min_by(|&&f1, &&f2| {
-            let d1 = pathing::euclidean_dist(robot_pos, f1);
-            let d2 = pathing::euclidean_dist(robot_pos, f2);
-            // FIX: Remove this check
-            let d1_valid = (d1 as f32) > params::DIAMETER;
-            let d2_valid = (d2 as f32) > params::DIAMETER;
-            if !d1_valid && !d2_valid {
-                Ordering::Equal
-            } else if !d1_valid {
-                Ordering::Greater
-            } else if !d2_valid {
-                Ordering::Less
-            } else {
-                d1.cmp(&d2)
-            }
-        })
-        .unwrap()
-        .to_owned()
-}
-
 /// Evaluates the fontier regions and returns the best frontier
 pub fn evaluate_frontier_regions(
     robot_pos: (usize, usize),
     robot_angle: f32,
+    evaluation_weights: FrontierEvaluationWeights,
     frontier_regions: Vec<Vec<(usize, usize)>>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<(usize, usize)> {
@@ -224,13 +215,15 @@ pub fn evaluate_frontier_regions(
 
     let best_frontier = frontiers.into_iter().max_by(
         |&(dist_1, size_1, turn_1, _pos_1), &(dist_2, size_2, turn_2, _pos_2)| {
-            let weight1 = FRONTIER_REGION_SIZE_WEIGHT * (size_1 as f32 / biggest_frontier as f32)
-                + FRONTIER_DISTANCE_WEIGHT * (1.0 - dist_1 / furthest_frontier)
-                + FRONTIER_TURN_WEIGHT * (1.0 - turn_1 / PI);
+            let weight1 = evaluation_weights.frontier_region_size
+                * (size_1 as f32 / biggest_frontier as f32)
+                + evaluation_weights.frontier_distance * (1.0 - dist_1 / furthest_frontier)
+                + evaluation_weights.frontier_turn * (1.0 - turn_1 / PI);
 
-            let weight2 = FRONTIER_REGION_SIZE_WEIGHT * (size_2 as f32 / biggest_frontier as f32)
-                + FRONTIER_DISTANCE_WEIGHT * (1.0 - dist_2 / furthest_frontier)
-                + FRONTIER_TURN_WEIGHT * (1.0 - turn_2 / PI);
+            let weight2 = evaluation_weights.frontier_region_size
+                * (size_2 as f32 / biggest_frontier as f32)
+                + evaluation_weights.frontier_distance * (1.0 - dist_2 / furthest_frontier)
+                + evaluation_weights.frontier_turn * (1.0 - turn_2 / PI);
 
             weight1.partial_cmp(&weight2).unwrap_or(Ordering::Equal)
         },
@@ -243,6 +236,7 @@ pub fn evaluate_frontier_regions(
 pub fn evaluate_frontiers(
     robot_pos: Pos2,
     robot_angle: f32,
+    evaluation_weights: FrontierEvaluationWeights,
     frontiers: HashSet<(usize, usize)>,
     costmap_grid: &ScaledGrid<f32>,
 ) -> Option<Pos2> {
@@ -254,8 +248,13 @@ pub fn evaluate_frontiers(
 
     let frontier_regions = make_frontier_regions(frontiers, costmap_grid);
     let goal = {
-        let goal_grid =
-            evaluate_frontier_regions(robot_pos_grid, robot_angle, frontier_regions, costmap_grid)?;
+        let goal_grid = evaluate_frontier_regions(
+            robot_pos_grid,
+            robot_angle,
+            evaluation_weights,
+            frontier_regions,
+            costmap_grid,
+        )?;
         costmap_grid.grid_to_pos(Pos2::new(goal_grid.0 as f32, goal_grid.1 as f32))
     };
     Some(goal)
