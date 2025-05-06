@@ -6,8 +6,8 @@ import random
 def main():
     random.seed(2)
 
-
     path = bp.repo_path("trainer/worlds/world_0.ron")
+    # path = bp.repo_path("simple_sim/worlds/bitmap/depot/depot.yaml")
     world = bp.World.from_description_file(path)
 
 

@@ -74,11 +74,15 @@ class Scenario:
     duration: int
     robots: list[Robot]
 
-    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot]):
+    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot] | int):
         self.title = title
         self.world = world
         self.behavior = behavior
         self.duration = duration
+
+        if isinstance(robots, int):
+            robots = place_robots(world, robots)
+
         self.robots = robots
 
     def to_ron(self) -> str:
@@ -175,7 +179,7 @@ class World:
             return desc["width"], desc["height"]
         if self.is_bitmap():
             world_dir = desc["image"].replace(".pgm", "")
-            path = os.path.join(root_dir(), "simple_sim/worlds/bitmap/", world_dir)
+            path = repo_path("simple_sim/worlds/bitmap/", world_dir)
             if not os.path.exists(path):
                 print(f"Error: Bitmap image '{path}' does not exist.")
                 exit(1)
@@ -393,13 +397,9 @@ def save_figure(fig, output_file: str):
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
 
-def plot_coverage(results: list[Result] | Result, name: str, title=None, force=False):
+def plot_coverage(results: list[Result] | Result, name: str, title=None):
 
     file = os.path.join(plot_dir(), f"{name}.png")
-
-    if os.path.exists(file) and not force:
-        print(f"Plot already exists: '{relpath(file)}'.")
-        return
 
     if isinstance(results, Result): results = [results]
 
@@ -417,8 +417,6 @@ def plot_coverage(results: list[Result] | Result, name: str, title=None, force=F
     if len(results) > 1: plt.legend()
 
     save_figure(plt.gcf(), file)
-
-    print(f"Plot saved to '{relpath(name)}'")
 
 def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 

@@ -1,9 +1,10 @@
 import botplot as bp
-from math import ceil, pi
 import random
+import os
 
 
 def main():
+
     behaviors = [
         "pure-pathing-s33-d33-t33",
         "pure-pathing-s10-d30-t60",
@@ -22,34 +23,26 @@ def main():
         # "simple_sim/worlds/objectmap/medium_obstacles.ron",
     ]
 
-    random.seed(42)
-
     n = 1
-    robots = [
-        bp.Robot(
-            x=i % int(ceil(n)),
-            y=i // int(ceil(n)),
-            angle=random.random() * 2 * pi - pi,
-        )
-        for i in range(n)
-    ]
+    seed = 0
 
     for world in worlds:
-        world_name = world.split("/")[-1].split(".")[0]
+        world_name = os.path.basename(world).split(".")[0]
         results: list[bp.Result] = []
         for behavior in behaviors:
+            random.seed(seed)
             scenario = bp.Scenario(
-                title=f"{world_name}: {n} robots: {behavior}",
+                title=f"{behavior[len('pure-pathing-'):]}",
                 world=world,
                 behavior="search:" + behavior,
                 duration=200,
-                robots=robots,
+                robots=n,
             )
 
             res = bp.run_sim(scenario)
             results.append(res)
 
-        bp.plot_coverage(results, f"frontier_eval_params_{world_name}")
+        bp.plot_coverage(results, f"frontier_eval_params_{world_name}", f"Coverage of {n} robots in \"{world_name}\"")
 
 
 if __name__ == "__main__":
