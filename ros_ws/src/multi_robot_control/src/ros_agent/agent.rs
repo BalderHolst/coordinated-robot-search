@@ -17,7 +17,7 @@ use futures::StreamExt;
 use opencv::highgui;
 use r2r::{
     self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
-    ros_agent_msgs, sensor_msgs,
+    ros_agent_msgs, sensor_msgs, visualization_msgs,
 };
 
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
@@ -28,6 +28,8 @@ pub struct RosAgent {
 
     robot: Box<dyn botbrain::Robot>,
     behavior: botbrain::behaviors::Behavior,
+    goal_pub: Publisher<visualization_msgs::msg::Marker>,
+    goal_path_pub: Publisher<visualization_msgs::msg::Marker>,
 
     pose: Arc<Mutex<Option<geometry_msgs::msg::PoseWithCovarianceStamped>>>,
     /// Pos and angle in world coordinates
@@ -91,6 +93,24 @@ impl RosAgent {
 
         // Activate debug soup
         robot.get_debug_soup_mut().activate();
+
+        let goal_pub = node
+            .lock()
+            .unwrap()
+            .create_publisher::<visualization_msgs::msg::Marker>(
+                "planner_goal",
+                QosProfile::default().volatile(),
+            )
+            .unwrap();
+
+        let goal_path_pub = node
+            .lock()
+            .unwrap()
+            .create_publisher::<visualization_msgs::msg::Marker>(
+                "planner_goal",
+                QosProfile::default().volatile(),
+            )
+            .unwrap();
 
         let map = map.await.expect("Map handler failed");
 
@@ -193,6 +213,9 @@ impl RosAgent {
 
             robot,
             behavior,
+
+            goal_pub,
+            goal_path_pub,
 
             pose,
             pose_world: (Pos2::default(), 0.0),
@@ -365,8 +388,8 @@ impl RosAgent {
 
     fn update_map_overlay(&self) {
         let mut map = self.map.map.clone();
-        // let search_grid = self.robot.get_debug_soup().get("Grids", "Costmap Grid");
-        let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
+        let search_grid = self.robot.get_debug_soup().get("Grids", "Costmap Grid");
+        // let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
         let mut min = f32::INFINITY;
         let mut max = f32::NEG_INFINITY;
         if let Some(item) = search_grid {
@@ -424,5 +447,12 @@ impl RosAgent {
         if let Err(e) = self.map_overlay_pub.publish(&map) {
             log_warn!(&self.node_logger, "Error publishing map_overlay: {}", e);
         }
+    }
+
+    fn show_goal_marker(&self, goal: Pos2) {
+        todo!()
+    }
+    fn show_goal_path_marker(&self, path: Vec<Pos2>) {
+        todo!()
     }
 }

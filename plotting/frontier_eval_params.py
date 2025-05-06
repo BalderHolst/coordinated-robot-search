@@ -11,16 +11,20 @@ def main():
         "pure-pathing-s10-d80-t10",
         "pure-pathing-s10-d10-t80",
         "pure-pathing-s20-d60-t20",
+        "pure-pathing-s10-d45-t45",
+        "pure-pathing-s0-d50-t50",
         "pure-pathing-s100-d0-t0",
         "pure-pathing-s0-d100-t0",
         "pure-pathing-s0-d0-t100",
     ]
+    worlds = [
+        "simple_sim/worlds/bitmap/depot/depot.yaml",
+        # "simple_sim/worlds/objectmap/medium_obstacles.ron",
+    ]
 
     random.seed(42)
 
-    results: list[bp.Result] = []
-
-    n = 5
+    n = 1
     robots = [
         bp.Robot(
             x=i % int(ceil(n)),
@@ -30,20 +34,22 @@ def main():
         for i in range(n)
     ]
 
-    for behavior in behaviors:
-        print(f"Running simulation with {n} robots with {behavior}")
-        scenario = bp.Scenario(
-            title=f"{n} robots: {behavior}",
-            world="simple_sim/worlds/bitmap/depot/depot.yaml",
-            behavior="search:" + behavior,
-            duration=200,
-            robots=robots,
-        )
+    for world in worlds:
+        world_name = world.split("/")[-1].split(".")[0]
+        results: list[bp.Result] = []
+        for behavior in behaviors:
+            scenario = bp.Scenario(
+                title=f"{world_name}: {n} robots: {behavior}",
+                world=world,
+                behavior="search:" + behavior,
+                duration=200,
+                robots=robots,
+            )
 
-        res = bp.run_sim(scenario)
-        results.append(res)
+            res = bp.run_sim(scenario)
+            results.append(res)
 
-    bp.plot_coverage(results, "frontier_eval_params_extra")
+        bp.plot_coverage(results, f"frontier_eval_params_{world_name}")
 
 
 if __name__ == "__main__":

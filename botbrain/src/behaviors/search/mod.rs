@@ -63,6 +63,14 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
         behaviors::pure_pathing_s20_d60_t20,
     ),
     (
+        "pure-pathing-s10-d45-t45",
+        behaviors::pure_pathing_s10_d45_t45,
+    ),
+    (
+        "pure-pathing-s0-d50-t50",
+        behaviors::pure_pathing_s0_d50_t50,
+    ),
+    (
         "pure-pathing-s100-d0-t0",
         behaviors::pure_pathing_s100_d0_t0,
     ),
@@ -1159,6 +1167,50 @@ mod behaviors {
                     frontier_region_size: 0.2,
                     frontier_distance: 0.6,
                     frontier_turn: 0.2,
+                };
+                target.unwrap_or(Vec2::ZERO)
+            },
+        )
+    }
+    pub fn pure_pathing_s10_d45_t45(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
+            },
+            |robot, time| {
+                let target = robot.path_planning(time);
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.1,
+                    frontier_distance: 0.45,
+                    frontier_turn: 0.45,
+                };
+                target.unwrap_or(Vec2::ZERO)
+            },
+        )
+    }
+    pub fn pure_pathing_s0_d50_t50(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
+            },
+            |robot, time| {
+                let target = robot.path_planning(time);
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.0,
+                    frontier_distance: 0.5,
+                    frontier_turn: 0.5,
                 };
                 target.unwrap_or(Vec2::ZERO)
             },
