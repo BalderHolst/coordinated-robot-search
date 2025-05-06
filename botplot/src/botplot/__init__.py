@@ -129,7 +129,7 @@ class World:
                 ])
 
             return plt.imread(img_file)
-
+        # TODO: Get bitmap image here?
 
         pass
 
@@ -138,7 +138,17 @@ class World:
         if self.is_obj():
             return desc["width"], desc["height"]
         if self.is_bitmap():
-            raise NotImplemented("Bitmap world not implemented yet.")
+            world_dir = desc["image"].replace(".pgm", "")
+            path = os.path.join(root_dir(), "simple_sim/worlds/bitmap/", world_dir)
+            if not os.path.exists(path):
+                print(f"Error: Bitmap image '{path}' does not exist.")
+                exit(1)
+            with open(os.path.join(path, desc["image"]), "rb") as f:
+                # Read the first line (format identifier, e.g., P2 or P5)
+                _format_identifier = f.readline().strip()
+                # Read the width and height from the next line
+                width, height = map(int, f.readline().split())
+            return width, height
 
 @dataclass
 class Result:
