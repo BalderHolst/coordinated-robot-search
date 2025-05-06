@@ -26,9 +26,9 @@ pub(super) struct FrontierEvaluationWeights {
 impl Default for FrontierEvaluationWeights {
     fn default() -> Self {
         Self {
-            frontier_region_size: 0.2,
-            frontier_distance: 0.6,
-            frontier_turn: 0.2,
+            frontier_region_size: 0.1,
+            frontier_distance: 0.3,
+            frontier_turn: 0.6,
         }
     }
 }
@@ -193,10 +193,11 @@ pub fn evaluate_frontier_regions(
                     let size = region.len();
 
                     let frontier_angle = Vec2::new(
-                        pos_map.x - robot_pos.0 as f32,
-                        pos_map.y - robot_pos.1 as f32,
+                        pos.0 as f32 - robot_pos.0 as f32,
+                        pos.1 as f32 - robot_pos.1 as f32,
                     )
                     .angle();
+
                     let angle_to_target =
                         utils::normalize_angle(frontier_angle - robot_angle).abs();
 

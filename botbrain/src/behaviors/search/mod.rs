@@ -62,6 +62,18 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
         "pure-pathing-s20-d60-t20",
         behaviors::pure_pathing_s20_d60_t20,
     ),
+    (
+        "pure-pathing-s100-d0-t0",
+        behaviors::pure_pathing_s100_d0_t0,
+    ),
+    (
+        "pure-pathing-s0-d100-t0",
+        behaviors::pure_pathing_s0_d100_t0,
+    ),
+    (
+        "pure-pathing-s0-d0-t100",
+        behaviors::pure_pathing_s0_d0_t100,
+    ),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -1147,6 +1159,72 @@ mod behaviors {
                     frontier_region_size: 0.2,
                     frontier_distance: 0.6,
                     frontier_turn: 0.2,
+                };
+                target.unwrap_or(Vec2::ZERO)
+            },
+        )
+    }
+    pub fn pure_pathing_s100_d0_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
+            },
+            |robot, time| {
+                let target = robot.path_planning(time);
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 1.0,
+                    frontier_distance: 0.0,
+                    frontier_turn: 0.0,
+                };
+                target.unwrap_or(Vec2::ZERO)
+            },
+        )
+    }
+    pub fn pure_pathing_s0_d100_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
+            },
+            |robot, time| {
+                let target = robot.path_planning(time);
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.0,
+                    frontier_distance: 1.0,
+                    frontier_turn: 0.0,
+                };
+                target.unwrap_or(Vec2::ZERO)
+            },
+        )
+    }
+    pub fn pure_pathing_s0_d0_t100(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+                robot.update_proximity_grid(time);
+                robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
+            },
+            |robot, time| {
+                let target = robot.path_planning(time);
+                robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
+                    frontier_region_size: 0.0,
+                    frontier_distance: 0.0,
+                    frontier_turn: 1.0,
                 };
                 target.unwrap_or(Vec2::ZERO)
             },
