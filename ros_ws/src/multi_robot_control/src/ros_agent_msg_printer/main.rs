@@ -1,9 +1,9 @@
+use botbrain::messaging::MessageKind;
 use futures::{StreamExt, executor::LocalPool, task::LocalSpawnExt};
 use std::time::Duration;
 
 const DEFAULT_TOPIC: &str = "/search_channel";
 
-use botbrain::MessageKind;
 use r2r::{self, QosProfile, ros_agent_msgs};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,11 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     Ok(kind) => {
                         match kind {
                             MessageKind::ShapeDiff { shape: _, diff: _ } => {} // TODO: Print shape diff
-                            MessageKind::CamDiff {
-                                cone: _,
-                                lidar: _,
-                                diff: _,
-                            } => {} // TODO: Print cam diff
+                            MessageKind::CamDiff { cone: _, diff: _ } => {} // TODO: Print cam diff
                             MessageKind::Debug(s) => {
                                 r2r::log_info!(logger, "[{}] Debug: {}", msg.sender_id, s)
                             }

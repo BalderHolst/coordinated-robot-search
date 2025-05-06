@@ -12,7 +12,7 @@ use crate::{
     util,
     vision::{camera_info::CameraInfo, object_detection::ObjectDetection},
 };
-use botbrain::{CamCone, CamData, Pos2, Vec2, debug_soup::DebugType, shapes::Cone};
+use botbrain::{Pos2, camera::CamPoint, debug_soup::DebugItem, shapes::Cone};
 use futures::StreamExt;
 use opencv::highgui;
 use r2r::{
@@ -30,6 +30,8 @@ pub struct RosAgent {
     behavior: botbrain::behaviors::Behavior,
 
     pose: Arc<Mutex<Option<geometry_msgs::msg::PoseWithCovarianceStamped>>>,
+    /// Pos and angle in world coordinates
+    pose_world: (Pos2, f32),
     scan: Arc<Mutex<Option<sensor_msgs::msg::LaserScan>>>,
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
 
@@ -193,6 +195,7 @@ impl RosAgent {
             behavior,
 
             pose,
+            pose_world: (Pos2::default(), 0.0),
             scan,
             cmd_pub,
 
@@ -239,6 +242,7 @@ impl RosAgent {
                     let pos =
                         pos - self.map.map_origin - (self.map.map_size / 2.0) * self.map.map_scale;
                     self.robot.input_pose(botbrain::RobotPose { pos, angle });
+                    self.pose_world = (pos, angle);
                 } else {
                     continue;
                 }
@@ -252,14 +256,18 @@ impl RosAgent {
                 // Set the object detection input
                 if let Some(mut image) = self.image.lock().unwrap().take() {
                     if let Ok(img) = sensor_image_to_opencv_image(&mut image) {
-                        match self.vision.find_search_objects_probability(&img) {
+                        let (pos, angle) = self.pose_world;
+                        match self
+                            .vision
+                            .find_search_objects_probability(pos, angle, &img)
+                        {
                             Ok(cam_data) => {
-                                highgui::wait_key(1).unwrap();
+                                // highgui::wait_key(1).unwrap();
                                 // log_info!(&self.node_logger, "Found search objects:{:?}", cam_data);
                                 self.robot.input_cam(cam_data);
                             }
                             Err(_) => {
-                                let cam_data = CamData::Cone(CamCone {
+                                let cam_data = vec![CamPoint {
                                     cone: {
                                         if let Some(pose) = self.pose.lock().unwrap().as_ref() {
                                             let pose = cov_pose_to_pose2d(pose);
@@ -283,8 +291,8 @@ impl RosAgent {
                                         }
                                     },
                                     probability: 0.0,
-                                });
-                                self.robot.input_cam(cam_data);
+                                }];
+                                self.robot.input_cam(cam_data.into());
                             }
                         }
                     } else {
@@ -357,12 +365,12 @@ impl RosAgent {
 
     fn update_map_overlay(&self) {
         let mut map = self.map.map.clone();
-        let search_grid = self.robot.get_debug_soup().get("Grids", "Costmap Grid");
-        // let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
+        // let search_grid = self.robot.get_debug_soup().get("Grids", "Costmap Grid");
+        let search_grid = self.robot.get_debug_soup().get("Grids", "Search Grid");
         let mut min = f32::INFINITY;
         let mut max = f32::NEG_INFINITY;
         if let Some(item) = search_grid {
-            if let DebugType::Grid(grid) = &*item {
+            if let DebugItem::Grid(grid) = &*item {
                 let (x_size, y_size) = (map.info.width, map.info.height);
                 for y in 0..y_size {
                     for x in 0..x_size {

@@ -1,6 +1,11 @@
+use botbrain::{
+    Pos2,
+    camera::{CamData, CamPoint},
+    shapes::Cone,
+};
 use opencv::{
     core::{CV_8UC1, CV_8UC3, Point2f, Point2i, Scalar, Vec3f, Vec4d, Vector},
-    highgui,
+    // highgui,
     imgproc::{self, LineTypes},
     prelude::*,
 };
@@ -31,7 +36,7 @@ pub struct ObjectDetection {
     // For continous use (No reallocation)
     mask: Mat,
     hsv: Mat,
-    masked_circles: Mat,
+    // masked_circles: Mat,
 }
 
 impl ObjectDetection {
@@ -54,25 +59,27 @@ impl ObjectDetection {
         .expect("Mat failed");
 
         // NOTE: Remove (only for debugging)
-        let masked_circles = Mat::new_rows_cols_with_default(
-            camera.get_pixels_v(),
-            camera.get_pixels_h(),
-            CV_8UC3,
-            Scalar::all(0.0),
-        )
-        .expect("Mat failed");
+        // let masked_circles = Mat::new_rows_cols_with_default(
+        //     camera.get_pixels_v(),
+        //     camera.get_pixels_h(),
+        //     CV_8UC3,
+        //     Scalar::all(0.0),
+        // )
+        // .expect("Mat failed");
         Self {
             camera,
             mask,
             hsv,
-            masked_circles,
+            // masked_circles,
         }
     }
 
     pub fn find_search_objects_probability(
         &mut self,
+        robot_pos: Pos2,
+        robot_angle: f32,
         image: &Mat,
-    ) -> Result<botbrain::CamData, String> {
+    ) -> Result<CamData, String> {
         Self::apply_yellow_mask(self, image)?;
 
         let contours = self
@@ -82,6 +89,8 @@ impl ObjectDetection {
         let search_objects = self
             .find_likely_objects(contours)
             .map_err(|e| format!("find_likely_objects failed: {}", e))?;
+
+        let search_objects = self.convert_to_cam_data(robot_pos, robot_angle, search_objects)?;
 
         Ok(search_objects)
     }
@@ -95,6 +104,7 @@ impl ObjectDetection {
         // Define lower and upper bounds for yellow color
         // Hue is from 0 to 180
         // Yellow is normally 60 degrees of 360 degrees, therefore ~30 degrees here
+        // The rest is saturation and value
         let lower_yellow = Scalar::new(28.0, 180.0, 180.0, 0.0);
         let upper_yellow = Scalar::new(32.0, 255.0, 255.0, 0.0);
 
@@ -123,14 +133,15 @@ impl ObjectDetection {
     fn find_likely_objects(
         &mut self,
         contours: Vector<Vector<Point2i>>,
-    ) -> Result<botbrain::CamData, String> {
+    ) -> Result<Vec<Circle>, String> {
         if contours.is_empty() {
             return Err("No contours found".to_string());
         }
         // INFO: Only for debug
-        self.hsv
-            .copy_to(&mut self.masked_circles)
-            .expect("copy_to failed");
+        // self.hsv
+        //     .copy_to(&mut self.masked_circles)
+        //     .expect("copy_to failed");
+
         // Find the largest
         let circles = contours
             .into_iter()
@@ -177,40 +188,40 @@ impl ObjectDetection {
                 }
             })
             // INFO: Only for debug
-            .inspect(|circle| {
-                imgproc::circle(
-                    &mut self.masked_circles,
-                    circle.center,
-                    circle.radius + 5,
-                    Scalar::from_array([
-                        circle.color[0] as f64,
-                        circle.color[1] as f64,
-                        circle.color[2] as f64,
-                        255.0,
-                    ]),
-                    1,
-                    LineTypes::LINE_8 as i32,
-                    0,
-                )
-                .expect("circle failed");
-            })
+            // .inspect(|circle| {
+            //     imgproc::circle(
+            //         &mut self.masked_circles,
+            //         circle.center,
+            //         circle.radius + 5,
+            //         Scalar::from_array([
+            //             circle.color[0] as f64,
+            //             circle.color[1] as f64,
+            //             circle.color[2] as f64,
+            //             255.0,
+            //         ]),
+            //         1,
+            //         LineTypes::LINE_8 as i32,
+            //         0,
+            //     )
+            //     .expect("circle failed");
+            // })
             .collect::<Vec<_>>();
 
         // INFO: Only for debug
-        let mut temp_img = Mat::default();
-        imgproc::cvt_color(
-            &self.masked_circles,
-            &mut temp_img,
-            imgproc::COLOR_HSV2BGR,
-            0,
-        )
-        .expect("cvt_color failed");
-        highgui::imshow("circles", &temp_img).unwrap();
+        // let mut temp_img = Mat::default();
+        // imgproc::cvt_color(
+        //     &self.masked_circles,
+        //     &mut temp_img,
+        //     imgproc::COLOR_HSV2BGR,
+        //     0,
+        // )
+        // .expect("cvt_color failed");
+        // highgui::imshow("circles", &temp_img).unwrap();
 
         if circles.is_empty() {
             Err("No circles found".to_string())
         } else {
-            self.convert_to_cam_data(circles)
+            Ok(circles)
         }
     }
 
@@ -222,10 +233,15 @@ impl ObjectDetection {
         }
     }
 
-    fn convert_to_cam_data(&self, circles: Vec<Circle>) -> Result<botbrain::CamData, String> {
-        let cam_points: Vec<botbrain::CamPoint> = circles
+    fn convert_to_cam_data(
+        &self,
+        robot_pos: Pos2,
+        robot_angle: f32,
+        circles: Vec<Circle>,
+    ) -> Result<CamData, String> {
+        let cam_points: Vec<CamPoint> = circles
             .into_iter()
-            .flat_map(|circle| {
+            .map(|circle| {
                 let hue_probability = Self::compute_probability(
                     circle.color[0] - TARGET_COLOR[0],
                     HUE_TOLERANCE,
@@ -246,18 +262,19 @@ impl ObjectDetection {
 
                 let probability = hue_probability + saturation_probability + value_probability;
 
-                let mut cam_points: Vec<botbrain::CamPoint> = vec![];
-
-                // HACK: Update to use cone for object of interest
-                for i in (-circle.radius / 2)..(circle.radius / 2) {
-                    let angle = -self.camera.get_angle_h(circle.center.x + i);
-                    cam_points.push(botbrain::CamPoint { probability, angle });
+                let angle = robot_angle - self.camera.get_angle_h(circle.center.x);
+                CamPoint {
+                    cone: Cone {
+                        center: robot_pos,
+                        radius: botbrain::params::CAM_RANGE,
+                        angle,
+                        fov: botbrain::params::CAM_FOV,
+                    },
+                    probability,
                 }
-
-                cam_points
             })
             .collect();
 
-        Ok(botbrain::CamData::Points(cam_points))
+        Ok(cam_points.into())
     }
 }
