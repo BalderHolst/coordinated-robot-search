@@ -2,7 +2,7 @@ import subprocess
 import os
 from typing import Self
 
-IGNORE = ["target", ".git" ]
+import botplot.utils as utils
 
 class RustCrate:
     name: str
@@ -46,17 +46,9 @@ class RustCrate:
                 return True
 
         # Walk source files and check modification times
-        def any_file_newer(dir: str, exe_mtime: float) -> bool:
-            for entry in os.scandir(dir):
-                if entry.name in IGNORE: continue
-                if entry.is_dir(follow_symlinks=False):
-                    if any_file_newer(entry.path, exe_mtime): return True
-                elif entry.is_file(follow_symlinks=False):
-                    if entry.name.endswith(".rs") or entry.name in ("Cargo.toml", "Cargo.lock"):
-                        if os.path.getmtime(entry.path) > exe_mtime:
-                            return True
 
-        return any_file_newer(self.path, exe_mtime)
+
+        return utils.any_file_newer(self.path, exe_mtime)
 
     def run(self, flags: list[str] = [], **kwargs) -> subprocess.CompletedProcess:
         """Run the Rust crate with the given flags."""

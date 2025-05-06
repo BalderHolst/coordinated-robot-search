@@ -14,7 +14,6 @@ use crate::{
 };
 use botbrain::{Pos2, camera::CamPoint, debug_soup::DebugItem, shapes::Cone};
 use futures::StreamExt;
-use opencv::highgui;
 use r2r::{
     self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
     ros_agent_msgs, sensor_msgs, visualization_msgs,
@@ -285,7 +284,6 @@ impl RosAgent {
                             .find_search_objects_probability(pos, angle, &img)
                         {
                             Ok(cam_data) => {
-                                // highgui::wait_key(1).unwrap();
                                 // log_info!(&self.node_logger, "Found search objects:{:?}", cam_data);
                                 self.robot.input_cam(cam_data);
                             }

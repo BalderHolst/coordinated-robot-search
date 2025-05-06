@@ -21,6 +21,7 @@ r2r_cargo(rcl                    # we need the c ros2 api
           rcl_action             # as of r2r 0.1.0, we also need the action api
           geometry_msgs
           sensor_msgs
+          visualization_msgs
           tf2_msgs
           nav_msgs
           rosgraph_msgs

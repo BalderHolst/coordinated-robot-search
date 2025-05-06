@@ -30,3 +30,12 @@ RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
 # Terminal multiplexer for convenience
 RUN apt install -y tmux
+
+
+# Install the botplot python package
+RUN apt install -y python3-pip yq
+COPY ./botplot /pip/botplot
+RUN pip install --break-system-packages /pip/botplot
+
+# Add botplot to PYTHONPATH if it exists
+RUN echo "[[ -d /root/ws/botplot ]] && export PYTHONPATH=/root/ws/botplot/src:\$PYTHONPATH" >> ~/.bashrc

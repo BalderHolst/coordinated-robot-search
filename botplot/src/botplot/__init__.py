@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
 
-from botplot.crate import RustCrate
+from botplot.rust_crate import RustCrate
+from botplot.colcon_workspace import ColconWorkspace
 
 from botplot.colors import COLORS
 
@@ -59,6 +60,8 @@ def plot_dir(): return repo_path("plots")
 botbrain   = RustCrate(repo_path("botbrain"))
 simple_sim = RustCrate(repo_path("simple_sim"), dependencies=[botbrain])
 trainer    = RustCrate(repo_path("trainer"), dependencies=[simple_sim, botbrain])
+
+ros_ws = ColconWorkspace(repo_path("ros_ws"))
 
 @dataclass
 class Robot:
