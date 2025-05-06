@@ -28,6 +28,11 @@ impl<C: Clone + Default> Grid<C> {
         }
     }
 
+    /// Create a new grid with the given dimensions
+    pub fn with_size((width, height): (usize, usize)) -> Self {
+        Self::new(width, height)
+    }
+
     /// Create an empty grid of zero size
     pub fn empty() -> Self {
         Self {
@@ -35,6 +40,21 @@ impl<C: Clone + Default> Grid<C> {
             width: 0,
             height: 0,
         }
+    }
+
+    /// Turn the grid into a vector of cells
+    pub fn into_cells(self) -> Vec<C> {
+        self.cells
+    }
+
+    /// Access the underlying cell array
+    pub fn cells(&self) -> &[C] {
+        &self.cells
+    }
+
+    /// Access the underlying cell array mutably
+    pub fn cells_mut(&mut self) -> &mut [C] {
+        &mut self.cells
     }
 
     /// Width of the grid

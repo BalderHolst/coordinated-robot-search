@@ -5,11 +5,11 @@ use std::{
 
 use emath::Pos2;
 
-use crate::{behaviors::ScaledGrid, params, shapes::Line};
+use crate::{params, shapes::Line};
 
 use super::{
     costmap::{self},
-    ROBOT_OBSTACLE_CLEARANCE,
+    Costmap, ROBOT_OBSTACLE_CLEARANCE,
 };
 
 /// When a goal/point is within this distance from the robot
@@ -27,7 +27,7 @@ pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
 ];
 
 /// Constructs a path using straight line or A* algorithm as backup
-pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) -> Option<Vec<Pos2>> {
+pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &Costmap) -> Option<Vec<Pos2>> {
     find_straight_path(robot_pos, goal, costmap_grid).or_else(|| {
         find_a_star_path(
             robot_pos,
@@ -46,7 +46,7 @@ pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &ScaledGrid<f32>) ->
 pub fn find_straight_path(
     robot_pos: Pos2,
     goal: Pos2,
-    costmap_grid: &ScaledGrid<f32>,
+    costmap_grid: &Costmap,
 ) -> Option<Vec<Pos2>> {
     let dir = (goal - robot_pos).normalized();
     let line = Line {
@@ -93,7 +93,7 @@ pub fn find_a_star_path(
     robot_pos: Pos2,
     goal: Pos2,
     clearance: f32,
-    costmap_grid: &ScaledGrid<f32>,
+    costmap_grid: &Costmap,
 ) -> Option<Vec<Pos2>> {
     let world_size = costmap_grid.grid().size();
 
@@ -181,7 +181,7 @@ pub fn find_a_star_path(
 }
 
 // Shorten the path by removing while still keeping a min distance to obstacles
-pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &ScaledGrid<f32>) -> Vec<Pos2> {
+pub fn smooth_path(path: Vec<Pos2>, costmap_grid: &Costmap) -> Vec<Pos2> {
     let mut smoothed_path = vec![];
     let mut prev_pos = path[0];
     let mut idx = 1;

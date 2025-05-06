@@ -266,6 +266,27 @@ impl<C: Clone + Default> ScaledGrid<C> {
         });
     }
 
+    /// Transform the grid to a new grid with a different type
+    pub fn transform<T: Clone + Default>(self, f: impl Fn(C) -> T) -> ScaledGrid<T> {
+        let mut new_grid = Grid::with_size(self.grid().size());
+        let old_grid = self.grid;
+
+        for (old, new) in old_grid
+            .into_cells()
+            .into_iter()
+            .zip(new_grid.cells_mut().iter_mut())
+        {
+            *new = f(old);
+        }
+
+        ScaledGrid {
+            grid: new_grid,
+            width: self.width,
+            height: self.height,
+            cell_size: self.cell_size,
+        }
+    }
+
     /// Cast a ray from a position in a given direction
     pub fn cast_ray(
         &self,

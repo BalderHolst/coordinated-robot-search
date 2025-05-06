@@ -15,12 +15,11 @@ ROBOTS = [
 BEHAVIORS = [
     "avoid-obstacles:avoid-closest",
     "search:full",
-    "search:naive-proximity",
     "search:no-pathing",
     "search:pure-pathing",
 ]
 
-DURATION = 1000
+DURATION = 1600
 N = [3, 4, 5, 6, 7, 8]
 
 def main():
@@ -42,7 +41,7 @@ def main():
             print(f"\n=====> Running {behavior} with {n} robots <=====")
 
             scenario = bp.Scenario(
-                title=f"{behavior} - {n} robots",
+                title=f"{behavior}",
                 world="simple_sim/worlds/objectmap/medium_obstacles.ron",
                 behavior=behavior,
                 duration=DURATION,

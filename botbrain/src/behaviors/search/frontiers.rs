@@ -7,15 +7,9 @@ use std::{
 
 use emath::{Pos2, Vec2};
 
-use crate::{
-    behaviors::{search::pathing::NEIGHBORS_8, ScaledGrid},
-    params, utils,
-};
+use crate::{behaviors::search::pathing::NEIGHBORS_8, params, utils};
 
-use super::{
-    costmap::{self, COSTMAP_SEARCHED, COSTMAP_UNKNOWN},
-    pathing, ROBOT_OBSTACLE_CLEARANCE,
-};
+use super::{costmap, pathing, Costmap, CostmapCell, ROBOT_OBSTACLE_CLEARANCE};
 
 /// Weights for frontier evaluation
 /// Higher weights means more importance
@@ -41,10 +35,10 @@ impl Default for FrontierEvaluationWeights {
 
 /// Frontier is a known cell with unknown neighbors
 /// pos is the position of the cell in the underlying grid of the ScaledGrid
-pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool {
+pub fn is_frontier(pos: (usize, usize), costmap_grid: &Costmap) -> bool {
     if !matches!(
         costmap_grid.grid().get(pos.0, pos.1),
-        Some(&COSTMAP_SEARCHED)
+        Some(CostmapCell::Searched)
     ) {
         return false;
     }
@@ -53,11 +47,11 @@ pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool 
         let new_pos = (pos.0 as isize + x, pos.1 as isize + y);
         if new_pos.0 < 0 || new_pos.1 < 0 {
             false
-        } else if let Some(&cell) = costmap_grid
+        } else if let Some(cell) = costmap_grid
             .grid()
             .get(new_pos.0 as usize, new_pos.1 as usize)
         {
-            cell == COSTMAP_UNKNOWN
+            matches!(cell, CostmapCell::Unknown)
         } else {
             false
         }
@@ -65,7 +59,7 @@ pub fn is_frontier(pos: (usize, usize), costmap_grid: &ScaledGrid<f32>) -> bool 
 }
 
 /// Finds the frontiers from the robot position using the costmap
-pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSet<(usize, usize)> {
+pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &Costmap) -> HashSet<(usize, usize)> {
     let robot_pos = {
         let tmp = costmap_grid.pos_to_grid(robot_pos);
         (tmp.x as usize, tmp.y as usize)
@@ -89,8 +83,8 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
         if is_frontier(pos, costmap_grid) {
             frontiers.insert(pos);
         }
-        if let Some(&cell) = costmap_grid.grid().get(pos.0, pos.1) {
-            if cell != COSTMAP_SEARCHED {
+        if let Some(cell) = costmap_grid.grid().get(pos.0, pos.1) {
+            if !matches!(cell, CostmapCell::Searched) {
                 continue;
             }
             for (dx, dy) in &NEIGHBORS_8 {
@@ -99,8 +93,10 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
                     continue;
                 }
                 let new_pos = (new_pos.0 as usize, new_pos.1 as usize);
-                if let Some(&cell) = costmap_grid.grid().get(new_pos.0, new_pos.1) {
-                    if cell == COSTMAP_SEARCHED && !visited.contains(&(new_pos.0, new_pos.1)) {
+                if let Some(cell) = costmap_grid.grid().get(new_pos.0, new_pos.1) {
+                    if matches!(cell, CostmapCell::Searched)
+                        && !visited.contains(&(new_pos.0, new_pos.1))
+                    {
                         queue.push_back((new_pos.0, new_pos.1));
                     }
                 }
@@ -114,7 +110,7 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &ScaledGrid<f32>) -> HashSe
 /// Constructs the frontier regions from the frontiers
 pub fn make_frontier_regions(
     frontiers: HashSet<(usize, usize)>,
-    costmap_grid: &ScaledGrid<f32>,
+    costmap_grid: &Costmap,
 ) -> Vec<Vec<(usize, usize)>> {
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
 
@@ -139,8 +135,8 @@ pub fn make_frontier_regions(
                     continue;
                 }
                 let new_pos = (new_pos.0 as usize, new_pos.1 as usize);
-                if let Some(&cell) = costmap_grid.grid().get(new_pos.0, new_pos.1) {
-                    if cell == COSTMAP_SEARCHED
+                if let Some(cell) = costmap_grid.grid().get(new_pos.0, new_pos.1) {
+                    if matches!(cell, CostmapCell::Searched)
                         && !visited.contains(&(new_pos.0, new_pos.1))
                         && frontiers.contains(&new_pos)
                     {
@@ -161,7 +157,7 @@ pub fn evaluate_frontier_regions(
     robot_angle: f32,
     evaluation_weights: FrontierEvaluationWeights,
     frontier_regions: Vec<Vec<(usize, usize)>>,
-    costmap_grid: &ScaledGrid<f32>,
+    costmap_grid: &Costmap,
 ) -> Option<(usize, usize)> {
     // The furthest frontier region's closest frontier
     let mut furthest_frontier = f32::NEG_INFINITY;
@@ -233,12 +229,13 @@ pub fn evaluate_frontier_regions(
 }
 
 /// Find the best frontier to go to
+/// Returns `None` if no valid frontiers are found
 pub fn evaluate_frontiers(
     robot_pos: Pos2,
     robot_angle: f32,
     evaluation_weights: FrontierEvaluationWeights,
     frontiers: HashSet<(usize, usize)>,
-    costmap_grid: &ScaledGrid<f32>,
+    costmap_grid: &Costmap,
 ) -> Option<Pos2> {
     // For working with grid coordinates
     let robot_pos_grid = {

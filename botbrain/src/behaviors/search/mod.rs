@@ -1,10 +1,11 @@
 //! This module contains robot `search` behavior.
 
-use costmap::{COSTMAP_DYNAMIC_OBSTACLE, COSTMAP_GRID_SCALE, COSTMAP_OBSTACLE};
+use costmap::COSTMAP_GRID_SCALE;
 use pathing::PATH_PLANNER_DISTANCE_TOLERANCE;
 use std::{
     collections::{HashMap, HashSet},
     f32::consts::PI,
+    ops::Range,
     time::Duration,
 };
 
@@ -88,6 +89,11 @@ const PROXIMITY_MAX_LAYERS: usize = 3;
 
 const COSTMAP_GRID_UPDATE_INTERVAL: f32 = 1.0;
 
+const PATHING_ATEMPTS: u16 = 50;
+
+/// How long to wait before retrying to path
+const PATHING_FAIL_TIMEOUT_RANGE: Range<f32> = 0.1..30.0;
+
 const ROBOT_SPACING: f32 = 2.0;
 
 const ROBOT_OBSTACLE_CLEARANCE: f32 = params::DIAMETER;
@@ -99,6 +105,38 @@ enum RobotMode {
     Pathing,
     ProximityPathing,
 }
+
+#[derive(Clone, Default, Debug, PartialEq)]
+enum CostmapCell {
+    #[default]
+    Unknown,
+    Obstacle,
+    DynamicObstacle,
+    Searched,
+}
+
+impl CostmapCell {
+    fn maybe_free(&self) -> bool {
+        !self.is_obstacle()
+    }
+
+    fn is_obstacle(&self) -> bool {
+        matches!(self, CostmapCell::Obstacle | CostmapCell::DynamicObstacle)
+    }
+}
+
+impl From<CostmapCell> for f32 {
+    fn from(cell: CostmapCell) -> Self {
+        match cell {
+            CostmapCell::Unknown => 1.0,
+            CostmapCell::Obstacle => -3.0,
+            CostmapCell::DynamicObstacle => -2.0,
+            CostmapCell::Searched => -1.0,
+        }
+    }
+}
+
+type Costmap = ScaledGrid<CostmapCell>;
 
 #[derive(Clone, Default)]
 pub(crate) struct SearchRobot {
@@ -137,7 +175,7 @@ pub(crate) struct SearchRobot {
     last_proximity_grid_update: Duration,
 
     /// Grid containing the costmap for path planning
-    costmap_grid: ScaledGrid<f32>,
+    costmap_grid: ScaledGrid<CostmapCell>,
 
     /// The time of the last costmap grid update
     last_costmap_grid_update: Duration,
@@ -156,6 +194,12 @@ pub(crate) struct SearchRobot {
 
     /// The path planned by the robot
     path_fails: u16,
+
+    /// How long to wait before retrying to path (within `PATHING_FAIL_TIMEOUT_RANGE`)
+    path_fail_timeout: f32,
+
+    /// The time of the last planning failure
+    path_fail_time: Option<Duration>,
 
     /// Other robots and their positions
     others: HashMap<RobotId, (Pos2, f32)>,
@@ -444,20 +488,16 @@ impl SearchRobot {
         lidar_contribution
     }
 
-    fn control_towards(&self, target: Option<Vec2>) -> Control {
-        if let Some(target) = target {
-            let angle_error = normalize_angle(self.angle - target.angle());
-            let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
-            let speed = 1.0 - t;
-            let steer = normalize_angle(target.angle() - self.angle);
-
-            Control { speed, steer }
-        } else {
-            Control {
-                speed: 0.0,
-                steer: 0.0,
-            }
+    fn control_towards(&self, target: Vec2) -> Control {
+        if target == Vec2::ZERO {
+            return Control::default();
         }
+        let angle_error = normalize_angle(self.angle - target.angle());
+        let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
+        let speed = 1.0 - t;
+        let steer = normalize_angle(target.angle() - self.angle);
+
+        Control { speed, steer }
     }
 
     fn visualize(&mut self) {
@@ -494,7 +534,7 @@ impl SearchRobot {
         soup.add(
             "Grids",
             "Costmap Grid",
-            DebugItem::Grid(self.costmap_grid.clone()),
+            DebugItem::Grid(self.costmap_grid.clone().transform(f32::from)),
         );
 
         soup.add(
@@ -543,24 +583,51 @@ impl SearchRobot {
         );
     }
 
-    fn path_planning(&mut self) -> Option<Vec2> {
-        if self.path_fails > 1000 {
+    fn set_path_timeout(&mut self, time: Duration) {
+        self.path_planner_goal = None;
+        self.path_planner_path = vec![];
+        self.robot_mode = RobotMode::Exploring;
+
+        self.path_fail_time = Some(time);
+        self.path_fail_timeout = (self.path_fail_timeout * 2.0).clamp(
+            PATHING_FAIL_TIMEOUT_RANGE.start,
+            PATHING_FAIL_TIMEOUT_RANGE.end,
+        );
+        println!(
+            "[{}] Pathing failed. Waiting for {} seconds",
+            self.id.as_u32(),
+            self.path_fail_timeout
+        );
+    }
+
+    fn set_path_success(&mut self) {
+        self.path_fails = 0;
+        self.path_fail_timeout = PATHING_FAIL_TIMEOUT_RANGE.start;
+    }
+
+    /// Returns target vector or `None` if no path is found
+    fn path_planning(&mut self, time: Duration) -> Option<Vec2> {
+        // Don't path if we failed recently
+        if let Some(path_fail_time) = self.path_fail_time {
+            if (time - path_fail_time).as_secs_f32() < self.path_fail_timeout {
+                return None;
+            }
+        }
+
+        if self.path_fails > PATHING_ATEMPTS {
             self.path_fails = 0;
-            self.path_planner_goal = None;
-            self.path_planner_path = vec![];
+            self.set_path_timeout(time);
             println!("[{}] Pathing failed too many times", self.id.as_u32());
+            return None;
         }
 
         // Logic to find goal or change to exploring mode when reached
         if let Some(goal) = self.path_planner_goal {
             let diff = goal - self.pos;
+            // Have we reached the goal?
             if diff.length() < PATH_PLANNER_DISTANCE_TOLERANCE {
                 self.path_planner_goal = None;
                 self.path_planner_path = vec![];
-                // println!(
-                //     "[{}] Goal reached, switching to exploring mode",
-                //     self.id.as_u32()
-                // );
                 self.robot_mode = RobotMode::Exploring;
                 return None;
             }
@@ -578,6 +645,12 @@ impl SearchRobot {
                 }
             }
 
+            // Abort if we still have no frontiers
+            if frontiers.is_empty() {
+                self.path_fails += 1;
+                return None;
+            }
+
             match frontiers::evaluate_frontiers(
                 self.pos,
                 self.angle,
@@ -588,11 +661,13 @@ impl SearchRobot {
                 Some(goal) => self.path_planner_goal = Some(goal),
                 None => {
                     // Should only happen in the beginning
-                    self.robot_mode = RobotMode::Exploring;
+                    self.set_path_timeout(time);
                     return None;
                 }
             }
         }
+
+        self.set_path_success();
 
         // Don't stop pathing if there are no other robots in map
         if !self.others.is_empty() && self.robot_mode != RobotMode::ProximityPathing {
@@ -600,15 +675,13 @@ impl SearchRobot {
                 // 0.0 means we are outside the proximity grid
                 Some(cell) if *cell == 0.0 => {
                     let mut masked_costmap = self.costmap_grid.clone();
-                    // Maske the grid to find a new goal within the proximity grid
+                    // Make the grid to find a new goal within the proximity grid
 
                     masked_costmap.mask(|pos| {
                         if let Some(proximity_cell) = self.proximity_grid.get(pos) {
                             // Don't overwrite obstacles
                             if let Some(costmap_cell) = self.costmap_grid.get(pos) {
-                                *costmap_cell == COSTMAP_OBSTACLE
-                                    || *costmap_cell == COSTMAP_DYNAMIC_OBSTACLE
-                                    || *proximity_cell != 0.0
+                                costmap_cell.is_obstacle() || *proximity_cell != 0.0
                             } else {
                                 // Keep the cell if it is in the proximity grid
                                 *proximity_cell != 0.0
@@ -643,7 +716,7 @@ impl SearchRobot {
                     self.get_debug_soup_mut().add(
                         "Planner",
                         "Masked Costmap",
-                        DebugItem::Grid(masked_costmap.clone()),
+                        DebugItem::Grid(masked_costmap.clone().transform(f32::from)),
                     );
 
                     // self.get_debug_soup_mut().add(
@@ -830,7 +903,7 @@ fn search(
     robot: &mut RobotRef,
     time: Duration,
     update: fn(&mut SearchRobot, time: Duration),
-    contributions: fn(&mut SearchRobot, &Vec2) -> Option<Vec2>,
+    target: fn(&mut SearchRobot, time: Duration) -> Vec2,
 ) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
 
@@ -839,14 +912,9 @@ fn search(
 
     update(robot, time);
 
-    let forward_bias = Vec2::angled(robot.angle) * FORWARD_BIAS;
-    robot.debug("", "Forward Bias", DebugItem::Vector(forward_bias));
+    let target = target(robot, time);
 
-    let mut target = Vec2::ZERO;
-    target += forward_bias;
-    let target = contributions(robot, &target);
-
-    robot.debug("", "Target", DebugItem::Vector(target.unwrap_or_default()));
+    robot.debug("", "Target", DebugItem::Vector(target));
 
     robot.postbox.clean();
 
@@ -868,24 +936,20 @@ mod behaviors {
                     robot.update_costmap_grid(time);
                 }
             },
-            |robot, target| match robot.robot_mode {
+            |robot, time| match robot.robot_mode {
                 RobotMode::Exploring => {
-                    let mut target = *target;
+                    let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                     let search_gradient = robot.search_gradient();
                     let proximity_gradient = robot.proximity_gradient();
                     let lidar = robot.lidar();
                     target += search_gradient + proximity_gradient + lidar;
-                    // if target.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
-                    //     robot.robot_mode = RobotMode::Pathing;
-                    // }
                     if search_gradient.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
                         robot.robot_mode = RobotMode::Pathing;
                     }
-                    Some(target)
+                    target
                 }
                 RobotMode::Pathing | RobotMode::ProximityPathing => {
-                    // No += since we want full control
-                    robot.path_planning()
+                    robot.path_planning(time).unwrap_or(Vec2::ZERO)
                 }
             },
         )
@@ -899,11 +963,11 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid_naive(time);
             },
-            |robot, target| {
-                let mut target = *target;
+            |robot, _time| {
+                let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                 target += robot.search_gradient();
                 target += robot.proximity_gradient();
-                Some(target)
+                target
             },
         )
     }
@@ -916,10 +980,10 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
             },
-            |robot, target| {
-                let mut target = *target;
+            |robot, _time| {
+                let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                 target += robot.search_gradient();
-                Some(target)
+                target
             },
         )
     }
@@ -932,11 +996,11 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
             },
-            |robot, target| {
-                let mut target = *target;
+            |robot, _time| {
+                let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                 target += robot.search_gradient();
                 target += robot.proximity_gradient();
-                Some(target)
+                target
             },
         )
     }
@@ -946,18 +1010,12 @@ mod behaviors {
             robot,
             time,
             |robot, time| {
+                robot.robot_mode = RobotMode::Pathing;
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
             },
-            |robot, _target| {
-                let target = robot.path_planning();
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
-            },
+            |robot, time| robot.path_planning(time).unwrap_or(Vec2::ZERO),
         )
     }
 
@@ -970,19 +1028,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.3333,
                     frontier_distance: 0.3333,
                     frontier_turn: 0.3333,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
@@ -994,19 +1050,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.1,
                     frontier_distance: 0.3,
                     frontier_turn: 0.6,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
@@ -1018,19 +1072,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.8,
                     frontier_distance: 0.1,
                     frontier_turn: 0.1,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
@@ -1042,19 +1094,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.1,
                     frontier_distance: 0.8,
                     frontier_turn: 0.1,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
@@ -1066,19 +1116,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.1,
                     frontier_distance: 0.1,
                     frontier_turn: 0.8,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
@@ -1090,19 +1138,17 @@ mod behaviors {
                 robot.update_search_grid(time);
                 robot.update_proximity_grid(time);
                 robot.update_costmap_grid(time);
+                // Make sure we stay in pathing mode always
+                robot.robot_mode = RobotMode::Pathing;
             },
-            |robot, _target| {
-                let target = robot.path_planning();
+            |robot, time| {
+                let target = robot.path_planning(time);
                 robot.frontier_evaluation_weights = frontiers::FrontierEvaluationWeights {
                     frontier_region_size: 0.2,
                     frontier_distance: 0.6,
                     frontier_turn: 0.2,
                 };
-                if robot.robot_mode == RobotMode::Exploring {
-                    // Make sure we stay in pathing mode always
-                    robot.robot_mode = RobotMode::Pathing;
-                }
-                target
+                target.unwrap_or(Vec2::ZERO)
             },
         )
     }
