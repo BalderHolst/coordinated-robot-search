@@ -5,6 +5,7 @@ use botbrain::{
     Pos2, Vec2,
 };
 use rand::Rng;
+use ron::ser::PrettyConfig;
 use simple_sim::world::description::ObjectDescription;
 
 use crate::cli::{WorldGenArgs, WorldToImgArgs};
@@ -35,7 +36,9 @@ pub fn world_gen(args: WorldGenArgs) -> Result<(), String> {
         let path = out_dir.join(format!("world_{}.ron", i));
 
         // Serialize to RON format
-        let Ok(contents) = ron::ser::to_string_pretty(&desc, Default::default()) else {
+        let Ok(contents) =
+            ron::ser::to_string_pretty(&desc, PrettyConfig::new().struct_names(false))
+        else {
             return Err(format!(
                 "Failed to serialize world description: {}",
                 path.display()

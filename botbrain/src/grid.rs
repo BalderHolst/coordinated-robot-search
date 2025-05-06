@@ -208,6 +208,18 @@ impl<C: Clone + Default> Grid<C> {
             }
         })
     }
+
+    /// Iterate over coordinates within a square
+    pub fn iter_square(&self, center: Pos2, size: f32) -> impl Iterator<Item = (usize, usize)> {
+        let half_size = size / 2.0;
+        let min_x = f32::max((center.x - half_size).ceil(), 0.0) as usize;
+        let max_x = f32::min((center.x + half_size).floor(), self.width as f32 - 1.0) as usize;
+
+        let min_y = f32::max((center.y - half_size).ceil(), 0.0) as usize;
+        let max_y = f32::min((center.y + half_size).floor(), self.height as f32 - 1.0) as usize;
+
+        (min_y..=max_y).flat_map(move |y| (min_x..=max_x).map(move |x| (x, y)))
+    }
 }
 
 impl<C: Clone + Default> Debug for Grid<C> {

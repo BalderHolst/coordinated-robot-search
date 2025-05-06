@@ -58,8 +58,6 @@ pub fn convert_to_botbrain_map(world: &World) -> botbrain::Map {
 }
 
 pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
-    println!("Loading world from {:?}", path);
-
     let contents = || {
         std::fs::read_to_string(path)
             .map_err(|e| format!("Failed to read file '{}': {}", path.display(), e))

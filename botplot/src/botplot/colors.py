@@ -15,3 +15,6 @@ COLORS = [
     "#bc5b80",
     "#47b66d",
 ]
+
+def get_color(index: int) -> str:
+    return COLORS[index % len(COLORS)]

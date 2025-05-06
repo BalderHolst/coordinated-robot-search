@@ -53,10 +53,11 @@ class RustCrate:
 
         return False
 
-    def run(self, flags: list[str] = [], **kwargs):
+    def run(self, flags: list[str] = [], **kwargs) -> subprocess.CompletedProcess:
         """Run the Rust crate with the given flags."""
         if self.needs_recompile(): self.compile()
         proc = subprocess.run([self.executable()] + flags, **kwargs)
         if proc.returncode != 0:
             print(f"Error: {proc.stderr}")
             exit(1)
+        return proc

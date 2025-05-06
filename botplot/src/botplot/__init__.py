@@ -1,8 +1,10 @@
 import os
 import json
 import hashlib
+import random
 from math import sqrt
 from dataclasses import dataclass
+from typing import Self
 
 import polars as pl
 import matplotlib as mpl
@@ -72,6 +74,13 @@ class Scenario:
     duration: int
     robots: list[Robot]
 
+    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot]):
+        self.title = title
+        self.world = world
+        self.behavior = behavior
+        self.duration = duration
+        self.robots = robots
+
     def to_ron(self) -> str:
         robots = ", ".join([f"(pos: (x: {r.x}, y: {r.y}), angle: {r.angle})" for r in self.robots])
 
@@ -94,6 +103,33 @@ BITMAP_LABEL = "Bitmap"
 class World:
     file: str
     data: dict
+
+    @classmethod
+    def from_description_file(cls, file: str) -> Self:
+
+        if file.endswith(".ron"):
+            abs_file = os.path.abspath(file)
+            hash = hashlib.sha256(abs_file.encode()).hexdigest()
+            name = os.path.basename(file)
+            json_file = os.path.join(data_dir(), "json-desciptions", f"{name}-{hash}.json")
+
+            os.makedirs(os.path.dirname(json_file), exist_ok=True)
+
+            if os.path.exists(json_file):
+                print(f"Using cached json world description: {relpath(json_file)}")
+            else:
+                trainer.run([
+                    "world-to-json",
+                    "--input", file,
+                    "--output", json_file,
+                    "--force",
+                ])
+            file = json_file
+
+        with open(file) as f:
+            data = json.load(f)
+
+        return cls(file, data)
 
     def is_obj(self) -> bool:
         return OBJ_LABEL in self.data
@@ -129,9 +165,9 @@ class World:
                 ])
 
             return plt.imread(img_file)
-        # TODO: Get bitmap image here?
-
-        pass
+        else:
+            # TODO: Get bitmap image here?
+            raise NotImplemented("Bitmap world not implemented yet.")
 
     def dims(self) -> tuple[float, float]:
         desc = self.desc()
@@ -145,7 +181,7 @@ class World:
                 exit(1)
             with open(os.path.join(path, desc["image"]), "rb") as f:
                 # Read the first line (format identifier, e.g., P2 or P5)
-                _format_identifier = f.readline().strip()
+                _ = f.readline().strip()
                 # Read the width and height from the next line
                 width, height = map(int, f.readline().split())
             return width, height
@@ -241,7 +277,7 @@ class Result:
         return data_path, desc_path
 
     def world(self) -> World:
-        return World(self.description_file, self.desc()["world"])
+        return World.from_description_file(self.description_file)
 
 
 def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, verbose=False) -> Result:
@@ -293,12 +329,39 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
 
     return Result(data_file, desc_file)
 
-def world_plot(fig, ax, result: Result, title: str, out_file: str):
+def place_robots_data(world: str | World, n: int) -> dict:
+    if isinstance(world, World):
+        world = world.file
+
+    flags = []
+
+    proc = trainer.run([
+        "place-robots",
+        "--world", world,
+        "-n", str(n),
+        "--seed", str(random.randint(0, 2**64 - 1)),
+    ] + flags, capture_output=True, text=True)
+
+    data = json.loads(proc.stdout)
+    robots = []
+    for pose in data["poses"]:
+        x = pose["pos"]["x"]
+        y = pose["pos"]["y"]
+        angle = pose["angle"]
+        robots.append(Robot(x, y, angle))
+
+    data["robots"] = robots
+
+    return data
+
+def place_robots(world: str | World, n: int) -> list[Robot]:
+    data = place_robots_data(world, n)
+    return data["robots"]
+
+def plot_world(fig, ax, world: World, title: str, out_file: str):
 
     if title:
         ax.set_title(title, fontsize=16)
-
-    world = result.world()
 
     width, height = world.dims()
 
@@ -315,16 +378,12 @@ def world_plot(fig, ax, result: Result, title: str, out_file: str):
     ax.set_ylim(ymin, ymax)
     ax.set_aspect('equal')
 
-    # ncol = min(len(ax.get_legend_handles_labels()[0]), 4)  # Get the number of legend entries
-    # ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.02), borderaxespad=0., ncol=ncol)
-
     world_img = world.img()
     ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
 
     plt.tight_layout()
 
-    # Make sure directory exists
-    os.makedirs(os.path.dirname(out_file), exist_ok=True)
+    out_file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}.png")
 
     save_figure(fig, out_file)
 
@@ -540,5 +599,5 @@ def plot_paths(result: Result, title: str, segments=1, force=False):
             print(f"    => {e}")
             exit(1)
 
-        world_plot(fig, ax, result, f"{title} (after {t[end-1]:.0f}s)", file)
+        plot_world(fig, ax, result.world(), f"{title} (after {t[end-1]:.0f}s)", file)
 

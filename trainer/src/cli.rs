@@ -17,6 +17,8 @@ pub enum Command {
     Train(TrainArgs),
     WorldGen(WorldGenArgs),
     WorldToImg(WorldToImgArgs),
+    WorldToJson(WorldToJsonArgs),
+    PlaceRobots(PlaceRobotsArgs),
 }
 
 #[derive(Args)]
@@ -110,4 +112,34 @@ pub struct WorldToImgArgs {
     /// Theme to use for rendering
     #[arg(short, long, default_value = "light")]
     pub theme: simple_sim::gui::Theme,
+}
+
+#[derive(Args)]
+pub struct PlaceRobotsArgs {
+    /// World file to place robots in
+    #[arg(short, long)]
+    pub world: PathBuf,
+
+    /// Number of robots to place
+    #[arg(short, long)]
+    pub n_robots: usize,
+
+    /// Seed for random number generation
+    #[arg(short, long)]
+    pub seed: Option<u64>,
+}
+
+#[derive(Args)]
+pub struct WorldToJsonArgs {
+    /// Input file
+    #[arg(short, long)]
+    pub input: PathBuf,
+
+    /// Output file
+    #[arg(short, long)]
+    pub output: PathBuf,
+
+    /// Overwrite existing files
+    #[arg(short, long)]
+    pub force: bool,
 }

@@ -255,6 +255,16 @@ impl<C: Clone + Default> ScaledGrid<C> {
             .map(move |(x, y)| self.grid_to_pos(Pos2::new(x as f32, y as f32)))
     }
 
+    /// Iterate over cells within a square
+    pub fn iter_square(&self, center: Pos2, size: f32) -> impl Iterator<Item = Pos2> + '_ {
+        let grid_center = self.pos_to_grid(center);
+        let grid_size = size / self.cell_size;
+
+        self.grid
+            .iter_square(grid_center, grid_size)
+            .map(move |(x, y)| self.grid_to_pos(Pos2::new(x as f32, y as f32)))
+    }
+
     /// Maskes out the ScaledGrid cells
     /// If mask returns true, the cell is kept
     /// If not the cell is set to default
