@@ -15,8 +15,14 @@ use crate::{
 use botbrain::{Pos2, camera::CamPoint, debug_soup::DebugItem, shapes::Cone};
 use futures::StreamExt;
 use r2r::{
-    self, Publisher, QosProfile, geometry_msgs, log_error, log_info, log_warn, nav_msgs,
-    ros_agent_msgs, sensor_msgs, visualization_msgs,
+    self, Publisher, QosProfile,
+    geometry_msgs::{
+        self,
+        msg::{Point, Pose, PoseStamped, Quaternion, Vector3},
+    },
+    log_error, log_info, log_warn, nav_msgs, ros_agent_msgs, sensor_msgs,
+    std_msgs::msg::{ColorRGBA, Header},
+    visualization_msgs::{self, msg::Marker},
 };
 
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
@@ -28,11 +34,11 @@ pub struct RosAgent {
     robot: Box<dyn botbrain::Robot>,
     behavior: botbrain::behaviors::Behavior,
     goal_pub: Publisher<visualization_msgs::msg::Marker>,
-    goal_path_pub: Publisher<visualization_msgs::msg::Marker>,
+    goal_path_pub: Publisher<nav_msgs::msg::Path>,
 
     pose: Arc<Mutex<Option<geometry_msgs::msg::PoseWithCovarianceStamped>>>,
     /// Pos and angle in world coordinates
-    pose_world: (Pos2, f32),
+    pose_botbrain_world: (Pos2, f32),
     scan: Arc<Mutex<Option<sensor_msgs::msg::LaserScan>>>,
     cmd_pub: Publisher<geometry_msgs::msg::Twist>,
 
@@ -105,8 +111,8 @@ impl RosAgent {
         let goal_path_pub = node
             .lock()
             .unwrap()
-            .create_publisher::<visualization_msgs::msg::Marker>(
-                "planner_goal",
+            .create_publisher::<nav_msgs::msg::Path>(
+                "planner_goal_path",
                 QosProfile::default().volatile(),
             )
             .unwrap();
@@ -217,7 +223,7 @@ impl RosAgent {
             goal_path_pub,
 
             pose,
-            pose_world: (Pos2::default(), 0.0),
+            pose_botbrain_world: (Pos2::default(), 0.0),
             scan,
             cmd_pub,
 
@@ -233,15 +239,15 @@ impl RosAgent {
     }
 
     pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut last_map_update: Duration = util::get_ros2_time(self.node.clone());
+        let mut last_debug_update: Duration = util::get_ros2_time(self.node.clone());
 
         // Prevents ros_agent from updating before simulation is ready
         loop {
             let time = util::get_ros2_time(self.node.clone());
 
-            if time.abs_diff(last_map_update).as_millis() >= 200 {
+            if time.abs_diff(last_debug_update).as_millis() >= 200 {
                 // Simulated time is ready
-                last_map_update = time;
+                last_debug_update = time;
                 break;
             }
 
@@ -264,7 +270,7 @@ impl RosAgent {
                     let pos =
                         pos - self.map.map_origin - (self.map.map_size / 2.0) * self.map.map_scale;
                     self.robot.input_pose(botbrain::RobotPose { pos, angle });
-                    self.pose_world = (pos, angle);
+                    self.pose_botbrain_world = (pos, angle);
                 } else {
                     continue;
                 }
@@ -278,7 +284,7 @@ impl RosAgent {
                 // Set the object detection input
                 if let Some(mut image) = self.image.lock().unwrap().take() {
                     if let Ok(img) = sensor_image_to_opencv_image(&mut image) {
-                        let (pos, angle) = self.pose_world;
+                        let (pos, angle) = self.pose_botbrain_world;
                         match self
                             .vision
                             .find_search_objects_probability(pos, angle, &img)
@@ -377,9 +383,11 @@ impl RosAgent {
                 }
             }
 
-            if time > last_map_update + Duration::from_secs_f32(0.5) {
-                last_map_update = time;
+            if time > last_debug_update + Duration::from_secs_f32(0.5) {
+                last_debug_update = time;
                 self.update_map_overlay();
+                self.show_goal();
+                self.show_goal_path();
             }
         }
     }
@@ -447,10 +455,84 @@ impl RosAgent {
         }
     }
 
-    fn show_goal_marker(&self, goal: Pos2) {
-        todo!()
+    fn show_goal(&self) {
+        if let Some(goal) = self.robot.get_debug_soup().get("Planner", "Goal") {
+            if let DebugItem::Point(goal_pos) = &*goal {
+                let goal_pos_ros = *goal_pos
+                    + self.map.map_origin
+                    + (self.map.map_size / 2.0) * self.map.map_scale;
+                let goal_marker = Marker {
+                    type_: Marker::SPHERE as i32,
+                    action: Marker::ADD as i32,
+                    pose: Pose {
+                        position: Point {
+                            x: goal_pos_ros.x as f64,
+                            y: goal_pos_ros.y as f64,
+                            z: 0.0,
+                        },
+                        ..Default::default()
+                    },
+                    scale: Vector3 {
+                        x: 0.2,
+                        y: 0.2,
+                        z: 0.2,
+                    },
+                    color: ColorRGBA {
+                        r: 255.0,
+                        g: 255.0,
+                        b: 0.0,
+                        a: 255.0,
+                    },
+                    header: Header {
+                        frame_id: "map".to_string(),
+                        ..Default::default()
+                    },
+                    id: 0,
+                    ..Default::default()
+                };
+                // TODO: Use the pose in marker msg
+                // goal_marker.pose
+                self.goal_pub.publish(&goal_marker).unwrap();
+            }
+        }
     }
-    fn show_goal_path_marker(&self, path: Vec<Pos2>) {
-        todo!()
+
+    fn show_goal_path(&self) {
+        if let Some(goal_path) = self.robot.get_debug_soup().get("Planner", "Goal Path") {
+            if let DebugItem::GlobalLine(goal_pos) = &*goal_path {
+                let goal_path_ros = goal_pos
+                    .iter()
+                    .map(|pos| {
+                        *pos + self.map.map_origin + (self.map.map_size / 2.0) * self.map.map_scale
+                    })
+                    .map(|pos| PoseStamped {
+                        header: Header {
+                            frame_id: "map".to_string(),
+                            ..Default::default()
+                        },
+                        pose: Pose {
+                            position: Point {
+                                x: pos.x as f64,
+                                y: pos.y as f64,
+                                z: 0.0,
+                            },
+                            orientation: Quaternion {
+                                w: 1.0,
+                                ..Default::default()
+                            },
+                        },
+                    })
+                    .collect::<Vec<_>>();
+
+                let path = nav_msgs::msg::Path {
+                    header: Header {
+                        frame_id: "map".to_string(),
+                        ..Default::default()
+                    },
+                    poses: goal_path_ros,
+                };
+                self.goal_path_pub.publish(&path).unwrap();
+            }
+        }
     }
 }
