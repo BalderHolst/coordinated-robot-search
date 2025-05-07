@@ -774,11 +774,7 @@ impl SearchRobot {
                     }
                 }
                 None => {
-                    // println!(
-                    //     "[{}] Robot position not in proximity grid: {:?}",
-                    //     self.id.as_u32(),
-                    //     self.pos
-                    // );
+                    // Robot not in proximity grid
                 }
                 _ => {}
             }
@@ -796,12 +792,6 @@ impl SearchRobot {
                 // Start following the path next time
                 None
             } else {
-                // println!(
-                //     "[{}] What: {:?}, goal: {:?}",
-                //     self.id.as_u32(),
-                //     self.robot_mode,
-                //     self.path_planner_goal
-                // );
                 Some(self.lidar())
             }
         } else {
@@ -818,12 +808,6 @@ impl SearchRobot {
     fn follow_path(&mut self) -> Result<Vec2, ()> {
         if !self.path_planner_path.is_empty() {
             // Check if all cells in the line to the goal are free
-            // let dir = (self.path_planner_path[0] - self.pos).normalized();
-            // let mut start = self.pos + dir * params::DIAMETER;
-            // let end = self.path_planner_path[0];
-            // if (end - start).length() < params::DIAMETER * 2.0 {
-            //     start = end;
-            // }
             let line = Line {
                 start: self.pos,
                 end: self.path_planner_path[0],
@@ -854,13 +838,7 @@ impl SearchRobot {
             let mut path = Vec::with_capacity(self.path_planner_path.len() + 1);
             path.push(self.pos);
             path.extend(self.path_planner_path.iter().cloned());
-            // let smooth_path = smooth_path(path.clone(), &self.costmap_grid);
             soup.add("Planner", "Goal Path", DebugItem::GlobalLine(path));
-            // soup.add(
-            //     "Planner",
-            //     "Smooth Goal Path",
-            //     DebugItem::GlobalLine(smooth_path),
-            // );
         }
     }
 

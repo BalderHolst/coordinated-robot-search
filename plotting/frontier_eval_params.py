@@ -23,7 +23,7 @@ def main():
         # "simple_sim/worlds/objectmap/medium_obstacles.ron",
     ]
 
-    n = 1
+    n = 5
     seed = 0
 
     for world in worlds:
@@ -42,7 +42,11 @@ def main():
             res = bp.run_sim(scenario)
             results.append(res)
 
-        bp.plot_coverage(results, f"frontier_eval_params_{world_name}", f"Coverage of {n} robots in \"{world_name}\"")
+        bp.plot_coverage(
+            results,
+            f"frontier_eval_params_{world_name}",
+            f'Coverage of {n} robots in "{world_name}"',
+        )
 
 
 if __name__ == "__main__":
