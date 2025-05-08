@@ -34,7 +34,7 @@ The software is divided into three main parts, the robot behavior implementation
 simulator, and a ROS 2 environment.
 
 \subsection{Robot Behavior}
-The robot behaviors are implemented in the Botbrain rust crate. This crate defines the Robot interface
+The robot behaviors are implemented in the Botbrain rust crate {\color{red}(maybe just Botbrain library?)}. This crate defines the Robot interface
 which is the only way for outside crates to interact with a robot’s internal state (see \cref{fig:robot-interface}).
 
 \begin{figure}[H]
@@ -75,7 +75,7 @@ Separating the robot state from its behavior allows multiple behaviors for the s
 The {\color{red} functionality} of this project is entirely written in rust. Although this choice was mostly due to preference, it does have a few benefits, but has also been a {\color{red} disadvantage} at times. ROS 2 {\color{red} does not officially support Rust} and it can therefore be a bit tricky to integrate with ROS2 and \texttt{Colcon}. To use ROS2 from Rust, a library by the name \texttt{r2r} was used {\color{red}[CITE]}, which provides bindings for the ROS2 API and generates code for ROS2 message types. It works great although compile times are a bit long.
 
 % TODO: Take a look at this again...
-An advantage of writing everything in Rust is the robustness and correctness of the code. The rust compiler ensures that undefined behavior is impossible and enforces a very strict type system where object lifetimes are verified at compile time. We can therefore, with a say that the code will not do anything unexpected.
+An advantage of writing everything in Rust is the robustness and correctness of the code. The rust compiler ensures that undefined behavior is impossible and enforces a very strict type system where object lifetimes are verified at compile time. We can therefore, with a say that the code will not do anything unexpected {\color{red}(Maybe only memory safety related issuses? As we still could have implementation bugs)}.
 
 \subsection{Two Simulators}
 % TODO: Why two simulators?
