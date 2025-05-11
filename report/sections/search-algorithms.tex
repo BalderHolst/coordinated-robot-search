@@ -17,6 +17,7 @@ A robot keeps track of a lot of state which should dictate how it moves and expl
 \end{figure}
 
 
+
 % TODO: Describe the idea, that different factors contribute to the target vector. The target vector is the sum over all contributions.
 % TODO: Describe how we take gradients on a grid
 
@@ -92,7 +93,7 @@ With this gradient calculation, tho robots will explore the map by getting attra
 \end{figure}
 
 \subsection{Proximity Grid}
-The robot should stay withing communication range of the other robots, to assure this, the robot keeps track of the connectivity {\color{red} across} the whole map using a "Proximity Grid" (See \cref{fig:proximity-grid}).
+Robots should stay within communication range of the other robots, to assure this, the robot keeps track of the connectivity {\color{red} across} the whole map using a "Proximity Grid" (See \cref{fig:proximity-grid}).
 
 \begin{figure}[h]
     \begin{center}
@@ -101,7 +102,7 @@ The robot should stay withing communication range of the other robots, to assure
     \caption{Example of a proximity grid}\label{fig:proximity-grid}
 \end{figure}
 
-The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying withing the main network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the calculating. In the situation that the robot is the only link between the main network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
+The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying withing the largest network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the robot itself in the calculating. In the situation that the robot is the only link between the network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
 
 \begin{figure}[h]
     \begin{center}
@@ -134,9 +135,10 @@ The grid is calculated by the largest network of connected robots and "coloring"
 
 \subsection{Global Planner}
 In some situations, the robot may not be able explore new area because of the limited area used for calculating the gradient of the search grid.
-In the case the search gradient is too small we can do a more expensive operation to guide the robot to a more rewarding area.
+In the case the search gradient is too small, meaning the robot is unsure where to go, the robot can perform a more expensive computation to find and make a path to another area.
 In other situations, where computational resources are not limited, the robot can solely rely on the pathing algorithms for control.
 
+% TODO: Maybe make flow char for this
 The general setup of the planner is as follows:
 \begin{enumerate}
   \item Make costmap, see \cref{sec:costmap}.
@@ -147,8 +149,8 @@ The general setup of the planner is as follows:
 \end{enumerate}
 
 \subsubsection{Costmap}\label{sec:costmap}
-First a way of representing the area already search and obstacles in the world is needed. 
-The costmap has a resolution of $0.2m$ and is represented as a grid of cells.
+To represent the area already search and obstacles in the world a costmap is made. 
+The costmap has a resolution of $0.2$m and is represented as a grid of cells. A cell can either be searched, unknown or obstacle, as described here:
 \begin{itemize}
   \item Data from the search grid is transferred to the costmap. Covered cells is set to searched and other cells are set to unknown.
   \item Obstacles in in world map is set to obstacles in the costmap.
@@ -157,15 +159,19 @@ The costmap has a resolution of $0.2m$ and is represented as a grid of cells.
 
 % TODO: Show cost map and example of a planned route
 \subsubsection{Frontier Exploration}\label{sec:frontier_exploration}
-From the costmap, a way to find a suitable goal is required. This project uses frontier exploration to find all the frontiers. A frontier is a cell that separates searched and unknown areas. The frontiers are found via a breadth first search from the position of the robot. This is done to avoid searching the whole costmap which leads to faster goal generation. When the frontiers is found, they are grouped into regions. 
+To find a suitable goal, a costmap is required.
+This project uses frontier exploration to find all the frontiers. 
+A frontier is a cell that separates searched and unknown areas. 
+The frontiers are found via a Breadth First Search from the position of the robot  to avoid searching the whole costmap which leads to faster goal generation. When the frontiers is found, they are grouped into regions. 
 Lastly the frontiers and their region are evaluated based on 3 parameters:
-\begin{enumerate}
+\begin{itemize}
   \item Frontier region size.
   \item Frontier distance to the robot.
   \item How much the robot should turn to face the frontier.
-\end{enumerate}
+\end{itemize}
 The distance from the frontier to the nearest obstacles also has to be further than a parameter specifying the clearance the robot should have to obstacles.
-% TODO: Evaluate the used parameters.
+
+% TODO: Show evaluation of the used parameters.
 
 \subsubsection{Path planning}\label{sec:path_planning}
 Once a goal has been generated, a path to that goal needs to be generated. First a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is uphold, the robot will simply follow this path.
