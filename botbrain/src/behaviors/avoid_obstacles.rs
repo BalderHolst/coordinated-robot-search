@@ -1,7 +1,7 @@
 use std::{f32::consts::PI, time::Duration};
 
 use crate::{
-    behaviors::BehaviorOutput,
+    behaviors::{BehaviorOutput, DebugItem},
     camera::CamData,
     cast_robot,
     debug_soup::DebugSoup,
@@ -92,6 +92,20 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOut
         {
             min_point = point.clone();
         }
+    }
+
+    if robot.debug_enabled() {
+        robot.debug(
+            "",
+            "Lidar",
+            DebugItem::RobotRays(
+                robot
+                    .lidar
+                    .points()
+                    .map(|p| (p.angle, p.distance))
+                    .collect::<Vec<_>>(),
+            ),
+        );
     }
 
     // If the closest point is too close, steer away from it
