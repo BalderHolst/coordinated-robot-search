@@ -162,7 +162,7 @@ The costmap has a resolution of $0.2$m and is represented as a grid of cells. A 
 \begin{itemize}
   \item Data from the search grid is transferred to the costmap. Covered cells is set to searched and other cells are set to unknown.
   \item Obstacles in in world map is set to obstacles in the costmap.
-  \item Last LIDAR data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
+  \item Last LiDAR data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
 \end{itemize}
 
 % TODO: Show cost map and example of a planned route
@@ -191,11 +191,11 @@ The A-star algorithm is implemented as a min-heap, where it's always the cell wi
 The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered as visited and therefore removed from the list.
 
 Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to not hit other robots and obstacles.
-If this validation fails, the target vector to the next position is still used but the contribution from the LIDAR is added. This allows the robot to follow the path while not hitting obstacles. 
+If this validation fails, the target vector to the next position is still used but the contribution from the LiDAR is added. This allows the robot to follow the path while not hitting obstacles. 
 Still there is situations where new circumstances simply does not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail another goal will generated.
 
 Pathing errors:
 
 Looser restriction on the clearance of the generated path.
-Use a combination of pathing vectors and LIDAR contribution to follow path but not hit obstacles and other robots.
+Use a combination of pathing vectors and LiDAR contribution to follow path but not hit obstacles and other robots.
 % TODO: Pathing outside the proximity grid.

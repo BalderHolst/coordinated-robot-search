@@ -18,7 +18,7 @@ Gazebo also uses a publisher/subscriber model internally and can via a ros-gz-br
 The Turtlebot 4 is modeled in a URDF file. Included in the URDF is necessary plugin specifications and settings for simulating camera, LiDAR etc. in Gazebo. The differential drive system for the Turtlebot 4 is handled by the Gazebo Diff Drive Plugin \cite{gz-diff-drive}.
 
 \subsection{Localization}\label{sub:localization} 
-Botbrain robot requires pose estimation to function, therefore localization in the world is needed.
+\texttt{botbrain} robots requires pose estimation to function, therefore localization in the world is needed.
 For unknown environments, methods like Simultaneous Localization and Mapping (SLAM) is required. Here localization and mapping is performed as the robot moves around the environment.
 
 This project assumes that the robot already has an available map to use for localization. 
@@ -42,8 +42,8 @@ The process is as follows where the search object is assigned to be a yellow bal
 If no circles are found, nothing is interpreted as the search object. If one or multiple circles are found, their probability of being the search object is calculated.
 If the probability is above a certain threshold, the object is considered to be the search object.
 
-\subsection{Botbrain Integration}\label{sub:Botbrain_integration}
-As in \texttt{Simple Sim} the robots needs to communicate their observations and positions to each other. A custom ROS 2 message type is created as seen here:
+\subsection{\texttt{botbrain} Integration}\label{sub:Botbrain_integration}
+As in \texttt{simple\_sim} the robots needs to communicate their observations and positions to each other. A custom ROS 2 message type is created as seen here:
 \begin{minted}{bash}
   #file: AgentMessage.msg
   uint32 sender_id
@@ -56,7 +56,7 @@ The data field is a byte array of serialized message data the robot wants to sen
 After passing the required sensor data to the robot behavior, the robot behavior will give the control input to the robot. This control input is then passed to the Gazebo simulation, which internally is simulating a differentail drive system for the Turtleabot 4. The control input is a simple message type which contains linear and angular velocity for the differential drive system.
 
 \subsubsection{Debugging and Visualization}\label{sec:debugging_rviz}
-Botbrain exposes the \texttt{Debug Soup} which collect predefined data from the internals of Botbrain. 
-In \texttt{Simple Sim} this can be shown in the GUI itself, using ROS 2 a visualization package called ROS Visualization 2 (RViz2) package is used.
+\texttt{botbrain} exposes the \texttt{Debug Soup} which collect predefined data from the internals of Botbrain. 
+In \texttt{simple\_sim} this can be shown in the GUI itself, using ROS 2 a visualization package called ROS Visualization 2 (RViz2) package is used.
 RViz2 can visualize data from sensors, robots, and algorithms in real-time, making it an essential tool for debugging and monitoring a ROS 2 system.
 \texttt{Debug Soup} specific data can be read from the robots and converted to suitable data types for visualization in Rviz2. Like in \texttt{simple\_sim} the girds can be converted to the Occupancy Grid message.
