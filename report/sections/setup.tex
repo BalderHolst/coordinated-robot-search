@@ -6,7 +6,9 @@
 % TODO: Describe the sensors available
 % TODO: Describe that we assume the robot to have some sort of communication method
 
-For this project a differential drive robot with camera, LiDAR, odometry and communication capabilities is chosen. Lidar and odometry are used for localization using AMCL as discussed later ({\color{red} DISCUSS THIS} in \cref{sub:localization}), the camera is used to look for the search object and a global communication channel is needed for the robots to share data. To get realistic parameters and to make use of ready made 3D models, URDF files and robot parameters, the Turtlebot 4 \cite{tb4} was chosen as the target platform. It is, however, important to note that the software developed in this project will run on any robot satisfying the sensor and communication requirements by changing the parameters to match in the source code. The Turtlebot 4 has all the required hardware apart from a {\color{red} designated communication unit}. As this project focuses on simulation, the simulator will be responsible for passing messages between robots as they are sent. The software implementation is therefore {\color{red} communication method agnostic} as long as the messages the robots send are received by the other robots.
+For this project, a differential drive robot equipped with a camera, LiDAR, odometry, and communication capabilities was chosen. LiDAR and odometry are utilized for localization via AMCL (as discussed later---{\color{red} DISCUSS THIS} in \cref{sub:localization}). The camera is used to detect the search object and a global communication channel is needed for the robots to share data. To optain realistic parameters and utilize pre-existing 3D models, URDF files, and robot parameters, the Turtlebot 4 \cite{tb4} was chosen as the target platform. However, it is important to note that the software developed in this project can be adapted to run on any robot that meets the specified sensor and communication requirements by adjusting the corresponding parameters in the source code.
+% TODO: I think it has wifi/bluetooth builtin
+The Turtlebot 4 has all the required hardware apart from a {\color{red} designated communication unit}. As this project focuses on simulation, the simulator will be responsible for passing messages between robots as they are sent. The software implementation is therefore {\color{red} communication method agnostic} as long as the messages the robots send are received by the other robots.
 
 % TODO: Maybe mark the sensors on the robot
 \begin{figure}[h]
@@ -33,7 +35,7 @@ For this project a differential drive robot with camera, LiDAR, odometry and com
 
 
 The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
-simulator, and a ROS 2 environment.
+simulator, and a ROS 2 environment with 3D realistic simulations.
 
 \subsection{Robot Behavior}
 The robot behaviors are implemented in the \texttt{botbrain} library. \texttt{botbrain} defines the \texttt{Robot} interface
@@ -65,16 +67,18 @@ Separating the robot state from its behavior allows multiple behaviors for the s
 
 \subsection{Using Rust}
 % TODO: Describe how we integrated with colcon
-The {\color{red} functionality} of this project is entirely written in rust. Although this choice was mostly due to preference, it has both benefits and difficulties which influence the {\color{red} final product}. ROS 2 does not officially support Rust and it can therefore be difficult to integrate with ROS 2 and Colcon. To use ROS 2 from Rust, a library by the name \texttt{r2r} was used {\color{red}[CITE]}, which provides bindings for the ROS 2 API and generates code for ROS 2 message types. It works well although compile times are longer than for C++, as Rust bindings are generated during compilation. \\
+The core logic of this project is implemented entirely in Rust. While this choice was primarily driven by preference, it presents both advantages and challenges that impact the overall system. ROS 2 does not officially support Rust, which can complicate integration with the ROS 2 ecosystem. To utilize ROS 2 from Rust, the \texttt{R2R} library \cite{r2r} was used. It provides bindings for the ROS Client Library (RCL) and generates code for ROS 2 message types. It functions effectively, although initial compilation times are longer compared to C++, as Rust bindings are generated during the build process. \\
 
-An advantage of writing everything in Rust is the robustness and correctness of the code. The rust compiler ensures that undefined behavior is impossible and enforces a very strict type system where object lifetimes are verified at compile time. The resulting code is therefore less error prone and easier to refactor as multiple people work on it simultaneously.
+A key advantage of using Rust is the enhanced robustness and correctness of the codebase. The Rust compiler guarantees no undefined behavior and enforces a strict type system where object lifetimes are verified at compile time. Consequently, the resulting code is less susceptible to errors and easier to refactor, especially in collaborative development environments.
 
 \subsection{Two Simulators}
 % TODO: Why two simulators?
 % TODO: Shared behavior
 % TODO: Performance differences
-This project uses a simulator to simulator approach for validating robot behavior, as opposed to a simulator to real world comparison. The \texttt{simple\_sim} simulator provides a naive and simple environment useful for testing and validating robot behavior and was developed during this project A Gazebo simulation is used to verify that the simple simulator is approximating the sensor inputs and motor commands in a realistic way that leads to similar results. The Gazebo simulation is always considered most correct. A major advantage of the simple simulator, is that it is very light weight and can run faster than real time with deterministic results. \Cref{fig:simulators} shows a screenshots of the simulators.
+This project uses a simulator to simulator approach for validating robot behavior, as opposed to a simulator to real world comparison. The \texttt{simple\_sim} simulator provides a naive and simple environment useful for testing and validating robot behavior and was developed during this project. A Gazebo simulation is used to verify that the simple simulator is approximating the sensor inputs and motor commands in a realistic way that leads to similar results. The Gazebo simulation is always considered most correct. A major advantage of the simple simulator, is that it is very light weight and can run faster than real time with deterministic results. 
+\Cref{fig:simulators} shows a screenshots of the simulators running the same world.
 
+% TODO: Insert pictures of the depot in Simple Sim and Gazebo
 \begin{figure}[h]
     \centering
     \begin{subfigure}[b]{0.45\textwidth}
@@ -86,8 +90,8 @@ This project uses a simulator to simulator approach for validating robot behavio
     \begin{subfigure}[b]{0.45\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/gazebo_sim.png}
-        \caption{Gazebo + ROS 2 Simulator}
+        \caption{Gazebo Simulator in ROS 2}
     \end{subfigure}
-    \caption{Screenshots the simulators. {\color{red} add description what is on the screenshots}}
-    \label{fig:simulators}
+    \caption{Screenshots the simulators running the "depot" environment.}
+      \label{fig:simulators}
 \end{figure}

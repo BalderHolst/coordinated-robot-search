@@ -1,16 +1,12 @@
 % TODO: Maybe rename "Manually Developed Algorithm"
 
 \section{Search Algorithms}
-This section describes the development of a distributed algorithm which makes it possible for a group of robots to search a map. These algorithms are implemented in the \texttt{botbrain} library. \\
+This section describes the development of a distributed algorithm that enables a group of robots to search a map. These algorithms are implemented in the \texttt{botbrain} library.
 
-This project explores two approaches for controlling the behavior of the robot swarm: A manually developed algorithm {\color{red} and an algorithm based on reinforcement learning}. The following sections will explore the development of these.
-
-\section{Manually Developed Algorithm}
-The following sections describe the {\color{iterative}} process of developing the search algorithm.
+This project explores two approaches for controlling the behavior of the robot swarm: a manually developed algorithm and an algorithm based on reinforcement learning. The following sections describe the development of these approaches.
 
 \subsection{Target Contributions}
-A robot keeps track of state which, together with sensor inputs, dictates how it moves and explores the environment. Different inputs may indicate that the robot should do different things at the same time. This could be in the situation where the robot {\color{red} knows} that there is unexplored area in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area while the obstacle avoidance part of the behavior may {\color{red} tell} the robot to move away from the obstacle. All of these subsystem outputs should be combined to create a behavior which is controlled by all subsystems at the same time. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. The target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should, for example, be weighted highly, as the robot should {\color{red} try} very hard, not to run into obstacles. \Cref{fig:target-contributions} shows an illustration of this procedure.
-
+A robot keeps track of state which, together with sensor inputs, dictates how it moves and explores the environment. Different inputs may indicate that the robot should do different things at the same time. For example, the robot may {\color{red} know} that there is unexplored area in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area, while the obstacle avoidance part may {\color{red} tell} the robot to move away from the obstacle. All of these subsystem outputs should be combined to create a behavior which is controlled by all subsystems at the same time. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. The target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should, for example, be weighted highly, as the robot should {\color{red} try} very hard not to run into obstacles. \Cref{fig:target-contributions} shows an illustration of this procedure.
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.75\textwidth]{figures/target-contribtions.png}
@@ -29,8 +25,7 @@ A robot keeps track of state which, together with sensor inputs, dictates how it
 
 \subsection{Search Grid}
 
-Each robot has a "search grid" which is continuously updated by observations by the robot itself, and the observations of other robots which it receives over the shared communication channel. The "search grid" can be thought of as a heat map, where well explored areas are "colder" and less explored areas are "hotter". If communication is loss less, the internal "search grids" of all robots should always be in sync. Each robot will then calculate their desired trajectory vector by taking a gradient over the "search grid" at their position (see \cref{fig:search-gradient}). This results in behavior where robots will seek out unexplored areas near them. \\
-
+Each robot has a "search grid" which is continuously updated by observations from the robot itself, and the observations of other robots which it receives over the shared communication channel. The "search grid" can be thought of as a heat map, where well-explored areas are "colder" and less explored areas are "hotter". If communication is lossless, the internal "search grids" of all robots should always be in sync. Each robot will then calculate its desired trajectory vector by taking a gradient over the "search grid" at its position (see \cref{fig:search-gradient}). This results in behavior where robots will seek out unexplored areas near them. \\
 \begin{figure}[h]
     \begin{center}
         % TODO: Actually create figure
@@ -42,20 +37,18 @@ Each robot has a "search grid" which is continuously updated by observations by 
 
 
 % TODO: Can we write "we"?
-In practice, taking the gradient is not as simple as it may seem. First the "heat" under the robot ($H$) must be calculated. This is accomplished with an average over the cells underneath the robot ($C_\mathrm{robot}$) as in \cref{eq:robot-heat}.
-
+In practice, taking the gradient is not as simple as it may seem. First, the "heat" under the robot ($H$) must be calculated. This is accomplished with an average over the cells underneath the robot ($C_\mathrm{robot}$), as in \cref{eq:robot-heat}.
 \begin{equation}
 \label{eq:robot-heat}
     H = \frac{1}{N} \sum_c^{C_\mathrm{robot}} \mathrm{heat}(c)
 \end{equation}
 
-Now, a vector is drawn from the robot position $P$, to all grid cells within some radius ($C_\mathrm{r}$). This vector is called $\mathbf{d}$.
+Now, a vector is drawn from the robot position $P$ to all grid cells within some radius ($C_\mathrm{r}$). This vector is called $\mathbf{d}$.
 \begin{equation}
     \mathbf{d} = \mathrm{pos}(c) - P, \quad \forall c \in C_\mathrm{r}
 \end{equation}
 
-Every cell contributes to the gradient, in the direction of $\mathbf{d}$ with the weight of the difference in heat between the cell and the robot. Cells closer to the robot are also weighted higher than cells further away by using a linear fade out, to smooth out the gradient changes as the robot moves around, by gradually fading out the contribution of a cell as it gets closer the gradient cutoff distance resulting in \cref{eq:fade-gradient}.
-
+Every cell contributes to the gradient, in the direction of $\mathbf{d}$, with the weight of the difference in heat between the cell and the robot. Cells closer to the robot are also weighted higher than cells further away by using a linear fade out, to smooth out the gradient changes as the robot moves around, by gradually fading out the contribution of a cell as it gets closer to the gradient cutoff distance, resulting in \cref{eq:fade-gradient}.
 \begin{equation}
     \nabla = \sum_c^{C_\mathrm{r}} \;
     \underbracket{\; \mathbf{d}/\norm{\mathbf{d}}      \;}_\text{\makebox[0pt]{Direction}} \cdot
@@ -64,8 +57,7 @@ Every cell contributes to the gradient, in the direction of $\mathbf{d}$ with th
     \label{eq:fade-gradient}
 \end{equation}
 
-This gradient performs well within the map, but leads to problems near the map edges. Cells outside the map have no "temperature" and do contribute to the gradient. {\color{red}So}, in the case that a robot is near the edge and cells within the map are colder than the cells under the robot, the gradient vector points towards the edge of the map, even though there is nothing to explore there. \Cref{fig:edge-gradient} shows this scenario.
-
+This gradient performs well within the map, but leads to problems near the map edges. Cells outside the map have no "temperature" and do not contribute to the gradient. {\color{red}So}, in the case that a robot is near the edge and cells within the map are colder than the cells under the robot, the gradient vector points towards the edge of the map, even though there is nothing to explore there. \Cref{fig:edge-gradient} shows this scenario.
 \begin{figure}[h]
     \begin{center}
         % TODO: Actually create figure
@@ -75,8 +67,7 @@ This gradient performs well within the map, but leads to problems near the map e
     \label{fig:edge-gradient}
 \end{figure}
 
-To mitigate this issue, the gradient equation is tweaked so that only positive contributions are used. In practice this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
-
+To mitigate this issue, the gradient equation is tweaked so that only positive contributions are used. In practice, this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
 \begin{equation}
 \label{eq:robot-gradient}
     \nabla = \sum_c^{C_\mathrm{r}}
@@ -89,7 +80,7 @@ To mitigate this issue, the gradient equation is tweaked so that only positive c
     \end{cases}
 \end{equation}
 
-With this calculation, will point toward unexplored areas without being attracted to the edges of the map. A final consideration is that the world may contain obstacles. Cells which are hidden behind an obstacle are also excluded from the gradient calculation. \Cref{fig:search-no-proximity} shows the resulting robot behavior when using the search gradient as the target vector with a small forward bias.
+With this calculation, the robot will point toward unexplored areas without being attracted to the edges of the map. A final consideration is that the world may contain obstacles. Cells which are hidden behind an obstacle are also excluded from the gradient calculation. \Cref{fig:search-no-proximity} shows the resulting robot behavior when using the search gradient as the target vector with a small forward bias.
 
 \begin{figure}[h]
     \begin{center}
@@ -101,8 +92,7 @@ With this calculation, will point toward unexplored areas without being attracte
 \end{figure}
 
 \subsection{Proximity Grid}
-Robots should stay within communication range of the other robots, to assure this, the robot keeps track of the connectivity {\color{red} across} the whole map using a "Proximity Grid" (See \cref{fig:proximity-grid}). \\
-
+Robots should stay within communication range of the other robots. To ensure this, the robot keeps track of the connectivity {\color{red} across} the whole map using a "Proximity Grid" (see \cref{fig:proximity-grid}). \\
 \begin{figure}[h]
     \begin{center}
         \includegraphics[width=0.95\textwidth]{figures/proximity-grid.png}
@@ -110,7 +100,9 @@ Robots should stay within communication range of the other robots, to assure thi
     \caption{Example of a proximity grid}\label{fig:proximity-grid}
 \end{figure}
 
-The grid is calculated by the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half colored if only one robot giving the tile connectivity to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying within the largest network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the robot itself in the calculation. In the situation that the robot is the only link between the network and the other robots, the robot will move towards the main network, and therefore "pull" the stay robots along. An example of this behavior in simulation can be seen on \cref{fig::proximity-pull}.
+The grid is calculated by finding the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half-colored if only one robot gives the tile connectivity, to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying within the largest network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the robot itself in the calculation. In the situation that the robot is the only link between the network and the other robots, the robot will move towards the main network, and therefore "pull" the stray robots along. 
+
+An example of this behavior in simulation can be seen in \cref{fig:proximity-pull}.
 
 \begin{figure}[h]
     \begin{center}
@@ -123,13 +115,13 @@ The grid is calculated by the largest network of connected robots and "coloring"
         \begin{subfigure}[b]{0.31\textwidth}
             \centering
             \includegraphics[width=\textwidth]{figures/proximity-pull2.png}
-            \caption{The single link robot has moved toward the main network and is pulling the stay robots along}
+            \caption{The single link robot has moved toward the main network and is pulling the stray robots along}
             \label{fig:proximity-pull2}
         \end{subfigure}
         \begin{subfigure}[b]{0.31\textwidth}
             \centering
             \includegraphics[width=\textwidth]{figures/proximity-pull3.png}
-            \caption{The stay robots have now been pulled towards the main network.}
+            \caption{The stray robots have now been pulled towards the main network.}
             \label{fig:proximity-pull3}
         \end{subfigure}
     \end{center}
@@ -142,8 +134,8 @@ The grid is calculated by the largest network of connected robots and "coloring"
 % TODO: Add a nice figure
 
 \subsection{Global Planner}
-In some situations, the robot may not be able explore new area because of the limited area used for calculating the gradient of the search grid.
-In the case the search gradient is too small, meaning the robot is unsure where to go, the robot can perform a more expensive computation to find and make a path to another area.
+In some situations, the robot may not be able to explore new areas because of the limited area used for calculating the gradient of the search grid.
+If the search gradient is too small, meaning the robot is unsure where to go, the robot can perform a more expensive computation to find and make a path to another area.
 In other situations, where computational resources are not limited, the robot can solely rely on the pathing algorithms for control.
 
 % TODO: Maybe make flow char for this
@@ -157,11 +149,11 @@ The general setup of the planner is as follows:
 \end{enumerate}
 
 \subsubsection{Costmap}\label{sec:costmap}
-To represent the area already search and obstacles in the world a costmap is made. 
-The costmap has a resolution of $0.2$m and is represented as a grid of cells. A cell can either be searched, unknown or obstacle, as described here:
+To represent the area already searched and obstacles in the world, a costmap is made. 
+The costmap has a resolution of $0.2$m and is represented as a grid of cells. A cell can either be searched, unknown, or obstacle, as described here:
 \begin{itemize}
-  \item Data from the search grid is transferred to the costmap. Covered cells is set to searched and other cells are set to unknown.
-  \item Obstacles in in world map is set to obstacles in the costmap.
+  \item Data from the search grid is transferred to the costmap. Covered cells are set to searched and other cells are set to unknown.
+  \item Obstacles in the world map are set to obstacles in the costmap.
   \item Last LiDAR data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
 \end{itemize}
 
@@ -170,32 +162,30 @@ The costmap has a resolution of $0.2$m and is represented as a grid of cells. A 
 To find a suitable goal, a costmap is required.
 This project uses frontier exploration to find all the frontiers. 
 A frontier is a cell that separates searched and unknown areas. 
-The frontiers are found via a Breadth First Search from the position of the robot  to avoid searching the whole costmap which leads to faster goal generation. When the frontiers is found, they are grouped into regions. 
-Lastly the frontiers and their region are evaluated based on 3 parameters:
+The frontiers are found via a Breadth First Search from the position of the robot to avoid searching the whole costmap, which leads to faster goal generation. When the frontiers are found, they are grouped into regions. 
+Lastly, the frontiers and their regions are evaluated based on 3 parameters:
 \begin{itemize}
   \item Frontier region size.
   \item Frontier distance to the robot.
   \item How much the robot should turn to face the frontier.
 \end{itemize}
-The distance from the frontier to the nearest obstacles also has to be further than a parameter specifying the clearance the robot should have to obstacles.
-
+The distance from the frontier to the nearest obstacle also has to be greater than a parameter specifying the clearance the robot should have to obstacles.
 % TODO: Show evaluation of the used parameters.
 
 \subsubsection{Path planning}\label{sec:path_planning}
-Once a goal has been generated, a path to that goal needs to be generated. First a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is uphold, the robot will simply follow this path.
+Once a goal has been generated, a path to that goal needs to be generated. First, a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is upheld, the robot will simply follow this path.
 In situations where this clearance can't be validated, the A-star algorithm is used.
 The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far.
-The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells needs to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is uphold.
-
+The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells need to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is upheld.
 \subsubsection{Path following}\label{sec:path_following}
-The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered as visited and therefore removed from the list.
+The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered visited and therefore removed from the list.
 
-Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to not hit other robots and obstacles.
+Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to avoid hitting other robots and obstacles.
 If this validation fails, the target vector to the next position is still used but the contribution from the LiDAR is added. This allows the robot to follow the path while not hitting obstacles. 
-Still there is situations where new circumstances simply does not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail another goal will generated.
+Still, there are situations where new circumstances simply do not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail, another goal will be generated.
 
 Pathing errors:
 
-Looser restriction on the clearance of the generated path.
-Use a combination of pathing vectors and LiDAR contribution to follow path but not hit obstacles and other robots.
 % TODO: Pathing outside the proximity grid.
+Looser restrictions on the clearance of the generated path.
+Use a combination of pathing vectors and LiDAR contribution to follow the path while avoiding obstacles and other robots.
