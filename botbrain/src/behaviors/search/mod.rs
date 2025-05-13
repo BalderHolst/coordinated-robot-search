@@ -116,6 +116,7 @@ const PATHING_FAIL_TIMEOUT_RANGE: Range<f32> = 0.1..30.0;
 
 const ROBOT_SPACING: f32 = 2.0;
 
+/// Min distance allowed from the center of the robot to an obstacle
 const ROBOT_OBSTACLE_CLEARANCE: f32 = params::DIAMETER;
 
 #[derive(Clone, Debug, Default, PartialEq)]
