@@ -32,6 +32,8 @@
 
 \newcommand{\norm}[1]{\left\lVert#1\right\rVert}
 
+% TODO: Mention robustness of each algorithm somewhere
+
 % ============ COLORS ============
 % 66A47F - Darkish Green
 
@@ -46,12 +48,13 @@
 
 \begin{document}
 
+\subfile{sections/frontpage} \newpage
 
-\subfile{sections/frontpage}
-\newpage
 \pagestyle{plain}
-\tableofcontents
-\newpage
+
+\subfile{sections/abstract}  \newpage
+\tableofcontents             \newpage
+
 \pagestyle{fancy}
 
 \subfile{sections/introduction}           \newpage
