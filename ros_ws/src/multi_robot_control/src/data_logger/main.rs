@@ -133,10 +133,13 @@ impl DataLogger {
     }
 
     async fn get_map(&self) -> Option<Map> {
-        let mut node = self.node.lock().await;
-        let mut sub_map = node
-            .subscribe::<OccupancyGrid>(MAP_TOPIC, QosProfile::default().transient_local())
-            .unwrap();
+        let mut sub_map;
+        {
+            let mut node = self.node.lock().await;
+            sub_map = node
+                .subscribe::<OccupancyGrid>(MAP_TOPIC, QosProfile::default().transient_local())
+                .unwrap();
+        }
 
         let logger = self.logger.to_string();
 
@@ -146,6 +149,19 @@ impl DataLogger {
     }
 
     async fn run(&self) {
+        let node = self.node.clone();
+        tokio::task::spawn_local(async move {
+            println!("Node stated");
+            loop {
+                {
+                    let mut node = node.lock().await;
+                    println!("Node running");
+                    node.spin_once(Duration::ZERO);
+                }
+                tokio::time::sleep(Duration::from_secs_f32(1.0 / NODE_UPDATE_HZ)).await;
+            }
+        });
+
         let Some(map) = self.get_map().await else {
             log_error!(self.logger, "Could not get map :(");
             return;
@@ -192,8 +208,8 @@ impl DataLogger {
                 }
             });
         }
-
         // Spawn data logger
+
         {
             let robot_data = self.robot_data.clone();
             let robot_positions = self.robot_positions.clone();
@@ -231,19 +247,6 @@ impl DataLogger {
                         );
                     }
                     tokio::time::sleep(Duration::from_secs(1)).await;
-                }
-            });
-        }
-
-        {
-            let node = self.node.clone();
-            tokio::task::spawn_local(async move {
-                loop {
-                    {
-                        let mut node = node.lock().await;
-                        node.spin_once(Duration::ZERO);
-                    }
-                    tokio::time::sleep(Duration::from_secs_f32(1.0 / NODE_UPDATE_HZ)).await;
                 }
             });
         }
