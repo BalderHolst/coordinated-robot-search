@@ -172,20 +172,22 @@ Lastly, the frontiers and their regions are evaluated based on 3 parameters:
 The distance from the frontier to the nearest obstacle also has to be greater than a parameter specifying the clearance the robot should have to obstacles.
 % TODO: Show evaluation of the used parameters.
 
-\subsubsection{Path planning}\label{sec:path_planning}
+\subsubsection{Path Planning}\label{sec:path_planning}
 Once a goal has been generated, a path to that goal needs to be generated. First, a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is upheld, the robot will simply follow this path.
 In situations where this clearance can't be validated, the A-star algorithm is used.
-The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far.
-The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells need to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is upheld.
-\subsubsection{Path following}\label{sec:path_following}
-The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered visited and therefore removed from the list.
+The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far. The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells need to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is upheld.
+
+\subsubsection{Path Following}\label{sec:path_following}
+The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered visited and therefore removed from the list. \\
 
 Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to avoid hitting other robots and obstacles.
 If this validation fails, the target vector to the next position is still used but the contribution from the LiDAR is added. This allows the robot to follow the path while not hitting obstacles. 
 Still, there are situations where new circumstances simply do not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail, another goal will be generated.
 
-Pathing errors:
+
+% TODO: Finish this
+% Pathing errors:
+% Looser restrictions on the clearance of the generated path.
+% Use a combination of pathing vectors and LiDAR contribution to follow the path while avoiding obstacles and other robots.
 
 % TODO: Pathing outside the proximity grid.
-Looser restrictions on the clearance of the generated path.
-Use a combination of pathing vectors and LiDAR contribution to follow the path while avoiding obstacles and other robots.

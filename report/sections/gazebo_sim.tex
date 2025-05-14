@@ -1,25 +1,24 @@
 \section{Gazebo Simulation}
-To validate that the robot behavior models work in real environments, a more realistic simulation environment is required.
-This project utilizes Gazebo Harmonic, which is a 3D physics simulation engine capable of simulating various sensors like LiDAR and cameras. Gazebo is chosen for its flexibility and compatibility with ROS 2.
+To validate that the robot behavior models work in real environments, a more realistic simulation environment is required. This project utilizes Gazebo Harmonic, which is a 3D physics simulation engine capable of simulating various sensors like LiDAR and cameras. Gazebo is chosen for its flexibility and compatibility with ROS 2.
 This section describes the setup of the {\color{red}Sim-to-Real} system and the software used to implement it.
 
 \subsection{ROS 2}\label{sub:ros_2}
 % About ROS 2 (launch files, nodes, etc
 Real-world implementation requires more consideration than simulation. This can include communication of data over the internet, and interfacing with real hardware.
 For real-world implementation, ROS 2 (Robot Operating System version 2) is a good and common choice. The ROS 2 ecosystem provides tools, communication primitives, drivers, and a lot of packages to interact with hardware. ROS 2 is based on a publisher/subscriber model, where nodes publish data and other nodes subscribe to it.
-The concept of nodes in ROS 2 is that tasks are contained in different executables. These nodes can communicate with each other through topics, services, and actions.
+The concept of nodes in ROS 2 is that tasks are contained in different executables. These nodes can communicate with each other through topics, services, and actions. \\
 
 To run multiple robot simulations, each robot runs its behavior in a node where it is assigned to a namespace, making it possible to group related nodes and topics together.
-This makes it easy to separate nodes and data for each of the robots. Data can come from AMCL, Transform Frames, LiDAR, camera, etc.
+This makes it easy to separate nodes and data for each of the robots. Data can come from AMCL, Transform Frames, LiDAR, camera, etc. \\
 
-Gazebo also uses a publisher/subscriber model internally and can, via a ros-gz-bridge, share topics with ROS 2. This is how control inputs are passed to Gazebo and simulated sensor readings are passed back to ROS 2.
+Gazebo also uses a publisher/subscriber model internally and can, via a ros-gz-bridge, share topics with ROS 2. This is how control inputs are passed to Gazebo and simulated sensor readings are passed back to ROS 2. \\
 % TODO: Make figure showing the connection between ROS 2 and Gazebo
 
-The Turtlebot 4 is modeled in a URDF file. Included in the URDF are the necessary plugin specifications and settings for simulating camera, LiDAR, etc. in Gazebo. The differential drive system for the Turtlebot 4 is handled by the Gazebo Diff Drive Plugin \cite{gz-diff-drive}.
+The Turtlebot 4 is modeled in a URDF file. Included in the URDF are the necessary plugin specifications and settings for simulating camera, LiDAR, etc. in Gazebo. The differential drive system for the Turtlebot 4 is handled by the Gazebo Diff Drive Plugin \cite{gz-diff-drive}. \\
 
 \subsection{Localization}\label{sub:localization} 
 \texttt{botbrain} robots require pose estimation to function; therefore, localization in the world is needed.
-For unknown environments, methods like Simultaneous Localization and Mapping (SLAM) are required. Here, localization and mapping are performed as the robot moves around the environment.
+For unknown environments, methods like Simultaneous Localization and Mapping (SLAM) are required. Here, localization and mapping are performed as the robot moves around the environment. \\
 
 This project assumes that the robot already has an available map to use for localization.
 Using a package from the ROS 2 ecosystem, called nav2 \cite{nav2}, their implementation of an Adaptive Monte-Carlo Localizer (AMCL) is used to localize the robot \cite{amcl}.
@@ -27,7 +26,7 @@ The AMCL algorithm works by using LiDAR and odometry data from the robot. It the
 
 \subsection{Object detection}\label{sub:object_detection}
 The objective of the project is to search an area for a potential search object.
-To find the search object in a 3D environment, a simple object detection system is used in place of an object detection algorithm. The video from the simulated or real-world camera is subscribed to via a ROS 2 topic and then analyzed.
+To find the search object in a 3D environment, a simple object detection system is used in place of an object detection algorithm. The video from the simulated or real-world camera is subscribed to via a ROS 2 topic and then analyzed. \\
 
 The process is as follows, where the search object is assigned to be a yellow ball:
 % TODO: Make flow chart if it makes sense.
@@ -51,9 +50,9 @@ As in \texttt{simple\_sim}, the robots need to communicate their observations an
 \end{minted}
 
 This message type only includes a \texttt{sender\_id} of the robot sending the message and the payload. The \texttt{sender\_id} is for basic filtering, ensuring only messages from other robots are read.
-The data field is a byte array of serialized message data the robot wants to send.
+The data field is a byte array of serialized message data the robot wants to send. \\
 
-After passing the required sensor data to the robot behavior, the robot behavior will give the control input to the robot. This control input is then passed to the Gazebo simulation, which internally simulates a differential drive system for the Turtlebot 4. The control input is a simple message type which contains linear and angular velocity for the differential drive system.
+After passing the required sensor data to the robot behavior, the robot behavior will give the control input to the robot. This control input is then passed to the Gazebo simulation, which internally simulates a differential drive system for the Turtlebot 4. The control input is a simple message type which contains linear and angular velocity for the differential drive system. \\
 
 \subsubsection{Debugging and Visualization}\label{sec:debugging_rviz}
 \texttt{botbrain} exposes the \texttt{Debug Soup}, which collects predefined data from the internals of Botbrain.

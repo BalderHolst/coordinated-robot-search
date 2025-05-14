@@ -67,7 +67,7 @@ Separating the robot state from its behavior allows multiple behaviors for the s
 
 \subsection{Using Rust}
 % TODO: Describe how we integrated with colcon
-The core logic of this project is implemented entirely in Rust. While this choice was primarily driven by preference, it presents both advantages and challenges that impact the overall system. ROS 2 does not officially support Rust, which can complicate integration with the ROS 2 ecosystem. To utilize ROS 2 from Rust, the \texttt{R2R} library \cite{r2r} was used. It provides bindings for the ROS Client Library (RCL) and generates code for ROS 2 message types. It functions effectively, although initial compilation times are longer compared to C++, as Rust bindings are generated during the build process. \\
+The core logic of this project is implemented entirely in Rust. While this choice was primarily driven by preference, it presents both advantages and challenges that impact the overall system. ROS 2 does not officially support Rust, which can complicate integration with the ROS 2 ecosystem. To utilize ROS 2 from Rust, the \texttt{r2r} library \cite{r2r} was used. It provides bindings for the ROS Client Library (RCL) and generates code for ROS 2 message types. It functions effectively, although initial compilation times are longer compared to C++, as Rust bindings are generated during the build process. \\
 
 A key advantage of using Rust is the enhanced robustness and correctness of the codebase. The Rust compiler guarantees no undefined behavior and enforces a strict type system where object lifetimes are verified at compile time. Consequently, the resulting code is less susceptible to errors and easier to refactor, especially in collaborative development environments.
 
