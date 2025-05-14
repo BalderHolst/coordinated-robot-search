@@ -42,6 +42,7 @@ set(PROGRAMS_LIST
   ros_agent
   ros_agent_stats
   ros_agent_msg_printer
+  data_logger
 )
 
 # use a loop to install each program
