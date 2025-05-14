@@ -5,8 +5,8 @@ use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    shapes::{Cone, Shape},
-    RobotId,
+    shapes::{self, Cone, Shape},
+    RobotId, RobotPose,
 };
 
 /// Kinds of messages that can be sent between robots
@@ -51,6 +51,22 @@ impl MessageKind {
     /// Decode a byte array to a [MessageKind]
     pub fn decode(bytes: Vec<u8>) -> Result<Self, bincode::error::DecodeError> {
         Self::try_from(bytes)
+    }
+
+    /// Get the position of the robot that sent the message if it is contained in the message
+    pub fn pose(&self) -> Option<RobotPose> {
+        match self {
+            MessageKind::ShapeDiff {
+                shape: shapes::Shape::Cone(cone),
+                diff: _,
+            }
+            | MessageKind::CamDiff { cone, diff: _ } => Some(RobotPose {
+                pos: cone.center,
+                angle: cone.angle,
+            }),
+            MessageKind::ShapeDiff { shape: _, diff: _ } => None,
+            MessageKind::Debug(_) => None,
+        }
     }
 }
 

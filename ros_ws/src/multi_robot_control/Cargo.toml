@@ -25,6 +25,10 @@ path = "./src/ros_agent_stats/main.rs"
 name = "ros_agent_msg_printer"
 path = "./src/ros_agent_msg_printer/main.rs"
 
+[[bin]]
+name = "data_logger"
+path = "./src/data_logger/main.rs"
+
 [dependencies]
 botbrain = { path = "../../../botbrain", features = ["cli", "bin-msgs", "rl"] }
 clap = { version = "4.5.31", features = ["derive"] }
@@ -35,3 +39,5 @@ futures = "0.3"
 tokio = { version = "1", features = ["full"] }
 
 opencv = { version = "0.94", features = ["clang-runtime"] }
+arrow-array = "55.0.0"
+arrow-schema = "55.0.0"
