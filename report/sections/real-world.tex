@@ -1,13 +1,63 @@
 \section{Real World Implementation}
-No part of this project has been implemented on a physical system, but the software has been developed with the goal that it \emph{could} be implemented on a real robot.
+While this project has not been deployed on a physical robot, the entire software stack has been developed with real-world implementation in mind. 
+Both the simulation architecture and behavioral algorithms are designed to be modular, portable, and compatible with commonly available robotics hardware and middleware. 
+This section outlines how the system could be transferred from simulation to real-world execution.
 
 \subsection{Using ROS 2}
-The main way to use the developed behavior algorithms, is by running the ROS 2 node included in the project. The node requires {\color{red} LiDAR, camera and localization algorithm provided on the ?? topics}.
+The primary method for deploying the behavior algorithms is via the ROS 2 node included in the project.
+This node interfaces with the robot’s onboard sensors and actuators through standard ROS 2 topics.
+Specifically, it requires the following inputs:
+
+\begin{itemize}
+  \item \texttt{/scan}: LiDAR data for obstacle detection and localization.
+  \item \texttt{/camera/image\_raw}: Image stream from the onboard RGB camera for object detection.
+  \item \texttt{/amcl\_pose}: Robot pose estimated via AMCL (Adaptive Monte Carlo Localization), used for global localization within a known map.
+\end{itemize}
+
+These topics are typically available when using standard ROS 2 packages such as \texttt{nav2} and drivers for platforms like TurtleBot 4.
+The behavior node outputs velocity commands via the \texttt{/cmd\_vel} topic to control the robot.
 
 \subsection{Using the Rust Library}
-The most portable way to run the implemented behaviors, is by using the {\color{red} provided} \texttt{botbrain} library. It makes it possible to create a \texttt{Robot} which can calculate control commands given sensor input. This makes it possible to run the behaviors on systems that do not run ROS 2.
+For platforms or embedded systems that do not support ROS 2, the behavior algorithms can be deployed using the standalone \texttt{botbrain} Rust library. 
+This library exposes a high-level \texttt{Robot} interface which accepts sensor data and returns control commands and outgoing messages for communication.
 
 % TODO: Maybe a simple code example??
-% TODO: Zigbee
-% One channel or not possible?
-% TODO: Bandwidth for different protocols
+
+This approach allows for flexible integration in environments where ROS 2 is not viable, such as microcontroller-based systems or custom embedded platforms.
+
+\subsection{Communication Considerations}
+In simulation, message passing between robots is instantaneous and lossless. 
+In a real-world implementation, communication becomes a limiting factor. 
+Several technologies could be considered:
+
+\begin{itemize}
+  \item \textbf{Wi-Fi}: High bandwidth, but may suffer from interference or limited range in large-scale outdoor applications.
+  \item \textbf{Zigbee}: Low power and suitable for mesh networks but has limited bandwidth and range. Might not support high-frequency updates or large message payloads.
+  \item \textbf{LoRa}: Long-range communication with minimal bandwidth. Only suitable for infrequent or compact messaging.
+\end{itemize}
+
+The system assumes one shared communication channel, where all robots broadcast their observations. 
+Message serialization is already implemented in a compact binary format to reduce communication overhead. 
+If communication becomes a bottleneck, strategies such as message prioritization or selective transmission (e.g., only sending certain changes) may be necessary.
+
+\subsection{Hardware Requirements}
+The project targets a differential drive robot equipped with:
+\begin{itemize}
+  \item A 2D LiDAR scanner.
+  \item An RGB camera with a known field of view.
+  \item Wheel odometry or IMU for dead reckoning.
+  \item A communication module (e.g., Wi-Fi or Zigbee).
+\end{itemize}
+
+While the TurtleBot 4 is used in simulation, the system can be adapted to other platforms by updating sensor interfaces and adjusting configuration parameters.
+
+\subsection{Future Considerations}
+To successfully transition to a physical system, the following aspects would need to be tested and possibly refined:
+\begin{itemize}
+  \item Calibration of sensors and alignment of coordinate frames.
+  \item Validation of object detection under varying lighting and background conditions.
+  \item Evaluation of communication reliability and failure recovery strategies.
+  \item Real-time performance of the behavior logic and path planning.
+\end{itemize}
+
+Implementing a small-scale physical testbed would be a natural next step to validate the feasibility of the architecture and identify hardware-specific challenges.
