@@ -32,18 +32,54 @@ class ColconWorkspace:
         with open(os.path.join(self.path, "build", ".timestamp"), "w") as f:
             f.write("")
 
-    def launch(self, package: str, script: str, args: list[str] = [], **rosargs):
+    def launch(self, package: str, script: str, args: list[str] = [], block=True, capture_output=False, **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
         utils.ensure_installed("ros2")
-
-        setup_file = self.setup_file()
+        utils.ensure_installed("cargo")
+        utils.ensure_installed("bash")
 
         if self.needs_rebuild():
             self.build()
 
+        setup_file = self.setup_file()
         command = f"source {setup_file} && ros2 launch {package} {script} {' '.join(args)}"
 
-        for key, value in rosargs.items():
+        for key, value in rosparams.items():
             command += f" {key}:={value}"
 
-        subprocess.run(["bash", "-c", command], cwd=self.path)
+        print("Launching ROS 2 script:", command)
 
+        if block:
+            return subprocess.run(["bash", "-c", command], cwd=self.path, capture_output=capture_output, text=True)
+        else:
+            stdout = "/dev/stdout"
+            stderr = "/dev/stderr"
+            if capture_output:
+                stdout = subprocess.PIPE
+                stderr = subprocess.PIPE
+            return subprocess.Popen(["bash", "-c", command], cwd=self.path, text=True)
+
+    def run(self, package: str, node: str, block=True, capture_output=False, ros_args: list[str] = [], **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
+        utils.ensure_installed("ros2")
+        utils.ensure_installed("cargo")
+        utils.ensure_installed("bash")
+
+
+        if self.needs_rebuild():
+            self.build()
+
+        ros_args += [f"-p {key}:={value}" for key, value in rosparams.items()]
+
+        setup_file = self.setup_file()
+        command = f"source {setup_file} && ros2 run {package} {node} --ros-args {' '.join(ros_args)}"
+
+        print("Running ROS 2 node:", command)
+
+        if block:
+            return subprocess.run(["bash", "-c", command], cwd=self.path, capture_output=capture_output, text=True)
+        else:
+            stdout = subprocess.STDOUT
+            stderr = subprocess.STDOUT
+            if capture_output:
+                stdout = subprocess.PIPE
+                stderr = subprocess.PIPE
+            return subprocess.Popen(["bash", "-c", command], cwd=self.path, stdout=stdout, stderr=stderr, text=True)

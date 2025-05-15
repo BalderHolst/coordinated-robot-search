@@ -41,3 +41,4 @@ tokio = { version = "1", features = ["full"] }
 opencv = { version = "0.94", features = ["clang-runtime"] }
 arrow-array = "55.0.0"
 arrow-schema = "55.0.0"
+arrow-ipc = "55.1.0"

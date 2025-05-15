@@ -24,3 +24,9 @@ def any_file_newer(dir: str, exe_mtime: float) -> bool:
         elif entry.is_file(follow_symlinks=False):
             if os.path.getmtime(entry.path) > exe_mtime:
                 return True
+
+def kill_gazebo():
+    """Kill all Gazebo processes."""
+    ensure_installed(["bash", "ps", "grep", "awk", "xargs"])
+    cmd = "ps aux | grep -E 'rviz|gz|ros' | grep -v -E 'home|grep' | awk '{print $2}' | xargs kill"
+    subprocess.run(["bash", "-c", cmd], capture_output=True, text=True)
