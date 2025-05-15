@@ -2,23 +2,21 @@ import botplot as bp
 
 
 def main():
-    robots = 4
+    bp.seed(0)
 
-    sim = bp.ros_ws.launch(
-        "multi_robot_control",
-        "multi_robot.launch.py",
-        behavior="search:pure-pathing",
-        n_robots=robots,
-        headless=False,
-        block=False,
-        # capture_output=True,
+    scenario = bp.Scenario(
+        title = "ROS 2 Example",
+        world = bp.repo_path("simple_sim/worlds/bitmap/depot/depot.yaml"),
+        behavior = "search:pure-pathing",
+        duration = 60,
+        robots = 1,
     )
 
-    bp.ros_ws.run("multi_robot_control", "data_logger", timeout=10, robot_count=robots)
+    # res = bp.run_sim(scenario)
+    # bp.plot_paths(res, "Simple Sim Paths")
 
-    print("Killing simulation...")
-    sim.kill()
-    bp.utils.kill_gazebo()
+    res = bp.run_ros(scenario, headless=False)
+    bp.plot_paths(res, "ROS 2 Paths")
 
 if __name__ == "__main__":
     main()

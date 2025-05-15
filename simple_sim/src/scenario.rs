@@ -49,6 +49,23 @@ impl Scenario {
     }
 }
 
+pub fn convert_scenario_to_json(input: &PathBuf, output: &PathBuf) -> Result<(), String> {
+    let ron_scenario = std::fs::read_to_string(input)
+        .map_err(|e| format!("Failed to read scenario file '{}': {}", input.display(), e))?;
+
+    let scenario = ron::de::from_str::<Scenario>(&ron_scenario)
+        .map_err(|e| format!("Failed to parse scenario file '{}': {}", input.display(), e))?;
+
+    let scenario = scenario
+        .embed_world()
+        .map_err(|e| format!("Error embedding world: {e}"))?;
+
+    let json = serde_json::to_string_pretty(&scenario)
+        .map_err(|e| format!("Failed to serialize to JSON: {}", e))?;
+    std::fs::write(output, json).map_err(|e| format!("Failed to write JSON file: {}", e))?;
+    Ok(())
+}
+
 pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), String> {
     let mut scenario = match scenario_args.scenario.clone().contents() {
         Ok(s) if scenario_args.json => serde_json::from_str(&s)

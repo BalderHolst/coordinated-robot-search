@@ -1,23 +1,21 @@
-use botbrain::{Map, MapCell, RobotId, RobotPose, messaging::MessageKind, utils::CoverageGrid};
+use botbrain::{Map, MapCell, RobotPose, utils::CoverageGrid};
 use futures::StreamExt;
 use std::{path::PathBuf, rc::Rc, sync::Arc, time::Duration};
-use tokio::{
-    sync::{Mutex, RwLock},
-    task,
-};
+use tokio::sync::{Mutex, RwLock};
 
 use arrow_array::{Array, Float32Array, Float64Array, RecordBatch};
 use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 
 const MAP_TOPIC: &str = "/map";
-const DEFAULT_TOPIC: &str = "/search_channel";
 
 const LOG_HZ: f32 = 5.0;
 const NODE_UPDATE_HZ: f32 = 10.0;
 
 use r2r::{
-    self, Node, QosProfile, log_error, log_info, nav_msgs::msg::OccupancyGrid,
-    ros_agent_msgs::msg::AgentMessage,
+    self, Node, QosProfile,
+    geometry_msgs::msg::{PoseWithCovarianceStamped, Quaternion},
+    log_error, log_info,
+    nav_msgs::msg::OccupancyGrid,
 };
 
 type PositionTable = Vec<RobotPose>;
@@ -143,7 +141,6 @@ impl RobotData {
 struct DataLogger {
     node: Rc<Mutex<Node>>,
     logger: &'static str,
-    topic: String,
     timeout: Option<Duration>,
     output_path: PathBuf,
     robot_count: usize,
@@ -156,10 +153,8 @@ struct DataLogger {
 impl DataLogger {
     fn new() -> Self {
         let ctx = r2r::Context::create().unwrap();
-        let mut node = r2r::Node::create(ctx, "data_logger", "").unwrap();
+        let node = r2r::Node::create(ctx, "data_logger", "").unwrap();
         let logger = node.logger().to_string().leak();
-
-        let topic: String = node.get_parameter("topic").unwrap_or(DEFAULT_TOPIC.into());
 
         let robot_count: usize = node.get_parameter::<i64>("robot_count").unwrap_or(1) as usize;
 
@@ -191,7 +186,6 @@ impl DataLogger {
         Self {
             node,
             logger,
-            topic,
             timeout,
             output_path,
             robot_count,
@@ -317,40 +311,47 @@ impl DataLogger {
 
         // Spawn message listener
         {
-            let qos = QosProfile::default().volatile();
-            let mut node = self.node.lock().await;
-            let mut sub = node.subscribe::<AgentMessage>(&self.topic, qos).unwrap();
 
-            let logger = self.logger.to_string().leak();
-            let topic = self.topic.to_string().leak();
-            let robot_positions = self.robot_positions.clone();
-            let coverage_grid = coverage_grid.clone();
-            tokio::task::spawn_local(async move {
-                r2r::log_info!(logger, "Logging data from topic: '{}'", topic);
-                while let Some(msg) = sub.next().await {
-                    (async |msg: AgentMessage| match MessageKind::try_from(msg.data) {
-                        Ok(kind) => {
-                            if let Some(pose) = kind.pose() {
-                                let id = RobotId::new(msg.sender_id);
-                                {
-                                    let mut coverage_grid = coverage_grid.write().await;
-                                    let mut robot_positions = robot_positions.write().await;
-                                    Self::set_robot_pose(
-                                        &mut robot_positions,
-                                        &mut coverage_grid,
-                                        id,
-                                        pose,
-                                    );
-                                }
-                            }
-                        }
-                        Err(e) => {
-                            log_error!(logger, "[{}] Corrupt message: {}", msg.sender_id, e)
-                        }
-                    })(msg)
-                    .await;
-                }
-            });
+            for id in 0..self.robot_count {
+                let qos = QosProfile::default().transient_local();
+                let logger = self.logger.to_string();
+                let robot_positions = self.robot_positions.clone();
+                let coverage_grid = coverage_grid.clone();
+
+                let topic = format!("/robot_{id}/amcl_pose");
+                let mut sub = {
+                    let mut node = self.node.lock().await;
+                    node.subscribe::<PoseWithCovarianceStamped>(
+                        &topic,
+                        qos,
+                    )
+                    .unwrap()
+                };
+
+                tokio::task::spawn_local(async move {
+                    r2r::log_info!(&logger, "Logging data from topic: '{}'", topic);
+                    while let Some(msg) = sub.next().await {
+                        let pos = &msg.pose.pose.position;
+                        let pos: botbrain::Pos2 = botbrain::Pos2::new(pos.x as f32, pos.y as f32);
+                        let Quaternion { x, y, z, w } = &msg.pose.pose.orientation;
+                        let angle =
+                            f64::atan2(2. * (w * z + x * y), 1. - 2. * (y.powi(2) + z.powi(2)));
+
+                        let mut robot_positions = robot_positions.write().await;
+                        let mut coverage_grid = coverage_grid.write().await;
+
+                        Self::set_robot_pose(
+                            &mut robot_positions,
+                            &mut coverage_grid,
+                            id,
+                            RobotPose {
+                                pos,
+                                angle: angle as f32,
+                            },
+                        );
+                    }
+                });
+            }
         }
 
         // Logger
@@ -365,6 +366,7 @@ impl DataLogger {
             let node = self.node.clone();
             let timeout = self.timeout;
             tokio::task::spawn_local(async move {
+                println!("Starting logger for {} robots", robot_count);
                 loop {
                     {
                         let robot_positions = robot_positions.read().await;
@@ -373,10 +375,17 @@ impl DataLogger {
                         let time = get_ros2_time(&node).await.abs_diff(start_time);
                         log_info!(
                             logger,
-                            "time: {:?}s, Coverage {}%, Robot positions: {:?}",
+                            "time: {:?}s, Coverage {}%, Robots: {}",
                             time.as_secs_f32(),
                             coverage * 100.0,
-                            robot_positions.iter().map(|p| p.pos).collect::<Vec<_>>()
+                            robot_positions
+                                .iter()
+                                .map(|p| format!(
+                                    "(x: {:.3}, y: {:.3}, a: {:.3})",
+                                    p.pos.x, p.pos.y, p.angle
+                                ))
+                                .collect::<Vec<String>>()
+                                .join(", ")
                         );
 
                         let mut robot_data = robot_data.write().await;
@@ -405,7 +414,11 @@ impl DataLogger {
 
         let batch = self.to_record_batch().await;
 
-        log_info!(self.logger, "Saving data to '{}'", self.output_path.display());
+        log_info!(
+            self.logger,
+            "Saving data to '{}'",
+            self.output_path.display()
+        );
 
         save_batch(&mut batch.clone(), &self.output_path).map_err(|e| {
             log_error!(self.logger, "Failed to save batch: {}", e);
@@ -417,10 +430,10 @@ impl DataLogger {
     fn set_robot_pose(
         robot_positions: &mut PositionTable,
         coverage_grid: &mut CoverageGrid,
-        robot_id: RobotId,
+        robot_id: usize,
         pose: RobotPose,
     ) {
-        robot_positions[robot_id.as_u32() as usize] = pose.clone();
+        robot_positions[robot_id] = pose.clone();
         coverage_grid.mark_pose(pose);
     }
 }
@@ -429,7 +442,7 @@ impl DataLogger {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let local = tokio::task::LocalSet::new();
 
-    let mut data_logger = DataLogger::new();
+    let data_logger = DataLogger::new();
 
     local.run_until(data_logger.run()).await;
 

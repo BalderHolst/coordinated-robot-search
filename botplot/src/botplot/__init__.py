@@ -14,21 +14,25 @@ import matplotlib.patches as patches
 
 from botplot.rust_crate import RustCrate
 from botplot.colcon_workspace import ColconWorkspace
+import botplot.utils as utils
 
 from botplot.colors import COLORS
 
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
 
 plt.rcParams.update({
-    "text.usetex": True,        # Use LaTeX to render all text
-    "font.family": "serif",     # Set font family to serif
-    "font.serif": ["Computer Modern Roman"],  # Default LaTeX font
+    "text.usetex": utils.check_installed("latex"), # Use LaTeX to render all text
+    "font.family": "serif",                        # Set font family to serif
+    "font.serif": ["Computer Modern Roman"],       # Default LaTeX font
 })
 
 mpl.rcParams['axes.edgecolor']   = '#888888'   # gray frame around the plot
 mpl.rcParams['xtick.color']      = '#555555'   # gray x ticks
 mpl.rcParams['ytick.color']      = '#555555'   # gray y ticks
 mpl.rcParams['axes.labelcolor']  = '#444444'   # gray axis labels
+
+def seed(seed):
+    random.seed(seed)
 
 GIT_DIR = ".git"
 def root_dir() -> str:
@@ -52,10 +56,13 @@ def relpath(path: str) -> str:
     return os.path.relpath(path, os.path.curdir)
 
 def repo_path(*path: str) -> str:
-    return os.path.join(root_dir(), *path)
+    return os.path.join(os.path.abspath(root_dir()), *path)
 
-def data_dir(): return repo_path("data")
-def plot_dir(): return repo_path("plots")
+def data_dir(*file):
+    return repo_path("data", *file)
+
+def plot_dir(*file):
+    return repo_path("plot", *file)
 
 botbrain   = RustCrate(repo_path("botbrain"))
 simple_sim = RustCrate(repo_path("simple_sim"), dependencies=[botbrain])
@@ -118,7 +125,7 @@ class World:
             abs_file = os.path.abspath(file)
             hash = hashlib.sha256(abs_file.encode()).hexdigest()
             name = os.path.basename(file)
-            json_file = os.path.join(data_dir(), "json-desciptions", f"{name}-{hash}.json")
+            json_file = os.path.join(data_dir(), f"{name}-{hash}-desc.json")
 
             os.makedirs(os.path.dirname(json_file), exist_ok=True)
 
@@ -136,7 +143,7 @@ class World:
         with open(file) as f:
             data = json.load(f)
 
-        return cls(file, data)
+        return cls(file, data["world"])
 
     def is_obj(self) -> bool:
         return OBJ_LABEL in self.data
@@ -151,47 +158,49 @@ class World:
 
     def img(self):
 
-        if self.is_obj():
-            desc_name = os.path.basename(self.file).replace(".json", "-desc.json")
-            desc_file = os.path.join(data_dir(), desc_name)
+        desc_name = os.path.basename(self.file).replace(".json", "-world-desc.json")
+        desc_file = os.path.join(data_dir(), desc_name)
 
-            json.dump(self.data[OBJ_LABEL], open(desc_file, "w"), indent=4)
+        print(self.file)
 
-            img_name = os.path.basename(self.file).replace(".json", ".png")
-            img_file = os.path.join(data_dir(), img_name)
+        json.dump(self.desc(), open(desc_file, "w"), indent=4)
 
-            if os.path.exists(img_file):
-                print(f"Using cached world image: {relpath(img_file)}")
-            else:
-                trainer.run([
-                    "world-to-img",
-                    "--input", desc_file,
-                    "--output", img_file,
-                    "--theme", "grayscale",
-                    "--force",
-                ])
+        img_name = os.path.basename(self.file).replace(".json", ".png")
+        img_file = os.path.join(data_dir(), img_name)
 
-            return plt.imread(img_file)
+        if os.path.exists(img_file):
+            print(f"Using cached world image: {relpath(img_file)}")
         else:
-            # TODO: Get bitmap image here?
-            raise NotImplemented("Bitmap world not implemented yet.")
+            trainer.run([
+                "world-to-img",
+                "--input", desc_file,
+                "--output", img_file,
+                "--theme", "grayscale",
+                "--force",
+            ])
+
+        print(f"World image saved to '{relpath(img_file)}'")
+
+        return plt.imread(img_file)
 
     def dims(self) -> tuple[float, float]:
         desc = self.desc()
         if self.is_obj():
             return desc["width"], desc["height"]
         if self.is_bitmap():
-            world_dir = desc["image"].replace(".pgm", "")
-            path = repo_path("simple_sim/worlds/bitmap/", world_dir)
-            if not os.path.exists(path):
-                print(f"Error: Bitmap image '{path}' does not exist.")
+            pgm_path = desc["image"]
+            if not os.path.exists(pgm_path):
+                print(f"Error: Bitmap image '{pgm_path}' does not exist.")
                 exit(1)
-            with open(os.path.join(path, desc["image"]), "rb") as f:
+            with open(os.path.join(pgm_path), "rb") as f:
                 # Read the first line (format identifier, e.g., P2 or P5)
                 _ = f.readline().strip()
                 # Read the width and height from the next line
                 width, height = map(int, f.readline().split())
-            return width, height
+
+            resolution = desc["resolution"]
+
+            return width * resolution, height * resolution
 
 @dataclass
 class Result:
@@ -286,8 +295,14 @@ class Result:
     def world(self) -> World:
         return World.from_description_file(self.description_file)
 
+class SimpleResult(Result):
+    """Result from running a scenario with simple_sim."""
 
-def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, verbose=False) -> Result:
+class ROSResult(Result):
+    """Result from running a scenario with ROS."""
+
+
+def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True) -> SimpleResult:
 
     match scenario:
         case Scenario():
@@ -297,11 +312,13 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
         case _:
             raise ValueError("Scenario must be either a string or a Scenario object.")
 
+    name = name.replace(" ", "-").lower() + "-simple"
+
     hash = hashlib.sha256((name + str(scenario)).encode()).hexdigest()
 
     stem = f"{name}-{hash}"
-    data_file = os.path.join(data_dir(), f"{stem}.ipc")
-    desc_file = os.path.join(data_dir(), f"{stem}.json")
+    data_file = data_dir(f"{stem}.ipc")
+    desc_file = data_dir(f"{stem}.json")
 
     # Ensure the directories exist
     os.makedirs(os.path.dirname(data_file), exist_ok=True)
@@ -311,8 +328,7 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
         print(f"[INFO] Using cached result:")
         print(f"    {stem}.ipc")
         print(f"    {stem}.json")
-        return Result(data_file, desc_file)
-
+        return SimpleResult(data_file, desc_file)
 
     os.makedirs(os.path.dirname(data_file), exist_ok=True)
 
@@ -334,7 +350,88 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, ver
 
     print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
 
-    return Result(data_file, desc_file)
+    return SimpleResult(data_file, desc_file)
+
+
+def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> ROSResult:
+
+    match scenario:
+        case Scenario():
+            name = scenario.title
+        case str():
+            name = scenario.replace("/", "-")
+        case _:
+            raise ValueError("Scenario must be either a string or a Scenario object.")
+
+    name = name.replace(" ", "-").lower() + "-ros"
+
+    hash = hashlib.sha256((name + str(scenario)).encode()).hexdigest()
+
+    stem = f"{name}-{hash}"
+    data_file = data_dir(f"{stem}.ipc")
+    desc_file = data_dir(f"{stem}.json")
+
+    # Ensure the directories exist
+    os.makedirs(os.path.dirname(data_file), exist_ok=True)
+    os.makedirs(os.path.dirname(desc_file), exist_ok=True)
+
+    if use_cache and os.path.exists(data_file) and os.path.exists(desc_file):
+        print(f"[INFO] Using cached result:")
+        print(f"    {stem}.ipc")
+        print(f"    {stem}.json")
+        return ROSResult(data_file, desc_file)
+
+    # Save the scenario description to json a file
+    ron_desc_file = data_dir(f"{stem}.ron")
+    with open(ron_desc_file, 'w') as f:
+        f.write(scenario.to_ron())
+    simple_sim.run(["world-to-json", ron_desc_file, desc_file])
+
+    print(f"Saved scenario description to '{relpath(desc_file)}'")
+
+    os.makedirs(os.path.dirname(data_file), exist_ok=True)
+
+    flags = ["-o", data_file, "--description", desc_file]
+    if headless: flags.append("--headless")
+
+    proc = None
+
+    if isinstance(scenario, Scenario):
+        s = scenario.to_ron()
+        print(s)
+
+        robots = None
+        match scenario.robots:
+            case list(): robots = len(scenario.robots)
+            case int(): robots = scenario.robots
+
+        proc = ros_ws.launch(
+            "multi_robot_control",
+            "multi_robot.launch.py",
+            behavior="search:pure-pathing",
+            n_robots=robots,
+            block=False,
+            map=scenario.world,
+            headless=headless,
+            use_rviz=not headless,
+        )
+
+        ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=robots, output=data_file)
+
+    elif isinstance(scenario, str):
+        raise NotImplemented("ROS simulation does not support string scenarios.")
+    else:
+        print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
+        exit(1)
+
+
+    print("Killing simulation...")
+    proc.kill()
+    utils.kill_gazebo()
+
+    print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
+
+    return ROSResult(data_file, desc_file)
 
 def place_robots_data(world: str | World, n: int) -> dict:
     if isinstance(world, World):
@@ -378,8 +475,8 @@ def plot_world(fig, ax, world: World, title: str, out_file: str):
     plt.margins(0.0)
 
     # Remove frame ticks
-    ax.set_xticks([])
-    ax.set_yticks([])
+    # ax.set_xticks([])
+    # ax.set_yticks([])
 
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
@@ -556,10 +653,16 @@ def plot_paths(result: Result, title: str, segments=1, force=False):
 
                 x_col = df[f"robot_{i}/x"]
                 y_col = df[f"robot_{i}/y"]
-                mode_col = df[f"robot_{i}/mode"]
 
                 x_col = x_col[:end]
                 y_col = y_col[:end]
+
+                mode_col = None
+                if f"robot_{i}/mode" in df.columns:
+                    mode_col = df[f"robot_{i}/mode"]
+                else:
+                    mode_col = pl.Series([0] * len(x_col))
+
                 mode_col = mode_col[:end]
 
                 color = COLORS[i % len(COLORS)]

@@ -53,6 +53,7 @@ pub struct GlobArgs {
 pub enum Command {
     Run(RunArgs),
     Scenario(ScenarioArgs),
+    WorldToJson(WorldToJsonArgs),
 }
 
 #[derive(Args, Clone)]
@@ -95,4 +96,15 @@ pub struct ScenarioArgs {
     /// How often to print the simulation time (in seconds)
     #[arg(short('p'), long, default_value = "1.0")]
     pub print_interval: f64,
+}
+
+#[derive(Args, Clone)]
+pub struct WorldToJsonArgs {
+    /// The world file to load (".ron" format)
+    #[arg(index = 1)]
+    pub input: PathBuf,
+
+    /// The output file to write the json to
+    #[arg(index = 2)]
+    pub output: PathBuf,
 }

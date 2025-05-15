@@ -70,9 +70,24 @@ pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
             Ok(WorldDescription::Objs(obj_desc))
         }
         Some("json") => {
-            let obj_desc = serde_json::from_str::<ObjectDescription>(&contents()?)
-                .map_err(|e| format!("Failed to parse JSON file {}: {}", path.display(), e))?;
-            Ok(WorldDescription::Objs(obj_desc))
+            let contents = contents()?;
+            let desc = match serde_json::from_str::<ObjectDescription>(&contents) {
+                Ok(obj_desc) => WorldDescription::Objs(obj_desc),
+                Err(e) => {
+                    let mut bitmap_desc = serde_json::from_str::<BitmapDescription>(&contents)
+                        .map_err(|_| {
+                            format!("Failed to parse JSON file {}: {}", path.display(), e)
+                        })?;
+                    let image_path = path.with_file_name(&bitmap_desc.image);
+
+                    let image_bytes = std::fs::read(&image_path).map_err(|e| {
+                        format!("Failed to read image file {}: {}", image_path.display(), e)
+                    })?;
+                    bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
+                    WorldDescription::Bitmap(bitmap_desc)
+                }
+            };
+            Ok(desc)
         }
         Some("yaml") => {
             let mut bitmap_desc = serde_yml::from_str::<BitmapDescription>(&contents()?)
@@ -85,6 +100,11 @@ pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
             })?;
 
             bitmap_desc.bitmap = pgm::Parser::parse(image_bytes);
+            bitmap_desc.image = image_path
+                .canonicalize()
+                .map_err(|e| format!("Failed to canonicalize image path: {}", e))?;
+
+            dbg!(bitmap_desc.image.display());
 
             Ok(WorldDescription::Bitmap(bitmap_desc))
         }

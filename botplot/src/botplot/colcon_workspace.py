@@ -32,10 +32,8 @@ class ColconWorkspace:
         with open(os.path.join(self.path, "build", ".timestamp"), "w") as f:
             f.write("")
 
-    def launch(self, package: str, script: str, args: list[str] = [], block=True, capture_output=False, **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
-        utils.ensure_installed("ros2")
-        utils.ensure_installed("cargo")
-        utils.ensure_installed("bash")
+    def launch(self, package: str, script: str, args: list[str] = [], block=True, **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
+        utils.ensure_installed(["ros2", "cargo", "bash"])
 
         if self.needs_rebuild():
             self.build()
@@ -49,25 +47,17 @@ class ColconWorkspace:
         print("Launching ROS 2 script:", command)
 
         if block:
-            return subprocess.run(["bash", "-c", command], cwd=self.path, capture_output=capture_output, text=True)
+            return subprocess.run(["bash", "-c", command], cwd=self.path)
         else:
-            stdout = "/dev/stdout"
-            stderr = "/dev/stderr"
-            if capture_output:
-                stdout = subprocess.PIPE
-                stderr = subprocess.PIPE
-            return subprocess.Popen(["bash", "-c", command], cwd=self.path, text=True)
+            return subprocess.Popen(["bash", "-c", command], cwd=self.path)
 
-    def run(self, package: str, node: str, block=True, capture_output=False, ros_args: list[str] = [], **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
-        utils.ensure_installed("ros2")
-        utils.ensure_installed("cargo")
-        utils.ensure_installed("bash")
-
+    def run(self, package: str, node: str, block=True, ros_args: list[str] = [], **rosparams) -> subprocess.CompletedProcess | subprocess.Popen:
+        utils.ensure_installed(["ros2", "cargo", "bash"])
 
         if self.needs_rebuild():
             self.build()
 
-        ros_args += [f"-p {key}:={value}" for key, value in rosparams.items()]
+        ros_args += [f"-p {key}:={str(value).lower()}" for key, value in rosparams.items()]
 
         setup_file = self.setup_file()
         command = f"source {setup_file} && ros2 run {package} {node} --ros-args {' '.join(ros_args)}"
@@ -75,11 +65,6 @@ class ColconWorkspace:
         print("Running ROS 2 node:", command)
 
         if block:
-            return subprocess.run(["bash", "-c", command], cwd=self.path, capture_output=capture_output, text=True)
+            return subprocess.run(["bash", "-c", command], cwd=self.path)
         else:
-            stdout = subprocess.STDOUT
-            stderr = subprocess.STDOUT
-            if capture_output:
-                stdout = subprocess.PIPE
-                stderr = subprocess.PIPE
-            return subprocess.Popen(["bash", "-c", command], cwd=self.path, stdout=stdout, stderr=stderr, text=True)
+            return subprocess.Popen(["bash", "-c", command], cwd=self.path)

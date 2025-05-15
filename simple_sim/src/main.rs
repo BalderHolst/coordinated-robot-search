@@ -14,5 +14,8 @@ fn main() -> Result<(), String> {
         cli::Command::Scenario(scenario_args) => {
             scenario::run_scenario(args, scenario_args.clone())
         }
+        cli::Command::WorldToJson(world_args) => {
+            scenario::convert_scenario_to_json(&world_args.input, &world_args.output)
+        }
     }
 }
