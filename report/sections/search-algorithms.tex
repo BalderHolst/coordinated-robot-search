@@ -134,62 +134,83 @@ An example of this behavior in simulation can be seen in \cref{fig:proximity-pul
 % TODO: Add a nice figure
 
 \subsection{Global Planner}
-In some situations, the robot may not be able to explore new areas because of the limited area used for calculating the gradient of the search grid.
-If the search gradient is too small, meaning the robot is unsure where to go, the robot can perform a more expensive computation to find and make a path to another area.
-In other situations, where computational resources are not limited, the robot can solely rely on the pathing algorithms for control.
+In some situations, the robot may not be able to explore new areas due to the limited range used for calculating the gradient of the search grid.
+If the search gradient yields no clear direction,meaning the robot is unsure where to go,it can fall back on a more computationally expensive process to plan a path to a distant region.
+In other scenarios, where computational resources are ample, the robot can rely entirely on path planning for navigation.
 
-% TODO: Maybe make flow char for this
-The general setup of the planner is as follows:
+% TODO: Maybe make flowchart for this
+The general procedure of the global planner is as follows:
 \begin{enumerate}
-  \item Make costmap, see \cref{sec:costmap}.
-  \item Find frontiers and regions, see \cref{sec:frontier_exploration}.
-  \item Evaluate frontiers and their regions to find a goal, see \cref{sec:frontier_exploration}.
-  \item Find a path using straight line or A-star, see \cref{sec:path_planning}.
-  \item Follow path until goal is reached or until path is invalidated, see \cref{sec:path_following}.
+  \item Generate a costmap (\cref{sec:costmap}).
+  \item Identify frontiers and group them into regions (\cref{sec:frontier_exploration}).
+  \item Evaluate the frontiers and select a goal (\cref{sec:frontier_exploration}).
+  \item Plan a path using either a straight line or the A* algorithm (\cref{sec:path_planning}).
+  \item Follow the path until the goal is reached or the path is invalidated (\cref{sec:path_following}).
 \end{enumerate}
 
 \subsubsection{Costmap}\label{sec:costmap}
-To represent the area already searched and obstacles in the world, a costmap is made. 
-The costmap has a resolution of $0.2$m and is represented as a grid of cells. A cell can either be searched, unknown, or obstacle, as described here:
+To represent searched areas and obstacles, a costmap is constructed. 
+The costmap has a resolution of $0.2\,\text{m}$ and is represented as a grid of cells. Each cell can be in one of three states:
 \begin{itemize}
-  \item Data from the search grid is transferred to the costmap. Covered cells are set to searched and other cells are set to unknown.
-  \item Obstacles in the world map are set to obstacles in the costmap.
-  \item Last LiDAR data is used to add dynamic obstacles to the costmap. This can include other robots or obstacles not in the map.
+  \item \textbf{Searched:} Cells identified as covered in the search grid.
+  \item \textbf{Unknown:} Cells not yet covered.
+  \item \textbf{Obstacle:} Cells corresponding to static map obstacles or dynamic obstacles (e.g., other robots), inferred from the most recent LiDAR data.
 \end{itemize}
 
 % TODO: Show cost map and example of a planned route
 \subsubsection{Frontier Exploration}\label{sec:frontier_exploration}
-To find a suitable goal, a costmap is required.
-This project uses frontier exploration to find all the frontiers. 
-A frontier is a cell that separates searched and unknown areas. 
-The frontiers are found via a Breadth First Search from the position of the robot to avoid searching the whole costmap, which leads to faster goal generation. When the frontiers are found, they are grouped into regions. 
-Lastly, the frontiers and their regions are evaluated based on 3 parameters:
+To determine a suitable goal, the robot performs frontier exploration.
+A frontier is defined as a cell that separates searched and unknown areas.
+Frontiers are detected using a Breadth-First Search starting from the robot’s current position, avoiding a full scan of the costmap and thereby reducing computation time.
+
+Once frontiers are found, they are grouped into regions and evaluated based on three criteria:
 \begin{itemize}
-  \item Frontier region size.
-  \item Frontier distance to the robot.
-  \item How much the robot should turn to face the frontier.
+  \item Size of the frontier region.
+  \item Distance to the robot.
+  \item Required turn angle to face the frontier.
 \end{itemize}
-The distance from the frontier to the nearest obstacle also has to be greater than a parameter specifying the clearance the robot should have to obstacles.
-% TODO: Show evaluation of the used parameters.
+Additionally, a frontier must be sufficiently distant from any obstacle, as defined by a minimum clearance threshold.
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/frontier_eval_params_depot.png}
+        \caption{Complex map}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{figures/frontier_eval_params_medium_obstacles.png}
+        \caption{Simple map}
+    \end{subfigure}
+    \caption{Frontier evaluation parameters on two maps.}
+    \label{fig:frontier-eval-params}
+\end{figure}
+
+These parameters were tested on two environments: a complex map with many narrow passages and a simpler one with fewer obstacles. Results for five robots are shown in \cref{fig:frontier-eval-params}. Each line label indicates the parameter weights: 
+\texttt{sXX} for frontier size, \texttt{dXX} for distance, and \texttt{tXX} for turn angle.
+
+All configurations were verified to eventually achieve full map coverage. Thus, only the speed of achieving this is used to evaluate performance.
+
+As observed, configurations that favor high weights on distance and turn angle achieve faster coverage.
+Turn angle is most significant, as turning reduces linear velocity, so robots prefer straight paths.
+Distance weight encourages exploration of nearby frontiers first, promoting efficient local coverage.
+Frontier size, on the other hand, had minimal impact. High weights on region size (e.g., \texttt{s100-d0-t0}) led to longer travel distances and frequent turning, reducing efficiency.
 
 \subsubsection{Path Planning}\label{sec:path_planning}
-Once a goal has been generated, a path to that goal needs to be generated. First, a straight line to the goal is made. If this path can be validated, meaning the clearance to obstacles is upheld, the robot will simply follow this path.
-In situations where this clearance can't be validated, the A-star algorithm is used.
-The A-star algorithm uses the distance and cost so far as the heuristic function. The heuristic function is used to estimate the cost of the path to the goal. This is done by using the distance to the goal and the cost of the path so far. The A-star algorithm is implemented as a min-heap, where it's always the cell with the best/smallest heuristic being searched from. This allows for efficient shortest path finding, compared to Dijkstra's algorithm, where all cells need to be searched. Every cell is only included if the position is valid, meaning the clearance to obstacles is upheld.
+After selecting a goal, a path is generated. First, a direct straight-line path is attempted. If it satisfies clearance requirements, it is used.
+If not, the A* algorithm is employed to compute a valid path.
+
+A* uses a heuristic based on both the cost so far and the estimated distance to the goal.
+Cells are explored using a min-heap that prioritizes nodes with the lowest estimated total cost, enabling efficient search compared to Dijkstra’s algorithm, which evaluates all possible nodes.
+Only positions that maintain a safe clearance from obstacles are included in the path.
 
 \subsubsection{Path Following}\label{sec:path_following}
-The path is represented as a list of positions that the robot should visit before the goal is reached. When the robot is within a certain threshold of the goal, the position is considered visited and therefore removed from the list. \\
+The planned path is a sequence of waypoints that the robot must follow to reach the goal.
+As the robot approaches each subgoal within a defined threshold, the waypoint is marked as visited and removed from the list.
 
-Even though the path generated has already been validated to have the correct clearances to other obstacles, continuous validation is still performed to avoid hitting other robots and obstacles.
-If this validation fails, the target vector to the next position is still used but the contribution from the LiDAR is added. This allows the robot to follow the path while not hitting obstacles. 
-Still, there are situations where new circumstances simply do not allow the robot to follow the path. In this case, a new path to the goal is generated. This happens when validation of the path has failed too many times in a row. If the new path generation were to fail, another goal will be generated.
+Even though the path is validated during planning, it is continuously re-evaluated in real time to account for dynamic obstacles, including other robots.
+If validation fails, the robot still moves toward the next subgoal, but LiDAR-based obstacle avoidance is added to the target vector.
+Should validation fail repeatedly, the robot attempts to replan the path. If replanning fails, a new goal is selected entirely.
 
-
-% TODO: Finish this
-% Pathing errors:
-% Looser restrictions on the clearance of the generated path.
-% Use a combination of pathing vectors and LiDAR contribution to follow the path while avoiding obstacles and other robots.
-
-% TODO: Pathing outside the proximity grid.
-
-% TODO: For pathing compare different weights for the turn angle, distance, and frontier region size
+As robots must maintain communication with others, if a robot becomes disconnected from the swarm, it will seek a new goal within the proximity grid to reestablish connectivity.
