@@ -130,7 +130,7 @@ An example of this behavior in simulation can be seen in \cref{fig:proximity-pul
 
 
 \section{Gradient Based Algorithm}
-The gradient based algorithm uses contributions from gradients over the search{\color{red}-} and proximity grid to calculate its "target" vector. With only these contributions, the target vector is often points sideways or backwards which results in the robot spending a majority of its time turning. A constant forward contribution was therefore added to keep the robots moving and exploring the space. \Cref{fig:gradient-paths} shows the paths of 4 robots following this behavior.
+The gradient based algorithm uses contributions from gradients over the search{\color{red}-} and proximity grid to calculate its "target" vector. With only these contributions, the target vector often points sideways or backwards, as the robot constantly "cools" down the camera FOV cone in front of it, which results in the robot spending a majority of its time turning. A constant forward contribution is therefore added to keep the robots moving and exploring the space. \Cref{fig:gradient-paths} shows the paths of 4 robots following this behavior.
 
 
 \def\w{0.329\textwidth}
@@ -152,13 +152,13 @@ The gradient based algorithm uses contributions from gradients over the search{\
     \label{fig:gradient-paths}
 \end{figure}
 
-The robots seem to explore the map, but tend to linger in areas that are already explored. This may be cause the robots only take actions based on the grid cells near them and has no mechanism to move them towards less explored areas across the map. This can be seen in \cref{fig:gradient-paths}, as robots tend to turn more when the search gradient is {\color{red} uncertain} which direction is less explored, and leads more erratic paths, as seen in the to right of the map, where the red robot lingers during most of the episode.
-
-% TODO: Tie into global planner
+The robots explore the map but tend to linger in areas that are already explored. 
+This may be due to the limited range when calculating the gradient of the search grid. Robots also tend to linger when their search gradient becomes uncertain, which leads to more erratic paths. Generally, robots seem to switch between driving in smooth paths while exploring new area and in more jagged paths when lingering in already explored areas. To prevent this and promote map exploration, a mechanism to move them towards less explored areas of the map would be beneficial.
 
 \subsection{Global Planner}
-In some situations, the robot may not be able to explore new areas due to the limited range used for calculating the gradient of the search grid.
-If the search gradient yields no clear direction,meaning the robot is unsure where to go,it can fall back on a more computationally expensive process to plan a path to a distant region.
+
+If the search gradient yields no clear direction, meaning the robot is unsure where to go, it can fall back on a more computationally expensive process to plan a path to a distant region.
+
 In other scenarios, where computational resources are ample, the robot can rely entirely on path planning for navigation.
 
 % TODO: Maybe make flowchart for this
