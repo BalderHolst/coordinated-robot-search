@@ -1,6 +1,4 @@
-use botbrain::{
-    Map, MapCell, Pos2, RobotPose, Vec2, utils::CoverageGrid,
-};
+use botbrain::{Map, MapCell, Pos2, RobotPose, Vec2, utils::CoverageGrid};
 use futures::StreamExt;
 use std::{path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 use tokio::sync::{Mutex, RwLock};
@@ -400,10 +398,7 @@ impl DataLogger {
                 println!("Starting logger for {} robots", robot_count);
                 loop {
                     {
-
-                        let poses_ready = {
-                            *poses_ready.read().await
-                        };
+                        let poses_ready = { *poses_ready.read().await };
 
                         if !poses_ready {
                             log_info!(&logger, "Waiting for robot positions...");

@@ -11,8 +11,6 @@ if __name__ == "__main__":
             bp.Robot(x=4, y=6),
             bp.Robot(x=6, y=4),
             bp.Robot(x=6, y=6),
-            bp.Robot(x=8, y=4),
-            bp.Robot(x=8, y=6),
         ],
     )
 

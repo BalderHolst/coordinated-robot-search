@@ -1,0 +1,40 @@
+ObjectDescription(
+  width: 40,
+  height: 40,
+  scale: 0.10,
+  obstacles: [
+    WideLine(
+        line:Line(
+          start: Pos2(x: -10, y: 5),
+          end:   Pos2(x:  10, y: 5),
+        ),
+        width: 0.5,
+    ),
+    WideLine(
+        line:Line(
+          start: Pos2(x: 10, y: 10),
+          end:   Pos2(x: 10, y: -16),
+        ),
+        width: 0.5,
+    ),
+    Circle(
+      center: Pos2(x: -8, y: -10),
+      radius: 3,
+    ),
+    WideLine(
+        line:Line(
+          start: Pos2(x: -8, y: -10),
+          end:   Pos2(x: -2, y: 0),
+        ),
+        width: 0.3,
+    ),
+    Line(
+        start: Pos2(x: -20, y: 14),
+        end:   Pos2(x: -16, y: 16),
+    ),
+    Line(
+        start: Pos2(x: -16, y: 16),
+        end:   Pos2(x: -16, y: 18),
+    ),
+  ],
+)

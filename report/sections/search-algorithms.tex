@@ -1,12 +1,13 @@
 % TODO: Maybe rename "Manually Developed Algorithm"
 
 \section{Search Algorithms}
-This section describes the development of a distributed algorithm that enables a group of robots to search a map. These algorithms are implemented in the \texttt{botbrain} library.
+This section describes the development of distributed algorithms that enable a group of robots to search a map for an object. These algorithms are implemented in the \texttt{botbrain} library. \\
 
-This project explores two approaches for controlling the behavior of the robot swarm: a manually developed algorithm and an algorithm based on reinforcement learning. The following sections describe the development of these approaches.
+This project explores two approaches for controlling the behavior of the robot swarm: manually developed algorithms and an algorithm based on reinforcement learning. The following sections describe the development of these approaches.
 
 \subsection{Target Contributions}
-A robot keeps track of state which, together with sensor inputs, dictates how it moves and explores the environment. Different inputs may indicate that the robot should do different things at the same time. For example, the robot may {\color{red} know} that there is unexplored area in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area, while the obstacle avoidance part may {\color{red} tell} the robot to move away from the obstacle. All of these subsystem outputs should be combined to create a behavior which is controlled by all subsystems at the same time. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. The target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should, for example, be weighted highly, as the robot should {\color{red} try} very hard not to run into obstacles. \Cref{fig:target-contributions} shows an illustration of this procedure.
+A robot keeps track of its state which, together with sensor inputs, dictates how it moves and explores the environment. Different inputs may indicate that the robot should take different actions at the same time. For example, the robot may {\color{red} know} that an unexplored area exists in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area, while the obstacle avoidance part may {\color{red} tell} the robot to move away from the obstacle. These subsystems should all contribute to the behavior of the robot at the same time. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. The target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should, for example, be weighted highly, as the robot should avoid the robot hitting obstacles. \Cref{fig:target-contributions} shows an illustration of this procedure.
+
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.75\textwidth]{figures/target-contribtions.png}
@@ -16,16 +17,12 @@ A robot keeps track of state which, together with sensor inputs, dictates how it
 \end{figure}
 
 
-
 % TODO: Describe the idea, that different factors contribute to the target vector. The target vector is the sum over all contributions.
 % TODO: Describe how we take gradients on a grid
 
-\subsection{Forward Bias}
-% TODO: Describe what it is and why it is there
-
 \subsection{Search Grid}
 
-Each robot has a "search grid" which is continuously updated by observations from the robot itself, and the observations of other robots which it receives over the shared communication channel. The "search grid" can be thought of as a heat map, where well-explored areas are "colder" and less explored areas are "hotter". If communication is lossless, the internal "search grids" of all robots should always be in sync. Each robot will then calculate its desired trajectory vector by taking a gradient over the "search grid" at its position (see \cref{fig:search-gradient}). This results in behavior where robots will seek out unexplored areas near them. \\
+Each robot has a "search grid" which is continuously updated by observations from the robot itself, and the observations of other robots which it receives over the shared communication channel. The "search grid" can be thought of as a heat map, where well-explored areas are "colder" and less explored areas are "hotter". If communication between robots is lossless, the internal "search grids" of all robots should always be in sync. Each robot will then calculate its desired trajectory vector by taking a gradient over the "search grid" at its current position (see \cref{fig:search-gradient}). This results in behavior where robots will seek out unexplored areas near them. \\
 \begin{figure}[h]
     \begin{center}
         % TODO: Actually create figure
@@ -37,18 +34,21 @@ Each robot has a "search grid" which is continuously updated by observations fro
 
 
 % TODO: Can we write "we"?
-In practice, taking the gradient is not as simple as it may seem. First, the "heat" under the robot ($H$) must be calculated. This is accomplished with an average over the cells underneath the robot ($C_\mathrm{robot}$), as in \cref{eq:robot-heat}.
+In practice, taking the gradient is not as simple as it may seem. First, the "heat" under the robot ($H$) must be calculated. This is accomplished with an average over the cells underneath the robot ($C_\mathrm{robot}$), as in \cref{eq:robot-heat}. $N$ is the number of cells in $C_\mathrm{robot}$.
+
 \begin{equation}
 \label{eq:robot-heat}
     H = \frac{1}{N} \sum_c^{C_\mathrm{robot}} \mathrm{heat}(c)
 \end{equation}
 
-Now, a vector is drawn from the robot position $P$ to all grid cells within some radius ($C_\mathrm{r}$). This vector is called $\mathbf{d}$.
+Now, a vector is drawn from the robot position $P$ to all grid cells within a set gradient radius ($C_\mathrm{r}$). This vector is called $\mathbf{d}$.
+
 \begin{equation}
     \mathbf{d} = \mathrm{pos}(c) - P, \quad \forall c \in C_\mathrm{r}
 \end{equation}
 
 Every cell contributes to the gradient, in the direction of $\mathbf{d}$, with the weight of the difference in heat between the cell and the robot. Cells closer to the robot are also weighted higher than cells further away by using a linear fade out, to smooth out the gradient changes as the robot moves around, by gradually fading out the contribution of a cell as it gets closer to the gradient cutoff distance, resulting in \cref{eq:fade-gradient}.
+
 \begin{equation}
     \nabla = \sum_c^{C_\mathrm{r}} \;
     \underbracket{\; \mathbf{d}/\norm{\mathbf{d}}      \;}_\text{\makebox[0pt]{Direction}} \cdot
@@ -100,7 +100,7 @@ Robots should stay within communication range of the other robots. To ensure thi
     \caption{Example of a proximity grid}\label{fig:proximity-grid}
 \end{figure}
 
-The grid is calculated by finding the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half-colored if only one robot gives the tile connectivity, to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying within the largest network. A key aspect of calculating the proximity grid for a robot is \emph{not} including the robot itself in the calculation. In the situation that the robot is the only link between the network and the other robots, the robot will move towards the main network, and therefore "pull" the stray robots along. 
+The grid is calculated by finding the largest network of connected robots and "coloring" in the area with connectivity to this main network. A tile is half-colored if only one robot gives the tile connectivity, to indicate that the connection is less reliable in these areas. A {\color{red} gradient} over the proximity is used as a weighted contribution to the target vector of the robot, which makes the robot biased towards staying within the largest network. A key aspect of calculating the proximity grid for a robot is not including the robot itself in the calculation. In the situation that the robot is the only link between the network and the other robots, the robot will move towards the main network, and therefore "pull" the stray robots along. 
 
 An example of this behavior in simulation can be seen in \cref{fig:proximity-pull}.
 
@@ -129,9 +129,32 @@ An example of this behavior in simulation can be seen in \cref{fig:proximity-pul
 \end{figure}
 
 
+\section{Gradient Based Algorithm}
+The gradient based algorithm uses contributions from gradients over the search{\color{red}-} and proximity grid to calculate its "target" vector. With only these contributions, the target vector is often points sideways or backwards which results in the robot spending a majority of its time turning. A constant forward contribution was therefore added to keep the robots moving and exploring the space. \Cref{fig:gradient-paths} shows the paths of 4 robots following this behavior.
 
-% TODO: How is this populated
-% TODO: Add a nice figure
+
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-300s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-600s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-900s).png}
+    \end{subfigure}
+    \caption{Paths of 4 robots running the gradient based algorithm in an example world simulated using \texttt{simple\_sim}. Crosses mark robot starting positions and circles mark their end positions.}
+    \label{fig:gradient-paths}
+\end{figure}
+
+The robots seem to explore the map, but tend to linger in areas that are already explored. This may be cause the robots only take actions based on the grid cells near them and has no mechanism to move them towards less explored areas across the map. This can be seen in \cref{fig:gradient-paths}, as robots tend to turn more when the search gradient is {\color{red} uncertain} which direction is less explored, and leads more erratic paths, as seen in the to right of the map, where the red robot lingers during most of the episode.
+
+% TODO: Tie into global planner
 
 \subsection{Global Planner}
 In some situations, the robot may not be able to explore new areas due to the limited range used for calculating the gradient of the search grid.

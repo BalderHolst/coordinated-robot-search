@@ -21,9 +21,9 @@ from botplot.colors import COLORS
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
 
 plt.rcParams.update({
-    "text.usetex": True,                       # Use LaTeX to render all text
-    "font.family": "serif",                    # Set font family to serif
-    "font.serif": ["Computer Modern Roman"],   # Default LaTeX font
+    "text.usetex": utils.check_installed("latex"), # Use LaTeX to render all text
+    "font.family": "serif",                        # Set font family to serif
+    "font.serif": ["Computer Modern Roman"],       # Default LaTeX font
 })
 
 mpl.rcParams['axes.edgecolor']   = '#888888'   # gray frame around the plot
@@ -62,7 +62,7 @@ def data_dir(*file):
     return repo_path("data", *file)
 
 def plot_dir(*file):
-    return repo_path("plot", *file)
+    return repo_path("plots", *file)
 
 botbrain   = RustCrate(repo_path("botbrain"))
 simple_sim = RustCrate(repo_path("simple_sim"), dependencies=[botbrain])
@@ -462,15 +462,19 @@ def place_robots(world: str | World, n: int) -> list[Robot]:
     data = place_robots_data(world, n)
     return data["robots"]
 
-def plot_world(fig, ax, world: World, title: str, out_file: str):
+def plot_world(fig, ax, world: World, title: str, out_file: str, borders: bool, plot_title: bool) -> str:
 
-    if title:
+    if title and plot_title:
         ax.set_title(title, fontsize=16)
 
     width, height = world.dims()
 
     xmin, ymin = -width / 2, -height / 2
     xmax, ymax =  width / 2,  height / 2
+
+    if not borders:
+        for spine in ax.spines.values():
+            spine.set_visible(False)
 
     plt.margins(0.0)
 
@@ -479,17 +483,19 @@ def plot_world(fig, ax, world: World, title: str, out_file: str):
     ax.set_yticks([])
 
     ax.set_xlim(xmin, xmax)
-    ax.set_ylim(ymin, ymax)
+    ax.set_ylim(ymax, ymin)
     ax.set_aspect('equal')
 
     world_img = world.img()
-    ax.imshow(world_img, extent=[xmin, xmax, ymax, ymin], origin='lower', zorder=0)
+    ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
 
     plt.tight_layout()
 
     out_file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}.png")
 
     save_figure(fig, out_file)
+
+    return out_file
 
 def save_figure(fig, output_file: str):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
@@ -633,9 +639,11 @@ def plot_performance(result: Result | list[Result], title: str, max=None, force=
 
     plt.close(fig)
 
-def plot_paths(result: Result, title: str, segments=1, force=False):
+def plot_paths(result: Result, title: str, segments=1, force=False, borders=False, plot_title: bool = True, time_label: bool=False) -> list[str]:
     df = result.df()
     desc = result.desc()
+
+    plot_files = []
 
     for seg in range(segments):
         file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}-{seg + 1}-of-{segments}.png")
@@ -686,8 +694,6 @@ def plot_paths(result: Result, title: str, segments=1, force=False):
                     if cursor < len(mode_col):
                         mode = mode_col[cursor]
 
-
-
                 cross_size = 0.4
                 widen = lambda x, size: [x - size, x + size]
                 ax.plot(widen(x_col[0],  cross_size), widen(y_col[0], cross_size), color=color, linewidth=4, alpha=0.7)
@@ -703,5 +709,32 @@ def plot_paths(result: Result, title: str, segments=1, force=False):
             print(f"    => {e}")
             exit(1)
 
-        plot_world(fig, ax, result.world(), f"{title} (after {t[end-1]:.0f}s)", file)
+        end_time = t[end-1]
+
+        if time_label:
+            # label = patches.Patch(color='none', label=f'Time: {end_time:.0f}s')
+            # ax.legend(
+            #     handles=[label],
+            #     loc='lower right',
+            #     frameon=False,
+            #     handlelength=0,
+            #     handletextpad=0,
+            #     borderpad=0.3,
+            #     labelspacing=0.2,
+            #     fontsize=14,
+            # )
+            ax.text(
+                0.98, 0.02,               # X, Y in axes fraction (bottom right)
+                f'Time: {end_time:.0f}s',
+                transform=ax.transAxes,
+                ha='right', va='bottom',
+                fontsize=14,
+                bbox=dict(boxstyle='round,pad=0.28', facecolor='#ffffff88', edgecolor='none')
+            )
+
+
+        plot_file = plot_world(fig, ax, result.world(), f"{title} (after {end_time:.0f}s)", file, borders=borders, plot_title=plot_title)
+        plot_files.append(plot_file)
+
+    return plot_files
 
