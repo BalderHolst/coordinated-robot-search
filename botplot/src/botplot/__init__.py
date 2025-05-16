@@ -483,7 +483,7 @@ def plot_world(fig, ax, world: World, title: str, out_file: str):
     ax.set_aspect('equal')
 
     world_img = world.img()
-    ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
+    ax.imshow(world_img, extent=[xmin, xmax, ymax, ymin], origin='lower', zorder=0)
 
     plt.tight_layout()
 

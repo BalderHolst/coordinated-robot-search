@@ -8,8 +8,8 @@ def main():
         title = "ROS 2 Example",
         world = bp.repo_path("simple_sim/worlds/bitmap/depot/depot.yaml"),
         behavior = "search:pure-pathing",
-        duration = 60,
-        robots = 1,
+        duration = 400,
+        robots = 2,
     )
 
     # res = bp.run_sim(scenario)

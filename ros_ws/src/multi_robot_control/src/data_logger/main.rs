@@ -1,9 +1,11 @@
-use botbrain::{Map, MapCell, RobotPose, utils::CoverageGrid};
+use botbrain::{
+    Map, MapCell, Pos2, RobotPose, Vec2, utils::CoverageGrid,
+};
 use futures::StreamExt;
 use std::{path::PathBuf, rc::Rc, sync::Arc, time::Duration};
 use tokio::sync::{Mutex, RwLock};
 
-use arrow_array::{Array, Float32Array, Float64Array, RecordBatch};
+use arrow_array::{Array, Float32Array, RecordBatch};
 use arrow_schema::{DataType, Field, Schema, SchemaBuilder};
 
 const MAP_TOPIC: &str = "/map";
@@ -18,7 +20,7 @@ use r2r::{
     nav_msgs::msg::OccupancyGrid,
 };
 
-type PositionTable = Vec<RobotPose>;
+type PoseTable = Vec<RobotPose>;
 
 #[derive(Clone, Default)]
 struct RobotData {
@@ -144,7 +146,7 @@ struct DataLogger {
     timeout: Option<Duration>,
     output_path: PathBuf,
     robot_count: usize,
-    robot_positions: Rc<RwLock<PositionTable>>,
+    robot_poses: Rc<RwLock<PoseTable>>,
     time_data: Rc<RwLock<Vec<f32>>>,
     coverage_data: Rc<RwLock<Vec<f32>>>,
     robot_data: Rc<RwLock<Vec<RobotData>>>,
@@ -179,7 +181,7 @@ impl DataLogger {
                 .collect::<Vec<_>>(),
         ));
 
-        let robot_positions = Rc::new(RwLock::new(vec![RobotPose::default(); robot_count]));
+        let robot_poses = Rc::new(RwLock::new(vec![Default::default(); robot_count]));
 
         let node = Rc::new(Mutex::new(node));
 
@@ -189,14 +191,15 @@ impl DataLogger {
             timeout,
             output_path,
             robot_count,
-            robot_positions,
+            robot_poses,
             robot_data,
             time_data: Rc::new(RwLock::new(vec![])),
             coverage_data: Rc::new(RwLock::new(vec![])),
         }
     }
 
-    async fn get_map(&self) -> Option<Map> {
+    /// Returns the `botbrain` map and the origin of the ROS map
+    async fn get_map(&self) -> Option<(Map, Vec2)> {
         let mut sub_map;
         {
             let mut node = self.node.lock().await;
@@ -209,7 +212,14 @@ impl DataLogger {
 
         // We only need the map once
         log_info!(&logger, "Listening for map on '{MAP_TOPIC}'...");
-        sub_map.next().await.map(ros2_map_to_botbrain_map)
+        sub_map.next().await.map(|grid| {
+            let origin = Vec2 {
+                x: grid.info.origin.position.x as f32,
+                y: grid.info.origin.position.y as f32,
+            };
+            let map = ros2_map_to_botbrain_map(grid);
+            (map, origin)
+        })
     }
 
     async fn get_ros2_time(&self) -> Duration {
@@ -274,7 +284,7 @@ impl DataLogger {
         {
             let node = self.node.clone();
             let logger = self.logger.to_string();
-            tokio::task::spawn_local(async move {
+            _ = tokio::task::spawn_local(async move {
                 log_info!(&logger, "Node stated");
                 loop {
                     {
@@ -286,7 +296,7 @@ impl DataLogger {
             });
         }
 
-        let Some(map) = self.get_map().await else {
+        let Some((map, origin)) = self.get_map().await else {
             log_error!(self.logger, "Could not get map :(");
             return;
         };
@@ -306,42 +316,62 @@ impl DataLogger {
         let start_time = self.wait_for_ros_time().await;
         log_info!(self.logger, "ROS time is ready!");
 
+        let map_origin = Rc::new(origin);
+
         // Utility for calculating map coverage
         let coverage_grid = Rc::new(RwLock::new(CoverageGrid::new(map)));
 
+        let mut robot_poses_ready = Rc::new(Mutex::new(vec![false; self.robot_count]));
+        let poses_ready = Rc::new(RwLock::new(false));
+
         // Spawn message listener
         {
-
             for id in 0..self.robot_count {
                 let qos = QosProfile::default().transient_local();
                 let logger = self.logger.to_string();
-                let robot_positions = self.robot_positions.clone();
+                let robot_poses = self.robot_poses.clone();
+                let robot_poses_ready = robot_poses_ready.clone();
+                let poses_ready = poses_ready.clone();
                 let coverage_grid = coverage_grid.clone();
+                let map_origin = map_origin.clone();
 
                 let topic = format!("/robot_{id}/amcl_pose");
                 let mut sub = {
                     let mut node = self.node.lock().await;
-                    node.subscribe::<PoseWithCovarianceStamped>(
-                        &topic,
-                        qos,
-                    )
-                    .unwrap()
+                    node.subscribe::<PoseWithCovarianceStamped>(&topic, qos)
+                        .unwrap()
                 };
 
-                tokio::task::spawn_local(async move {
+                _ = tokio::task::spawn_local(async move {
                     r2r::log_info!(&logger, "Logging data from topic: '{}'", topic);
                     while let Some(msg) = sub.next().await {
+                        let mut robot_poses = robot_poses.write().await;
+                        let mut coverage_grid = coverage_grid.write().await;
+
+                        let poses_ready_val = { *poses_ready.read().await };
+
+                        if !poses_ready_val {
+                            let mut robot_poses_ready = robot_poses_ready.lock().await;
+                            robot_poses_ready[id] = true;
+
+                            let mut poses_ready = poses_ready.write().await;
+                            *poses_ready = robot_poses_ready.iter().all(|b| *b);
+                            log_info!(&logger, "Robots ready {:?}", robot_poses_ready);
+                        }
+
+                        let map_size = coverage_grid.map().size();
+
                         let pos = &msg.pose.pose.position;
-                        let pos: botbrain::Pos2 = botbrain::Pos2::new(pos.x as f32, pos.y as f32);
+                        let pos: Pos2 = Pos2::new(pos.x as f32, pos.y as f32);
+                        let pos =
+                            Pos2::new(pos.x as f32, pos.y as f32) - *map_origin - map_size / 2.0;
+
                         let Quaternion { x, y, z, w } = &msg.pose.pose.orientation;
                         let angle =
                             f64::atan2(2. * (w * z + x * y), 1. - 2. * (y.powi(2) + z.powi(2)));
 
-                        let mut robot_positions = robot_positions.write().await;
-                        let mut coverage_grid = coverage_grid.write().await;
-
                         Self::set_robot_pose(
-                            &mut robot_positions,
+                            &mut robot_poses,
                             &mut coverage_grid,
                             id,
                             RobotPose {
@@ -357,7 +387,7 @@ impl DataLogger {
         // Logger
         {
             let logger = self.logger.to_string().leak();
-            let robot_positions = self.robot_positions.clone();
+            let robot_poses = self.robot_poses.clone();
             let robot_count = self.robot_count;
             let robot_data = self.robot_data.clone();
             let time_data = self.time_data.clone();
@@ -365,11 +395,23 @@ impl DataLogger {
             let coverage_grid = coverage_grid.clone();
             let node = self.node.clone();
             let timeout = self.timeout;
-            tokio::task::spawn_local(async move {
+            let poses_ready = poses_ready.clone();
+            _ = tokio::task::spawn_local(async move {
                 println!("Starting logger for {} robots", robot_count);
                 loop {
                     {
-                        let robot_positions = robot_positions.read().await;
+
+                        let poses_ready = {
+                            *poses_ready.read().await
+                        };
+
+                        if !poses_ready {
+                            log_info!(&logger, "Waiting for robot positions...");
+                            tokio::time::sleep(Duration::from_secs_f32(1.0 / LOG_HZ)).await;
+                            continue;
+                        }
+
+                        let robot_poses = robot_poses.read().await;
                         let coverage_grid = coverage_grid.read().await;
                         let coverage = coverage_grid.coverage();
                         let time = get_ros2_time(&node).await.abs_diff(start_time);
@@ -378,7 +420,7 @@ impl DataLogger {
                             "time: {:?}s, Coverage {}%, Robots: {}",
                             time.as_secs_f32(),
                             coverage * 100.0,
-                            robot_positions
+                            robot_poses
                                 .iter()
                                 .map(|p| format!(
                                     "(x: {:.3}, y: {:.3}, a: {:.3})",
@@ -390,7 +432,7 @@ impl DataLogger {
 
                         let mut robot_data = robot_data.write().await;
                         for i in 0..robot_count {
-                            let pose = &robot_positions[i];
+                            let pose = &robot_poses[i];
                             robot_data[i].push_state(pose);
                         }
                         {
@@ -420,7 +462,7 @@ impl DataLogger {
             self.output_path.display()
         );
 
-        save_batch(&mut batch.clone(), &self.output_path).map_err(|e| {
+        _ = save_batch(&mut batch.clone(), &self.output_path).map_err(|e| {
             log_error!(self.logger, "Failed to save batch: {}", e);
         });
 
@@ -428,12 +470,12 @@ impl DataLogger {
     }
 
     fn set_robot_pose(
-        robot_positions: &mut PositionTable,
+        robot_poses: &mut PoseTable,
         coverage_grid: &mut CoverageGrid,
         robot_id: usize,
         pose: RobotPose,
     ) {
-        robot_positions[robot_id] = pose.clone();
+        robot_poses[robot_id] = pose.clone();
         coverage_grid.mark_pose(pose);
     }
 }

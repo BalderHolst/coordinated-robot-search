@@ -21,7 +21,7 @@ pub fn normalize_angle(angle: f32) -> f32 {
 pub struct CoverageGrid {
     coverage_grid: ScaledGrid<bool>,
     coverage: f32,
-    _map: Map, // TODO: Use this to infer lidar
+    map: Map, // TODO: Use this to infer lidar
 }
 
 impl CoverageGrid {
@@ -32,7 +32,7 @@ impl CoverageGrid {
         Self {
             coverage_grid: ScaledGrid::new(map.width(), map.height(), Self::CELL_SIZE),
             coverage: 0.0,
-            _map: map,
+            map,
         }
     }
 
@@ -70,5 +70,10 @@ impl CoverageGrid {
     /// Get the grid used to track coverage
     pub fn grid(&self) -> &ScaledGrid<bool> {
         &self.coverage_grid
+    }
+
+    /// Get the map
+    pub fn map(&self) -> &Map {
+        &self.map
     }
 }

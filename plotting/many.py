@@ -14,25 +14,18 @@ ROBOTS = [
 
 BEHAVIORS = [
     "avoid-obstacles:avoid-closest",
-    "search:full",
-    "search:no-pathing",
+    # "search:full",
+    # "search:no-pathing",
     "search:pure-pathing",
 ]
 
 DURATION = 1600
 N = [3, 4, 5, 6, 7, 8]
 
+N = [3]
+DURATION = 300
+
 def main():
-
-    force = False
-
-    [_, *args] = sys.argv
-    for arg in args:
-        match arg:
-            case "--force" | "-f": force = True
-            case _:
-                print(f"Unknown argument: {arg}")
-                sys.exit(1)
 
     results = {}
 
@@ -52,19 +45,19 @@ def main():
 
     for name, result in results.items():
         print("\n=====> Plotting", name, "<=====")
-        bp.plot_coverage(result, name + "/coverage", force=force)
-        bp.plot_performance(result, name + "/performance", force=force)
-        bp.plot_spread(result, name + "/spread", force=force)
-        bp.plot_paths(result, name + "/path/part", 10, force=force)
+        bp.plot_coverage(result, name + "/coverage")
+        bp.plot_performance(result, name + "/performance")
+        bp.plot_spread(result, name + "/spread")
+        bp.plot_paths(result, name + "/path/part", 10)
 
     for n in N:
         dir = f"many-{n}"
         runs = list(map(lambda b: results[f"{dir}/{b}"], BEHAVIORS))
 
         print("\n=====> Plotting Combined", dir, "<=====")
-        bp.plot_coverage(runs, dir + "/coverage", force=force)
-        bp.plot_performance(runs, dir + "/performance", max = 12, force=force)
-        bp.plot_spread(runs, dir + "/spread", force=force)
+        bp.plot_coverage(runs, dir + "/coverage")
+        bp.plot_performance(runs, dir + "/performance", max = 12)
+        bp.plot_spread(runs, dir + "/spread")
 
 
 if __name__ == "__main__":

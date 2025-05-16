@@ -27,6 +27,8 @@ use r2r::{
 
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
+const STEER_MULTIPLIER: f64 = 0.5;
+
 pub struct RosAgent {
     node: Arc<Mutex<r2r::Node>>,
     node_logger: String,
@@ -367,13 +369,13 @@ impl RosAgent {
                 twist.linear.x = if control.speed.is_finite() {
                     control.speed as f64
                 } else {
-                    log_error!(&self.node_logger, "Wierd input x: {}", control.speed);
+                    log_error!(&self.node_logger, "Weird input x: {}", control.speed);
                     0.0
                 };
                 twist.angular.z = if control.steer.is_finite() {
-                    control.steer as f64
+                    control.steer as f64 * STEER_MULTIPLIER
                 } else {
-                    log_error!(&self.node_logger, "Wierd input z: {}", control.steer);
+                    log_error!(&self.node_logger, "Weird input z: {}", control.steer);
                     0.0
                 };
 
