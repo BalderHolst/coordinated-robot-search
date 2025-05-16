@@ -28,60 +28,27 @@ mod frontiers;
 mod pathing;
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
-    ("full", behaviors::full),
+    ("hybrid", behaviors::hybrid),
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
-    ("no-pathing", behaviors::no_pathing),
-    ("pure-pathing", behaviors::pure_pathing),
+    ("gradient", behaviors::gradient),
+    ("pathing", behaviors::pathing),
     // Experimental to test frontier exploration params
     // s is size weight
     // d is distance weight
     // t is turn weight
     // Weight are in percentages
-    (
-        "pure-pathing-s33-d33-t33",
-        behaviors::pure_pathing_s33_d33_t33,
-    ),
-    (
-        "pure-pathing-s10-d30-t60",
-        behaviors::pure_pathing_s10_d30_t60,
-    ),
-    (
-        "pure-pathing-s80-d10-t10",
-        behaviors::pure_pathing_s80_d10_t10,
-    ),
-    (
-        "pure-pathing-s10-d80-t10",
-        behaviors::pure_pathing_s10_d80_t10,
-    ),
-    (
-        "pure-pathing-s10-d10-t80",
-        behaviors::pure_pathing_s10_d10_t80,
-    ),
-    (
-        "pure-pathing-s20-d60-t20",
-        behaviors::pure_pathing_s20_d60_t20,
-    ),
-    (
-        "pure-pathing-s10-d45-t45",
-        behaviors::pure_pathing_s10_d45_t45,
-    ),
-    (
-        "pure-pathing-s0-d50-t50",
-        behaviors::pure_pathing_s0_d50_t50,
-    ),
-    (
-        "pure-pathing-s100-d0-t0",
-        behaviors::pure_pathing_s100_d0_t0,
-    ),
-    (
-        "pure-pathing-s0-d100-t0",
-        behaviors::pure_pathing_s0_d100_t0,
-    ),
-    (
-        "pure-pathing-s0-d0-t100",
-        behaviors::pure_pathing_s0_d0_t100,
-    ),
+    ("pathing-s33-d33-t33", behaviors::pathing_s33_d33_t33),
+    ("pathing-s10-d30-t60", behaviors::pathing_s10_d30_t60),
+    ("pathing-s80-d10-t10", behaviors::pathing_s80_d10_t10),
+    ("pathing-s10-d80-t10", behaviors::pathing_s10_d80_t10),
+    ("pathing-s10-d10-t80", behaviors::pathing_s10_d10_t80),
+    ("pathing-s20-d60-t20", behaviors::pathing_s20_d60_t20),
+    ("pathing-s10-d45-t45", behaviors::pathing_s10_d45_t45),
+    ("pathing-s0-d50-t50", behaviors::pathing_s0_d50_t50),
+    ("pathing-s100-d0-t0", behaviors::pathing_s100_d0_t0),
+    ("pathing-s0-d100-t0", behaviors::pathing_s0_d100_t0),
+    ("pathing-s0-d0-t100", behaviors::pathing_s0_d0_t100),
 ];
 
 /// The range of the lidar sensor at which the robot moves away from an object
@@ -89,7 +56,7 @@ const LIDAR_OBSTACLE_RANGE: f32 = 1.0;
 
 const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
-const FORWARD_BIAS: f32 = 0.05;
+const FORWARD_BIAS: f32 = 0.20;
 
 const ANGLE_THRESHOLD: f32 = PI / 8.0;
 
@@ -931,7 +898,7 @@ fn search(
 mod behaviors {
     use super::*;
 
-    pub fn full(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn hybrid(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -994,7 +961,7 @@ mod behaviors {
         )
     }
 
-    pub fn no_pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn gradient(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1004,6 +971,7 @@ mod behaviors {
             },
             |robot, _time| {
                 let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
+                target += robot.lidar();
                 target += robot.search_gradient();
                 target += robot.proximity_gradient();
                 target
@@ -1011,7 +979,7 @@ mod behaviors {
         )
     }
 
-    pub fn pure_pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1026,7 +994,7 @@ mod behaviors {
     }
 
     // Experimental
-    pub fn pure_pathing_s33_d33_t33(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s33_d33_t33(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1048,7 +1016,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s10_d30_t60(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s10_d30_t60(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1070,7 +1038,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s80_d10_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s80_d10_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1092,7 +1060,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s10_d80_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s10_d80_t10(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1114,7 +1082,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s10_d10_t80(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s10_d10_t80(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1136,7 +1104,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s20_d60_t20(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s20_d60_t20(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1158,7 +1126,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s10_d45_t45(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s10_d45_t45(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1180,7 +1148,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s0_d50_t50(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s0_d50_t50(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1202,7 +1170,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s100_d0_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s100_d0_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1224,7 +1192,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s0_d100_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s0_d100_t0(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -1246,7 +1214,7 @@ mod behaviors {
             },
         )
     }
-    pub fn pure_pathing_s0_d0_t100(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn pathing_s0_d0_t100(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
         search(
             robot,
             time,

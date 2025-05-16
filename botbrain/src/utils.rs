@@ -2,7 +2,9 @@
 
 use std::f32::consts::PI;
 
-use crate::{params, scaled_grid::ScaledGrid, Map, RobotPose};
+use emath::Pos2;
+
+use crate::{params, scaled_grid::ScaledGrid, Map, MapCell, RobotPose};
 
 /// Normalize an angle to be in the range [-PI, PI]
 pub fn normalize_angle(angle: f32) -> f32 {
@@ -20,6 +22,7 @@ pub fn normalize_angle(angle: f32) -> f32 {
 #[derive(Clone)]
 pub struct CoverageGrid {
     coverage_grid: ScaledGrid<bool>,
+    obstacle_coverage: f32,
     coverage: f32,
     map: Map, // TODO: Use this to infer lidar
 }
@@ -29,15 +32,28 @@ impl CoverageGrid {
 
     /// Create a new coverage grid with the given dimensions
     pub fn new(map: Map) -> Self {
+        let mut coverage_grid = ScaledGrid::<bool>::new(map.width(), map.height(), Self::CELL_SIZE);
+
+        let mut obstacle_cells: usize = 0;
+        for (x, y, covered) in coverage_grid.iter_mut() {
+            if !*covered && matches!(map.get(Pos2::new(x, y)), Some(MapCell::Obstacle)) {
+                *covered = true;
+                obstacle_cells += 1;
+            }
+        }
+
+        let obstacle_coverage = obstacle_cells as f32 * Self::CELL_SIZE.powi(2);
+
         Self {
-            coverage_grid: ScaledGrid::new(map.width(), map.height(), Self::CELL_SIZE),
+            coverage_grid,
+            obstacle_coverage,
             coverage: 0.0,
             map,
         }
     }
 
     fn area(&self) -> f32 {
-        self.coverage_grid.width() * self.coverage_grid.height()
+        self.coverage_grid.width() * self.coverage_grid.height() - self.obstacle_coverage
     }
 
     /// Mark a pose as covered
