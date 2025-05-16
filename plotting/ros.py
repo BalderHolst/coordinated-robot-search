@@ -17,6 +17,7 @@ def main():
 
     res = bp.run_ros(scenario, headless=False)
     bp.plot_paths(res, "ROS 2 Paths")
+    bp.plot_coverage(res, "ROS 2 Coverage")
 
 if __name__ == "__main__":
     main()

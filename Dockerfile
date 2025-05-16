@@ -39,3 +39,6 @@ RUN pip install --break-system-packages /pip/botplot
 
 # Add botplot to PYTHONPATH if it exists
 RUN echo "[[ -d /root/ws/botplot ]] && export PYTHONPATH=/root/ws/botplot/src:\$PYTHONPATH" >> ~/.bashrc
+
+# Install latex packages for matplotlib
+RUN apt install -y texlive texlive-fonts-extra texlive-fonts-recommended texlive-latex-extra texlive-xetex dvipng

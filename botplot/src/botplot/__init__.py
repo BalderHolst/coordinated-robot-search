@@ -21,9 +21,9 @@ from botplot.colors import COLORS
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
 
 plt.rcParams.update({
-    "text.usetex": utils.check_installed("latex"), # Use LaTeX to render all text
-    "font.family": "serif",                        # Set font family to serif
-    "font.serif": ["Computer Modern Roman"],       # Default LaTeX font
+    "text.usetex": True,                       # Use LaTeX to render all text
+    "font.family": "serif",                    # Set font family to serif
+    "font.serif": ["Computer Modern Roman"],   # Default LaTeX font
 })
 
 mpl.rcParams['axes.edgecolor']   = '#888888'   # gray frame around the plot
@@ -475,8 +475,8 @@ def plot_world(fig, ax, world: World, title: str, out_file: str):
     plt.margins(0.0)
 
     # Remove frame ticks
-    # ax.set_xticks([])
-    # ax.set_yticks([])
+    ax.set_xticks([])
+    ax.set_yticks([])
 
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymin, ymax)
