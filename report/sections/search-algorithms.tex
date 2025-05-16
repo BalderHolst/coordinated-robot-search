@@ -5,6 +5,28 @@ This section describes the development of distributed algorithms that enable a g
 
 This project explores two approaches for controlling the behavior of the robot swarm: manually developed algorithms and an algorithm based on reinforcement learning. The following sections describe the development of these approaches.
 
+\subsection{The {\color{red}Roomba} Algorithm}
+The Roomba algorithm was chosen as a baseline search algorithm to test the developed algorithms against. This algorithm works by following a strait path until the robot encounters an obstacle. The robot then turns away from the obstacle until it can once more move in a strait path. The implementation for this project uses the lidar sensor, to find the closest obstacle. If the obstacle is too close, the robot turns away. Running the algorithm results in the paths found in \cref{fig:roomba-paths} below.
+
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/avoid-obstacles-paths-(after-200s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/avoid-obstacles-paths-(after-400s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/avoid-obstacles-paths-(after-600s).png}
+    \end{subfigure}
+    \caption{Paths of 4 robots running the gradient based algorithm in an example world simulated using \texttt{simple\_sim}. Crosses mark robot starting positions and circles mark their end positions.}
+    \label{fig:roomba-paths}
+\end{figure}
+
 \subsection{Target Contributions}
 A robot keeps track of its state which, together with sensor inputs, dictates how it moves and explores the environment. Different inputs may indicate that the robot should take different actions at the same time. For example, the robot may {\color{red} know} that an unexplored area exists in front of it, but it is blocked by an obstacle. The exploration part of the behavior may tell the robot to move towards the unexplored area, while the obstacle avoidance part may {\color{red} tell} the robot to move away from the obstacle. These subsystems should all contribute to the behavior of the robot at the same time. To resolve this, each subsystem outputs a "target" vector, which signifies the direction the robot should move. The target vectors are summed to get a single target vector which specifies the direction that the robot should move. Each subsystem can be weighted to make the robot more responsive to that subsystem. The obstacle avoidance subsystem should, for example, be weighted highly, as the robot should avoid the robot hitting obstacles. \Cref{fig:target-contributions} shows an illustration of this procedure.
 
@@ -104,21 +126,22 @@ The grid is calculated by finding the largest network of connected robots and "c
 
 An example of this behavior in simulation can be seen in \cref{fig:proximity-pull}.
 
+\def\w{0.329\textwidth}
 \begin{figure}[h]
     \begin{center}
-        \begin{subfigure}[b]{0.31\textwidth}
+        \begin{subfigure}[b]{\w}
             \centering
             \includegraphics[width=\textwidth]{figures/proximity-pull1.png}
             \caption{Proximity grid for a {\color{red} single link} robot}
             \label{fig:proximity-pull1}
         \end{subfigure}
-        \begin{subfigure}[b]{0.31\textwidth}
+        \begin{subfigure}[b]{\w}
             \centering
             \includegraphics[width=\textwidth]{figures/proximity-pull2.png}
             \caption{The single link robot has moved toward the main network and is pulling the stray robots along}
             \label{fig:proximity-pull2}
         \end{subfigure}
-        \begin{subfigure}[b]{0.31\textwidth}
+        \begin{subfigure}[b]{\w}
             \centering
             \includegraphics[width=\textwidth]{figures/proximity-pull3.png}
             \caption{The stray robots have now been pulled towards the main network.}
@@ -129,24 +152,23 @@ An example of this behavior in simulation can be seen in \cref{fig:proximity-pul
 \end{figure}
 
 
-\section{Gradient Based Algorithm}
+\subsection{Gradient Based Algorithm}
 The gradient based algorithm uses contributions from gradients over the search{\color{red}-} and proximity grid to calculate its "target" vector. With only these contributions, the target vector often points sideways or backwards, as the robot constantly "cools" down the camera FOV cone in front of it, which results in the robot spending a majority of its time turning. A constant forward contribution is therefore added to keep the robots moving and exploring the space. \Cref{fig:gradient-paths} shows the paths of 4 robots following this behavior.
-
 
 \def\w{0.329\textwidth}
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{\w}
         \centering
-        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-300s).png}
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:gradient-paths-(after-200s).png}
     \end{subfigure}
     \begin{subfigure}[b]{\w}
         \centering
-        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-600s).png}
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:gradient-paths-(after-400s).png}
     \end{subfigure}
     \begin{subfigure}[b]{\w}
         \centering
-        \includegraphics[width=\textwidth]{./figures/plots/gradient-paths/search:gradient-paths-(after-900s).png}
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:gradient-paths-(after-600s).png}
     \end{subfigure}
     \caption{Paths of 4 robots running the gradient based algorithm in an example world simulated using \texttt{simple\_sim}. Crosses mark robot starting positions and circles mark their end positions.}
     \label{fig:gradient-paths}
@@ -157,12 +179,13 @@ This may be due to the limited range when calculating the gradient of the search
 
 \subsection{Global Planner}
 
-If the search gradient yields no clear direction, meaning the robot is unsure where to go, it can fall back on a more computationally expensive process to plan a path to a distant region.
+In situations where the search gradient yields no clear direction, meaning the robot is unsure where to go, a global planner can provide a path to move the robot into an unexplored area. \\
 
-In other scenarios, where computational resources are ample, the robot can rely entirely on path planning for navigation.
+% TODO: Mention something about performance later
+% In cases, where computational resources are ample, the robot can rely entirely on path planning for navigation.
 
-% TODO: Maybe make flowchart for this
-The general procedure of the global planner is as follows:
+The next sections will describe the procedure of the global planner which is as follows:
+
 \begin{enumerate}
   \item Generate a costmap (\cref{sec:costmap}).
   \item Identify frontiers and group them into regions (\cref{sec:frontier_exploration}).
@@ -237,3 +260,54 @@ If validation fails, the robot still moves toward the next subgoal, but LiDAR-ba
 Should validation fail repeatedly, the robot attempts to replan the path. If replanning fails, a new goal is selected entirely.
 
 As robots must maintain communication with others, if a robot becomes disconnected from the swarm, it will seek a new goal within the proximity grid to reestablish connectivity.
+
+\subsection{Hybrid Algorithm}
+The global planner makes it possible to implement a hybrid algorithm which uses the gradient based algorithm while the search gradient is certain and uses the global planner to move to a new frontier when it gets stuck. The robot keeps track of the search gradient length and when is becomes shorter than a predefined threshold {\color{red} obtained by ?????}, the robot plans a path towards a global unexplored area. Running the algorithm on four robots results in the paths found in \cref{fig:hybrid-paths}.
+
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:hybrid-paths-(after-200s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:hybrid-paths-(after-400s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:hybrid-paths-(after-600s).png}
+    \end{subfigure}
+    \caption{Paths of 4 robots running the hybrid algorithm in an example world simulated using \texttt{simple\_sim}. Robots leave solid paths when using the gradient and dashed paths when following a path. Crosses mark robot starting positions and circles mark their end positions.}
+    \label{fig:hybrid-paths}
+\end{figure}
+
+It seems that the robots explore the map faster, with a more even spread between paths. Switching to a global planner depending on the length of the search gradient also seems to eradicate most of the robots lingering in unexplored areas, as seen in the pure gradient based algorithm.
+
+\subsection{Pure Pathing Algorithm}
+It is also possible to control a robot using the global planner exclusively, without the need for gradients. This results in the robot switching between planning a path and following that path. When the goal is reached, the robot plans a new path using the global planner \Cref{fig:pure-pathing-paths}.
+
+% TODO: Fix broken paths
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:pathing-paths-(after-200s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:pathing-paths-(after-400s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/plots/paths/search:pathing-paths-(after-600s).png}
+    \end{subfigure}
+    \caption{Paths of 4 robots running the pure pathing algorithm in an example world simulated using \texttt{simple\_sim}. The paths a dashed to indicate that the robot follows paths for the entire episode. Crosses mark robot starting positions and circles mark their end positions.}
+    \label{fig:pure-pathing-paths}
+\end{figure}
+
+Like the hybrid algorithm, the pure pathing algorithm seems to cover the map effectively, with more smooth and predictable paths. \Cref{sec:results} will provide more rigorous comparisons between the performance of these algorithms.
+
+

@@ -913,12 +913,15 @@ mod behaviors {
                 RobotMode::Exploring => {
                     let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                     let search_gradient = robot.search_gradient();
-                    let proximity_gradient = robot.proximity_gradient();
-                    let lidar = robot.lidar();
-                    target += search_gradient + proximity_gradient + lidar;
+
+                    target += search_gradient;
+                    target += robot.proximity_gradient();
+                    target += robot.lidar();
+
                     if search_gradient.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
                         robot.robot_mode = RobotMode::Pathing;
                     }
+
                     target
                 }
                 RobotMode::Pathing | RobotMode::ProximityPathing => {

@@ -3,10 +3,13 @@ import os
 import shutil
 
 BEHAVIORS = [
+    ("avoid-obstacles", "Roomba Behavior"),
     ("search:gradient", "Gradient Behavior"),
+    ("search:hybrid",   "Hybrid Behavior"),
+    ("search:pathing",  "Pathing Behavior"),
 ]
 
-DURATION = 900;
+DURATION = 600;
 
 PLOT_DIR = bp.repo_path("report", "figures", "plots")
 
@@ -32,7 +35,7 @@ if __name__ == "__main__":
         plot_files = bp.plot_paths(res, f"{behavior}-paths", 3, borders=True, plot_title=False, time_label=True)
 
         for src in plot_files:
-            dst = os.path.join(PLOT_DIR, "gradient-paths", os.path.basename(src))
+            dst = os.path.join(PLOT_DIR, "paths", os.path.basename(src))
 
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy(src, dst)
