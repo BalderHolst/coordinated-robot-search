@@ -676,7 +676,8 @@ impl SearchRobot {
                 self.pos,
                 self.angle,
                 self.frontier_evaluation_weights,
-                frontiers,
+                ROBOT_OBSTACLE_CLEARANCE * 2.0,
+                &frontiers,
                 &self.costmap_grid,
             ) {
                 Some(goal) => self.path_planner_goal = Some(goal),
@@ -739,22 +740,27 @@ impl SearchRobot {
                         "Masked Costmap",
                         DebugItem::Grid(masked_costmap.clone().transform(f32::from)),
                     );
-
-                    // self.get_debug_soup_mut().add(
-                    //     "Planner",
-                    //     "Masked frontiers",
-                    //     DebugItem::Grid(masked_costmap.clone()),
-                    // );
-
-                    // let frontier_len = frontiers.len();
-
-                    match frontiers::evaluate_frontiers(
+                    let frontier_goal = frontiers::evaluate_frontiers(
                         self.pos,
                         self.angle,
                         self.frontier_evaluation_weights,
-                        frontiers,
+                        ROBOT_OBSTACLE_CLEARANCE * 2.0,
+                        &frontiers,
                         &masked_costmap,
-                    ) {
+                    )
+                    .or_else(|| {
+                        println!("Smaller goal clearance");
+                        frontiers::evaluate_frontiers(
+                            self.pos,
+                            self.angle,
+                            self.frontier_evaluation_weights,
+                            ROBOT_OBSTACLE_CLEARANCE,
+                            &frontiers,
+                            &masked_costmap,
+                        )
+                    });
+
+                    match frontier_goal {
                         Some(goal) => {
                             // println!("[{}] Set prox goal", self.id.0);
                             self.get_debug_soup_mut().add(
@@ -848,53 +854,54 @@ impl SearchRobot {
         for (x, y) in frontiers {
             self.frontiers_grid.grid_mut().set(*x, *y, -10.0);
         }
-        let robot_pos = {
-            let tmp = self.frontiers_grid.pos_to_grid(self.pos);
-            (tmp.x as usize, tmp.y as usize)
-        };
-        let mut frontier_regions =
-            frontiers::make_frontier_regions(frontiers.clone(), &self.costmap_grid);
-
-        frontier_regions.sort_by_key(|v1| v1.len());
-
-        let frontier_regions_index: Vec<(Pos2, f32)> = frontier_regions
-            .iter()
-            .rev() // Smallest idx for biggest regions
-            .enumerate()
-            .flat_map(|(idx, region)| {
-                region
-                    .iter()
-                    .map(|(x, y)| {
-                        let idx = idx as f32;
-                        let pos = self
-                            .frontiers_grid
-                            .grid_to_pos(Pos2::new(*x as f32, *y as f32));
-                        (pos, idx)
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect();
-
-        let best = frontiers::evaluate_frontier_regions(
-            robot_pos,
-            self.angle,
-            self.frontier_evaluation_weights,
-            frontier_regions,
-            &self.costmap_grid,
-        );
-
-        self.get_debug_soup_mut().add(
-            "Planner",
-            "Frontier Regions Index",
-            DebugItem::NumberPoints(frontier_regions_index),
-        );
-
-        if let Some(best) = best {
-            let pos = Pos2::new(best.0 as f32, best.1 as f32);
-            let pos = self.frontiers_grid.grid_to_pos(pos);
-            self.get_debug_soup_mut()
-                .add("Planner", "Frontier Target", DebugItem::Point(pos));
-        }
+        // let robot_pos = {
+        //     let tmp = self.frontiers_grid.pos_to_grid(self.pos);
+        //     (tmp.x as usize, tmp.y as usize)
+        // };
+        // let mut frontier_regions =
+        //     frontiers::make_frontier_regions(frontiers.clone(), &self.costmap_grid);
+        //
+        // frontier_regions.sort_by_key(|v1| v1.len());
+        //
+        // let frontier_regions_index: Vec<(Pos2, f32)> = frontier_regions
+        //     .iter()
+        //     .rev() // Smallest idx for biggest regions
+        //     .enumerate()
+        //     .flat_map(|(idx, region)| {
+        //         region
+        //             .iter()
+        //             .map(|(x, y)| {
+        //                 let idx = idx as f32;
+        //                 let pos = self
+        //                     .frontiers_grid
+        //                     .grid_to_pos(Pos2::new(*x as f32, *y as f32));
+        //                 (pos, idx)
+        //             })
+        //             .collect::<Vec<_>>()
+        //     })
+        //     .collect();
+        //
+        // let best = frontiers::evaluate_frontier_regions(
+        //     robot_pos,
+        //     self.angle,
+        //     self.frontier_evaluation_weights,
+        //     ROBOT_OBSTACLE_CLEARANCE * 2.0,
+        //     frontier_regions,
+        //     &self.costmap_grid,
+        // );
+        //
+        // self.get_debug_soup_mut().add(
+        //     "Planner",
+        //     "Frontier Regions Index",
+        //     DebugItem::NumberPoints(frontier_regions_index),
+        // );
+        //
+        // if let Some(best) = best {
+        //     let pos = Pos2::new(best.0 as f32, best.1 as f32);
+        //     let pos = self.frontiers_grid.grid_to_pos(pos);
+        //     self.get_debug_soup_mut()
+        //         .add("Planner", "Frontier Target", DebugItem::Point(pos));
+        // }
     }
 }
 

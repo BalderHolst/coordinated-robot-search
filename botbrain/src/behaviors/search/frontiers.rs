@@ -9,7 +9,7 @@ use emath::{Pos2, Vec2};
 
 use crate::{behaviors::search::pathing::NEIGHBORS_8, params, utils};
 
-use super::{costmap, pathing, Costmap, CostmapCell, ROBOT_OBSTACLE_CLEARANCE};
+use super::{costmap, pathing, Costmap, CostmapCell};
 
 /// Weights for frontier evaluation
 /// Higher weights means more importance
@@ -109,7 +109,7 @@ pub fn find_frontiers(robot_pos: Pos2, costmap_grid: &Costmap) -> HashSet<(usize
 
 /// Constructs the frontier regions from the frontiers
 pub fn make_frontier_regions(
-    frontiers: HashSet<(usize, usize)>,
+    frontiers: &HashSet<(usize, usize)>,
     costmap_grid: &Costmap,
 ) -> Vec<Vec<(usize, usize)>> {
     let mut queue: VecDeque<(usize, usize)> = VecDeque::new();
@@ -117,7 +117,7 @@ pub fn make_frontier_regions(
     let mut visited: HashSet<(usize, usize)> = HashSet::default();
 
     let mut regions: Vec<Vec<(usize, usize)>> = Vec::new();
-    for frontier in &frontiers {
+    for frontier in frontiers {
         if visited.contains(frontier) {
             continue;
         }
@@ -156,6 +156,7 @@ pub fn evaluate_frontier_regions(
     robot_pos: (usize, usize),
     robot_angle: f32,
     evaluation_weights: FrontierEvaluationWeights,
+    clearance: f32,
     frontier_regions: Vec<Vec<(usize, usize)>>,
     costmap_grid: &Costmap,
 ) -> Option<(usize, usize)> {
@@ -183,8 +184,7 @@ pub fn evaluate_frontier_regions(
                         costmap_grid.grid_to_pos(temp)
                     };
 
-                    let is_valid =
-                        costmap::validate_pos(pos_map, ROBOT_OBSTACLE_CLEARANCE, costmap_grid);
+                    let is_valid = costmap::validate_pos(pos_map, clearance, costmap_grid);
                     if !is_valid {
                         // Very bad to be too close to obstacles
                         return None;
@@ -235,7 +235,8 @@ pub fn evaluate_frontiers(
     robot_pos: Pos2,
     robot_angle: f32,
     evaluation_weights: FrontierEvaluationWeights,
-    frontiers: HashSet<(usize, usize)>,
+    clearance: f32,
+    frontiers: &HashSet<(usize, usize)>,
     costmap_grid: &Costmap,
 ) -> Option<Pos2> {
     // For working with grid coordinates
@@ -250,6 +251,7 @@ pub fn evaluate_frontiers(
             robot_pos_grid,
             robot_angle,
             evaluation_weights,
+            clearance,
             frontier_regions,
             costmap_grid,
         )?;
