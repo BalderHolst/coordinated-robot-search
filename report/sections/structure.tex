@@ -1,7 +1,17 @@
-\section{Setup}
-\label{sec:setup}
+\section{Structure}
+The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
+simulator, and a ROS 2 environment with 3D realistic simulations.
+% TODO: Find a home for this figure
+% TODO: Find a nice color scheme
+% TODO: Refer to this figure in the text
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
+    \end{center}
+    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are ROS 2 nodes. Notice that the core library \texttt{botbrain} is not part of the ROS 2 dependent code. It can therefore be used by the simple simulator without ROS 2.}\label{fig:}
+\end{figure}
 
-\subsection{Hardware}
+\subsection{Simulated Hardware}
 % TODO: Describe the robot we are designing for
 % TODO: Describe the sensors available
 % TODO: Describe that we assume the robot to have some sort of communication method
@@ -17,25 +27,6 @@ The Turtlebot 4 has all the required hardware apart from a {\color{red} designat
     \end{center}
     \caption{Turtlebot 4}\label{fig:tb4}
 \end{figure}
-
-
-
-\section{Software Structure}
-% TODO: Introduce debug soup
-
-% TODO: Find a home for this figure
-% TODO: Find a nice color scheme
-% TODO: Refer to this figure in the text
-\begin{figure}
-    \begin{center}
-        \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
-    \end{center}
-    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are ROS 2 nodes. Notice that the core library \texttt{botbrain} is not part of the ROS 2 dependent code. It can therefore be used by the simple simulator without ROS 2.}\label{fig:}
-\end{figure}
-
-
-The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
-simulator, and a ROS 2 environment with 3D realistic simulations.
 
 \subsection{Robot Behavior}
 The robot behaviors are implemented in the \texttt{botbrain} library. \texttt{botbrain} defines the \texttt{Robot} interface
