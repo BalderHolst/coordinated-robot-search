@@ -2,8 +2,8 @@ import botplot as bp
 
 WORLD = bp.repo_path("worlds/objectmap/pathing_example.ron")
 
-RUNS = 5
-DURATION = 600
+RUNS = 10
+DURATION = 800
 ROBOTS = 4
 
 BEHAVIORS = [
@@ -21,7 +21,7 @@ def main():
         results: list[bp.Result] = []
 
         bp.seed(42)
-        for i in range(5):
+        for i in range(RUNS):
             print(f"{name} run {i+1}/{RUNS}")
 
             scenario = bp.Scenario(

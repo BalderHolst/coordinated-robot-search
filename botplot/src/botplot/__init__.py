@@ -340,9 +340,9 @@ class ResultCollection:
         line, = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
         if spread:
             color = line.get_color()
-            ax.fill_between(time, self.min[col], self.max[col], color=color, alpha=0.1)
-            ax.plot(time, self.min[col], color=color, alpha=0.8, linewidth=0.3)
-            ax.plot(time, self.max[col], color=color, alpha=0.8, linewidth=0.3)
+            ax.fill_between(time, self.min[col], self.max[col], color=color, alpha=0.2)
+            ax.plot(time, self.min[col], color=color, alpha=0.8, linewidth=0.5)
+            ax.plot(time, self.max[col], color=color, alpha=0.8, linewidth=0.5)
         return line
 
 class SimpleResult(Result):
