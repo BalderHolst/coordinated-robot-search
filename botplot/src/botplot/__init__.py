@@ -295,6 +295,56 @@ class Result:
     def world(self) -> World:
         return World.from_description_file(self.description_file)
 
+class ResultCollection:
+    name: str
+    results: list[Result]
+    min: pl.DataFrame
+    max: pl.DataFrame
+    avg: pl.DataFrame
+
+    def __init__(self, name: str, results: list[Result]) -> None:
+        self.name = name
+        self.results = results
+
+        dfs = [r.df() for r in results]
+
+        cols = dfs[0].columns
+
+        for df in dfs:
+            if set(cols) != set(df.columns):
+                print("\nError: Result columns do not match")
+
+        self.min = pl.DataFrame()
+        self.max = pl.DataFrame()
+        self.avg = pl.DataFrame()
+
+        for col in cols:
+            runs = [df[col] for df in dfs]
+            df_temp = pl.DataFrame({f"s{i}": s for i, s in enumerate(runs)})
+
+            max = df_temp.max_horizontal()
+            min = df_temp.min_horizontal()
+            avg = df_temp.mean_horizontal()
+
+            self.max = self.max.with_columns((max).alias(col))
+            self.min = self.min.with_columns((min).alias(col))
+            self.avg = self.avg.with_columns((avg).alias(col))
+
+    def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
+        time = self.avg["time"]
+
+        l = None
+        if label:
+            l = self.name
+
+        line, = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
+        if spread:
+            color = line.get_color()
+            ax.fill_between(time, self.min[col], self.max[col], color=color, alpha=0.1)
+            ax.plot(time, self.min[col], color=color, alpha=0.8, linewidth=0.3)
+            ax.plot(time, self.max[col], color=color, alpha=0.8, linewidth=0.3)
+        return line
+
 class SimpleResult(Result):
     """Result from running a scenario with simple_sim."""
 
@@ -498,31 +548,92 @@ def plot_world(fig, ax, world: World, title: str, out_file: str, borders: bool, 
     return out_file
 
 def save_figure(fig, output_file: str):
-    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    name = os.path.basename(output_file).replace(" ", "-").lower()
+    dir = os.path.dirname(output_file)
+    os.makedirs(dir, exist_ok=True)
+    output_file = os.path.join(dir, name)
     fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
 
-def plot_coverage(results: list[Result] | Result, name: str, title=None):
+def plot_coverage(results: Result | list[Result] | ResultCollection | list[ResultCollection], name: str, title=None):
 
+    fig, ax = plt.subplots()
+
+    file = os.path.join(plot_dir(), f"{name}.png")
+
+    if not isinstance(results, list): results = [results]
+
+    if isinstance(results, list) and all(isinstance(item, ResultCollection) for item in results):
+        lines = [(c, c.plot("coverage", ax, label=False)) for c in results]
+        for c, line in lines:
+            c.plot("coverage", ax, color=line.get_color(), spread=False)
+
+    else:
+
+        for result in results:
+            df = result.df()
+            desc = result.desc()
+            ax.plot(df["time"], df["coverage"], label=desc["title"])
+
+    if len(results) > 1: ax.legend()
+
+    if title is None: title = name
+
+    ax.set_xlabel(r"Time (s)")
+    ax.set_ylabel(r"Coverage (\%)")
+    ax.set_title(title)
+
+    save_figure(fig, file)
+
+def show_velocities(ax, df: pl.DataFrame, robot_count: int, label: str | None = None) -> pl.DataFrame:
+
+    df = df.with_columns([
+        pl.col("time").diff().alias("delta_time")
+    ])
+
+    for i in range(robot_count):
+        df = df.with_columns([
+            (pl.col(f"robot_{i}/x").diff().pow(2) + pl.col(f"robot_{i}/y").diff().pow(2)).sqrt().alias(f"robot_{i}/distance"),
+        ]).with_columns([
+            (pl.col(f"robot_{i}/distance") / pl.col("delta_time")).alias(f"robot_{i}/vel")
+        ])
+
+    velocity_cols = [pl.col(f"robot_{i}/vel") for i in range(robot_count)]
+
+    df = df.with_columns([
+        pl.min_horizontal(velocity_cols).alias("vel_min"),
+        pl.max_horizontal(velocity_cols).alias("vel_max"),
+        pl.mean_horizontal(velocity_cols).alias("vel_mean"),
+    ])
+
+    line, = ax.plot(df["time"], df["vel_mean"], linewidth=2, label=label)
+    color = line.get_color()
+    ax.fill_between(df["time"], df["vel_min"], df["vel_max"],
+                     color=color, alpha=0.3, label="Min-Max Range")
+
+def plot_velocity(results: list[Result] | Result, name: str, title=None):
     file = os.path.join(plot_dir(), f"{name}.png")
 
     if isinstance(results, Result): results = [results]
 
+    fig, ax = plt.subplots(figsize=(12, 6))
+
     for result in results:
         df = result.df()
         desc = result.desc()
-        plt.plot(df["time"], df["coverage"], label=desc["title"])
+        robot_count = len(desc["robots"])
+        show_velocities(ax, df, robot_count, label=desc["title"])
 
-    if title is None: title = "Coverage over time"
+    if title is None: title = "Velocity over time"
 
-    plt.xlabel(r"Time (s)")
-    plt.ylabel(r"Coverage (\%)")
-    plt.title(title)
+    ax.set_xlabel(r"Time (s)")
+    ax.set_ylabel(r"Velocity (m/s)")
+    ax.set_title(title)
 
     if len(results) > 1: plt.legend()
 
-    save_figure(plt.gcf(), file)
+    save_figure(fig, file)
 
 def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 
@@ -639,7 +750,7 @@ def plot_performance(result: Result | list[Result], title: str, max=None, force=
 
     plt.close(fig)
 
-def plot_paths(result: Result, title: str, segments=1, force=False, borders=False, plot_title: bool = True, time_label: bool=False) -> list[str]:
+def plot_paths(result: Result, title: str, segments=1, force=False, borders=False, plot_title: bool = False, time_label: bool=True) -> list[str]:
     df = result.df()
     desc = result.desc()
 

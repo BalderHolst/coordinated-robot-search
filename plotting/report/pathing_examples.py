@@ -32,7 +32,9 @@ if __name__ == "__main__":
 
         res = bp.run_sim(scenario)
 
-        plot_files = bp.plot_paths(res, f"{behavior}-paths", 3, borders=True, plot_title=False, time_label=True)
+        plot_files = bp.plot_paths(res, f"{behavior}-paths", 3, borders=True)
+
+        bp.plot_velocity(res, f"{behavior}-velocity", f"{behavior} Velocity")
 
         for src in plot_files:
             dst = os.path.join(PLOT_DIR, "paths", os.path.basename(src))

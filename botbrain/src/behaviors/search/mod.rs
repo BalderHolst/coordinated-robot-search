@@ -482,7 +482,7 @@ impl SearchRobot {
         }
         let angle_error = normalize_angle(self.angle - target.angle());
         let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
-        let speed = 1.0 - t;
+        let speed = (1.0 - t).sqrt();
         let steer = normalize_angle(target.angle() - self.angle);
 
         Control { speed, steer }
