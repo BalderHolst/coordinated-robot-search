@@ -83,7 +83,7 @@ pub struct WorldGenArgs {
     pub n: usize,
 
     /// Size of the worlds. Format: "x,y" or "(x,y)"
-    #[arg(long, default_value = "(40.0,40.0)", value_parser = vec2_parser)]
+    #[arg(long, default_value = "(20.0,20.0)", value_parser = vec2_parser)]
     pub size: Vec2,
 
     /// Minimum number of obstacles in the world

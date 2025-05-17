@@ -87,10 +87,17 @@ impl LidarData {
         }
     }
 
-    /// Get the longest ray in the lidar data. Returns `None` if there are no points.
+    /// Get the shortest ray in the lidar data. Returns `None` if there are no points.
     pub fn shortest_ray(&self) -> Option<LidarPoint> {
         self.points()
-            .max_by(|a, b| a.distance.total_cmp(&b.distance))
+            .min_by(|a, b| a.distance.total_cmp(&b.distance))
+            .cloned()
+    }
+
+    /// Get the longest ray in the lidar data. Returns `None` if there are no points.
+    pub fn longest_ray(&self) -> Option<LidarPoint> {
+        self.points()
+            .min_by(|a, b| a.distance.total_cmp(&b.distance))
             .cloned()
     }
 }

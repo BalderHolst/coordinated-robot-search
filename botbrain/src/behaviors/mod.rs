@@ -47,17 +47,21 @@ pub enum RobotKind {
     /// Robot capable of searching an environment for an object
     Search,
 
-    /// Reinforcement learning using only polar coordinates in its input state
+    /// Reinforcement learning using only the minimal state, action and network to avoid obstacles
     #[cfg(feature = "rl")]
-    PolarRl,
+    MinimalRl,
+
+    /// Reinforcement learning using polar coordinates in its state. Uses a small sized network.
+    #[cfg(feature = "rl")]
+    SmallPolarRl,
+
+    /// Reinforcement learning using polar coordinates in its state. Uses a medium sized network.
+    #[cfg(feature = "rl")]
+    MediumPolarRl,
 
     /// A reinforcement learning robot using a small network
     #[cfg(feature = "rl")]
     SmallRl,
-
-    /// Reinforcement learning using only the minimal state, action and network to avoid obstacles
-    #[cfg(feature = "rl")]
-    MinimalRl,
 }
 
 impl RobotKind {
@@ -70,9 +74,11 @@ impl RobotKind {
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
             #[cfg(feature = "rl")]
-            RobotKind::PolarRl => &[("run", rl::robots::polar::run::<MyBackend>)],
+            RobotKind::SmallPolarRl => &[("run", rl::robots::polar::run::<MyBackend>)],
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
+            #[cfg(feature = "rl")]
+            RobotKind::MediumPolarRl => &[("run", rl::robots::medium_polar::run::<MyBackend>)],
         }
     }
 
@@ -109,8 +115,12 @@ impl RobotKind {
                 || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
             #[cfg(feature = "rl")]
-            RobotKind::PolarRl => {
+            RobotKind::SmallPolarRl => {
                 || Box::new(rl::robots::polar::PolarRlRobot::<MyBackend>::new_trained())
+            }
+            #[cfg(feature = "rl")]
+            RobotKind::MediumPolarRl => {
+                || Box::new(rl::robots::medium_polar::MediumPolarRlRobot::<MyBackend>::default())
             }
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => {
@@ -128,7 +138,9 @@ impl RobotKind {
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => "small-rl",
             #[cfg(feature = "rl")]
-            RobotKind::PolarRl => "polar-rl",
+            RobotKind::SmallPolarRl => "small-polar-rl",
+            #[cfg(feature = "rl")]
+            RobotKind::MediumPolarRl => "medium-polar-rl",
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => "minimal-rl",
         }

@@ -1,6 +1,7 @@
 //! Defines the action space for the RL agent.
 
 mod minimal;
+mod slider;
 mod square;
 
 use burn::prelude::*;
@@ -31,4 +32,5 @@ pub trait Action: Clone + Default + Send + From<usize> + Into<usize> + 'static {
 }
 
 pub use minimal::MinimalAction;
+pub use slider::SliderAction;
 pub use square::SquareAction;

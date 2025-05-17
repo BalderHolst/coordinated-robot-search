@@ -14,11 +14,11 @@ const ROBOT_MIN_SPACE: f32 = 0.2;
 const ROBOT_SPACE: f32 = params::DIAMETER + ROBOT_MIN_SPACE * 2.0 + ROBOT_WIGGLE_ROOM * 2.0;
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
-struct PlacementResult {
-    poses: Vec<RobotPose>,
-    square_size: f32,
-    square_center: Pos2,
-    attempts: usize,
+pub struct PlacementResult {
+    pub poses: Vec<RobotPose>,
+    pub square_size: f32,
+    pub square_center: Pos2,
+    pub attempts: usize,
 }
 
 pub fn place_robots(args: &cli::PlaceRobotsArgs) -> Result<(), String> {
@@ -40,7 +40,7 @@ pub fn place_robots(args: &cli::PlaceRobotsArgs) -> Result<(), String> {
     Ok(())
 }
 
-fn place(world: &World, n_robots: usize, rng: &mut impl rand::Rng) -> PlacementResult {
+pub fn place(world: &World, n_robots: usize, rng: &mut impl rand::Rng) -> PlacementResult {
     let dim = (n_robots as f32).sqrt().ceil() as usize;
 
     let spawn_square_size = dim as f32 * ROBOT_SPACE + SPAWN_MARGIN * 2.0;

@@ -1,5 +1,6 @@
 //! Various neural network architectures for the RL agent
 
+pub mod medium;
 pub mod small;
 pub mod tiny;
 

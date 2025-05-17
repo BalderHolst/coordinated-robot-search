@@ -23,5 +23,8 @@ pub const COMMUNICATION_RANGE: f32 = 30.0;
 /// Possible speed values a behavior can set
 pub const SPEED_RANGE: Range<f32> = 0.0..1.0;
 
-/// Possible steering values a behavior can set
-pub const STEER_RANGE: Range<f32> = -1.0..1.0;
+/// Maximum steer command.
+pub const MAX_STEER: f32 = 1.0;
+
+/// Possible steering values a behavior can set.
+pub const STEER_RANGE: Range<f32> = -MAX_STEER..MAX_STEER;

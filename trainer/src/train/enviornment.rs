@@ -1,13 +1,12 @@
-use std::{f32::consts::PI, io, marker::PhantomData, path::PathBuf};
+use std::{io, marker::PhantomData, path::PathBuf};
 
 use botbrain::{
     behaviors::{
         rl::{action::Action, network::Network, state::State, RlRobot, REACT_HZ},
         Behavior,
     },
-    params::{self, RADIUS},
-    shapes::Circle,
-    Pos2, Robot, RobotPose,
+    params::RADIUS,
+    Robot, RobotPose,
 };
 use rand::Rng;
 use simple_sim::{
@@ -20,9 +19,8 @@ use burn::prelude::*;
 const TERMINATION_COVERAGE: f32 = 0.95;
 const TERMINATION_REWARD: f32 = -500.0;
 
-const MAX_INACTIVE_SECS: f32 = 20.0;
-
-const COLLISION_REWARD: f32 = -5.0;
+const CONSTANT_REWARD: f32 = -0.5;
+const COLLISION_REWARD: f32 = -10.0;
 
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     max_robots: usize,
@@ -36,43 +34,6 @@ pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     _state: PhantomData<S>,
     _action: PhantomData<A>,
     _network: PhantomData<N>,
-}
-
-fn random_pose(world: &World) -> RobotPose {
-    let mut rng = rand::rng();
-    let (min, max) = world.bounds();
-
-    let mut spawnable = false;
-    let mut pos = Pos2::default();
-
-    while !spawnable {
-        pos = Pos2 {
-            x: rng.random_range(min.x..=max.x),
-            y: rng.random_range(min.y..=max.y),
-        };
-
-        print!("[INFO] Trying to spawn robot at {:?}", pos);
-
-        spawnable = true;
-        for cell_pos in world.iter_circle(&Circle {
-            center: pos,
-            radius: params::RADIUS,
-        }) {
-            let cell = world.get(cell_pos);
-            if !matches!(cell, Some(simple_sim::world::Cell::Empty)) {
-                spawnable = false;
-                println!();
-                break;
-            }
-        }
-    }
-
-    println!("\t-> SUCCESS!");
-
-    RobotPose {
-        pos,
-        angle: rng.random_range(-PI..=PI),
-    }
 }
 
 impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, N> {
@@ -156,9 +117,13 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
     fn create_sim(max_robots: usize, world_dir: &PathBuf, behavior: Behavior) -> Simulator {
         let world = Self::load_random_world(world_dir);
         let sim_args = SimArgs { world, behavior };
+
         let n = rand::rng().random_range(1..=max_robots);
-        let poses: Vec<RobotPose> = (0..n).map(|_| random_pose(&sim_args.world)).collect();
-        let robots = Self::poses_to_robots(poses);
+        let place_result = crate::place_robots::place(&sim_args.world, n, &mut rand::rng());
+
+        println!("Placed robots after {} attempts", place_result.attempts);
+
+        let robots = Self::poses_to_robots(place_result.poses);
         Simulator::with_robots(sim_args.clone(), robots)
     }
 
@@ -195,7 +160,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
     pub fn step(&mut self, actions: Vec<A>) -> Snapshot<S> {
         assert_eq!(actions.len(), self.sim.robots().len());
 
-        let mut reward = 0.0;
+        let mut reward = CONSTANT_REWARD;
         let mut done = false;
 
         self.sim
@@ -217,11 +182,6 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
 
         if after_coverage > before_coverage {
             self.last_coverage_increase = self.sim.state.time.as_secs_f32();
-        }
-
-        if self.sim.state.time.as_secs_f32() > self.last_coverage_increase + MAX_INACTIVE_SECS {
-            println!("Inactive for too long!");
-            done = true;
         }
 
         let botbrain::Vec2 { x: w, y: h } = self.sim.world().size();
