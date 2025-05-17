@@ -43,7 +43,8 @@ The camera simulation follows a similar ray-marching procedure but is constraine
 \end{figure}
 
 \subsection{Debugging}
-To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and internal state. The \texttt{botbrain} library exposes a debugging interface known as \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items—such as occupancy grids, path vectors, target points, and internal decision states—can be visualized in both \texttt{simple\_sim} and ROS 2 via RViz2. This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm.
+To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and internal state. The \texttt{botbrain} library exposes a debugging interface known as \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items—such as occupancy grids, path vectors, target points, and internal decision states—can be visualized in both \texttt{simple\_sim} and ROS 2 via RViz2. The debug item in \texttt{simple\_sim} can be seen on the right side in \cref{fig:simple-sim-interface}.
+This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm.
 
 \subsection{Library}
 The simulator architecture is built around the shared \texttt{botbrain} behavior library, which encapsulates each robot’s internal state and provides a standardized interface for behavior control. This modular design allows the same behavior code to be executed seamlessly in both the lightweight \texttt{simple\_sim} environment and the more realistic Gazebo/ROS~2 simulation without requiring any code changes.

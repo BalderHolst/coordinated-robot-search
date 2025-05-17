@@ -243,9 +243,9 @@ Frontiers must also meet a minimum obstacle clearance threshold to be considered
     \label{fig:frontier-eval-params}
 \end{figure}
 
-These evaluations were tested in two distinct environments. Line labels in \cref{fig:frontier-eval-params} denote parameter weights: \texttt{sXX} (frontier size), \texttt{dXX} (distance), and \texttt{tXX} (turn angle). All tested configurations resulted in full coverage; thus, performance is measured in terms of coverage speed.
+These evaluations were conducted in two distinct environments. Line labels in \cref{fig:frontier-eval-params} indicate the parameter weightings used: \texttt{sXX} for frontier size, \texttt{dXX} for distance to the frontier, and \texttt{tXX} for the required turn angle. All tested configurations successfully achieved full map coverage; therefore, performance is evaluated based on coverage speed.
 
-Weighting distance and turn angle yielded the fastest coverage, as minimizing rotation promotes higher forward velocity. In contrast, high weight on frontier size alone often led to inefficient long-distance travel and frequent turning.
+As shown in \cref{fig:frontier-eval-params}, configurations that prioritized distance and turn angle produced the fastest coverage. This outcome suggests that minimizing rotation allows for higher sustained forward velocity. In contrast, configurations that emphasized frontier size alone often resulted in inefficient behavior, such as long detours and frequent turning, which slowed down overall progress.
 
 \subsubsection{Path Planning}
 \label{sec:path_planning}

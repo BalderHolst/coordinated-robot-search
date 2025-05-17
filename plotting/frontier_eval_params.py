@@ -4,23 +4,22 @@ import os
 
 
 def main():
-
     behaviors = [
-        "pure-pathing-s33-d33-t33",
-        "pure-pathing-s10-d30-t60",
-        "pure-pathing-s80-d10-t10",
-        "pure-pathing-s10-d80-t10",
-        "pure-pathing-s10-d10-t80",
-        "pure-pathing-s20-d60-t20",
-        "pure-pathing-s10-d45-t45",
-        "pure-pathing-s0-d50-t50",
-        "pure-pathing-s100-d0-t0",
-        "pure-pathing-s0-d100-t0",
-        "pure-pathing-s0-d0-t100",
+        "pathing-s33-d33-t33",
+        "pathing-s20-d60-t20",
+        "pathing-s10-d45-t45",
+        "pathing-s10-d30-t60",
+        "pathing-s0-d50-t50",
+        "pathing-s80-d10-t10",
+        "pathing-s10-d80-t10",
+        "pathing-s10-d10-t80",
+        "pathing-s100-d0-t0",
+        "pathing-s0-d100-t0",
+        "pathing-s0-d0-t100",
     ]
     worlds = [
-        "simple_sim/worlds/bitmap/depot/depot.yaml",
-        # "simple_sim/worlds/objectmap/medium_obstacles.ron",
+        "worlds/bitmap/depot/depot.yaml",
+        "worlds/objectmap/medium_obstacles.ron",
     ]
 
     n = 5
@@ -32,7 +31,7 @@ def main():
         for behavior in behaviors:
             random.seed(seed)
             scenario = bp.Scenario(
-                title=f"{behavior[len('pure-pathing-'):]}",
+                title=f"{behavior[len('pathing-') :]}",
                 world=world,
                 behavior="search:" + behavior,
                 duration=200,
