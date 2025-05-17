@@ -41,18 +41,21 @@ def main():
 
         collections.append(bp.ResultCollection(name, results))
 
-    plot_file = bp.plot_coverage(collections, f"Coverage over {RUNS} runs")
+    plot_files = []
 
-    dst = os.path.join(DIR, os.path.basename(plot_file))
-
-    os.makedirs(os.path.dirname(dst), exist_ok=True)
-
-    shutil.copyfile(
-        plot_file,
-        dst,
+    plot_files.append(
+        bp.plot_coverage(collections, f"Coverage over {RUNS} runs")
     )
 
-    print(f"Plot copied to '{dst}'")
+    plot_files.append(
+        bp.plot_spread(collections, f"Spread over {RUNS} runs")
+    )
+
+    for plot_file in plot_files:
+        dst = os.path.join(DIR, os.path.basename(plot_file))
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        shutil.copyfile(plot_file, dst)
+        print(f"Plot copied to '{dst}'")
 
 
 

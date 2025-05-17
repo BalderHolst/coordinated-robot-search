@@ -307,7 +307,9 @@ class ResultCollection:
         self.results = results
 
         dfs = [r.df() for r in results]
+        self.populate_dfs(dfs)
 
+    def populate_dfs(self, dfs: list[pl.DataFrame]):
         cols = dfs[0].columns
 
         for df in dfs:
@@ -344,6 +346,11 @@ class ResultCollection:
             ax.plot(time, self.min[col], color=color, alpha=0.8, linewidth=0.5)
             ax.plot(time, self.max[col], color=color, alpha=0.8, linewidth=0.5)
         return line
+
+    def with_spread(self) -> Self:
+        dfs = [r.df_with_spread() for r in self.results]
+        self.populate_dfs(dfs)
+        return self
 
 class SimpleResult(Result):
     """Result from running a scenario with simple_sim."""
@@ -709,20 +716,22 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> 
 
     return save_figure(fig, output_file)
 
-def plot_spread(result: Result | list[Result], title: str, force=False) -> str:
+def plot_spread(result: Result | list[Result] | ResultCollection | list[ResultCollection], title: str) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
-
-    if os.path.exists(file) and not force:
-        print(f"Plot already exists: '{relpath(file)}'.")
-        return
-
-    if isinstance(result, Result): result = [result]
 
     fig, ax = plt.subplots()
 
-    for res in result:
-        df = res.df_with_spread()
-        ax.plot(df["time"], df["spread-sd"], label=res.title())
+    if not isinstance(result, list): result = [result]
+
+    if isinstance(result, list) and all(isinstance(item, ResultCollection) for item in result):
+        result: list[ResultCollection]
+        for collection in result:
+            collection = collection.with_spread()
+            collection.plot("spread-sd", ax)
+    else:
+        for res in result:
+            df = res.df_with_spread()
+            ax.plot(df["time"], df["spread-sd"], label=res.title())
 
     if len(result) > 1: ax.legend()
 
