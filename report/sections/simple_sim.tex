@@ -23,18 +23,19 @@ LiDAR is simulated by emitting a series of radial rays from the robot's position
 
 The camera simulation follows a similar ray-marching procedure but is constrained to a defined field of view, replicating the properties of the Turtlebot 4’s camera. Rather than applying a full object detection algorithm, the camera rays directly infer object identity upon intersection, allowing simplified yet functional input for the behavior algorithms.
 
+% TODO: Maybe better colors for camera and lidar?
 \begin{figure}
     \centering
     \begin{subfigure}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/simple-lidar.png}
+        \includegraphics[width=\textwidth]{figures/screenshots/simple-lidar.png}
         \caption{LiDAR approximation}
         \label{fig:lidar-approximation}
     \end{subfigure}
     \hfill
     \begin{subfigure}[b]{0.45\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/simple-camera.png}
+        \includegraphics[width=\textwidth]{figures/screenshots/simple-camera.png}
         \caption{Camera approximation}
         \label{fig:camera-approximation}
     \end{subfigure}
