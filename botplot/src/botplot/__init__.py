@@ -555,10 +555,11 @@ def save_figure(fig, output_file: str):
     fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
+    return output_file
 
-def plot_coverage(results: Result | list[Result] | ResultCollection | list[ResultCollection], name: str, title=None):
+def plot_coverage(results: Result | list[Result] | ResultCollection | list[ResultCollection], name: str, title=None) -> str:
 
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(9, 5))
 
     file = os.path.join(plot_dir(), f"{name}.png")
 
@@ -584,7 +585,7 @@ def plot_coverage(results: Result | list[Result] | ResultCollection | list[Resul
     ax.set_ylabel(r"Coverage (\%)")
     ax.set_title(title)
 
-    save_figure(fig, file)
+    return save_figure(fig, file)
 
 def show_velocities(ax, df: pl.DataFrame, robot_count: int, label: str | None = None) -> pl.DataFrame:
 
@@ -612,7 +613,7 @@ def show_velocities(ax, df: pl.DataFrame, robot_count: int, label: str | None = 
     ax.fill_between(df["time"], df["vel_min"], df["vel_max"],
                      color=color, alpha=0.3, label="Min-Max Range")
 
-def plot_velocity(results: list[Result] | Result, name: str, title=None):
+def plot_velocity(results: list[Result] | Result, name: str, title=None) -> str:
     file = os.path.join(plot_dir(), f"{name}.png")
 
     if isinstance(results, Result): results = [results]
@@ -633,9 +634,9 @@ def plot_velocity(results: list[Result] | Result, name: str, title=None):
 
     if len(results) > 1: plt.legend()
 
-    save_figure(fig, file)
+    return save_figure(fig, file)
 
-def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
+def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> str:
 
     if isinstance(results, Result): results = [results]
 
@@ -706,9 +707,9 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None):
 
     output_file = os.path.join(plot_dir(), output_file)
 
-    save_figure(fig, output_file)
+    return save_figure(fig, output_file)
 
-def plot_spread(result: Result | list[Result], title: str, force=False):
+def plot_spread(result: Result | list[Result], title: str, force=False) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
     if os.path.exists(file) and not force:
@@ -725,9 +726,9 @@ def plot_spread(result: Result | list[Result], title: str, force=False):
 
     if len(result) > 1: ax.legend()
 
-    save_figure(fig, file)
+    return save_figure(fig, file)
 
-def plot_performance(result: Result | list[Result], title: str, max=None, force=False):
+def plot_performance(result: Result | list[Result], title: str, max=None, force=False) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
     if os.path.exists(file) and not force:
@@ -746,9 +747,7 @@ def plot_performance(result: Result | list[Result], title: str, max=None, force=
 
     ax.set_ylim(0, max)
 
-    save_figure(fig, file)
-
-    plt.close(fig)
+    return save_figure(fig, file)
 
 def plot_paths(result: Result, title: str, segments=1, force=False, borders=False, plot_title: bool = False, time_label: bool=True) -> list[str]:
     df = result.df()

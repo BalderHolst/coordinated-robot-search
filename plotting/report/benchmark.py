@@ -1,4 +1,6 @@
 import botplot as bp
+import shutil
+import os
 
 WORLD = bp.repo_path("worlds/objectmap/pathing_example.ron")
 
@@ -12,6 +14,8 @@ BEHAVIORS = [
     ("search:hybrid", "Hybrid"),
     ("search:pathing", "Pure Pathing"),
 ]
+
+DIR = bp.repo_path("report", "figures", "plots", "benchmarks")
 
 def main():
 
@@ -37,7 +41,20 @@ def main():
 
         collections.append(bp.ResultCollection(name, results))
 
-    bp.plot_coverage(collections, f"Coverage over {RUNS} runs")
+    plot_file = bp.plot_coverage(collections, f"Coverage over {RUNS} runs")
+
+    dst = os.path.join(DIR, os.path.basename(plot_file))
+
+    os.makedirs(os.path.dirname(dst), exist_ok=True)
+
+    shutil.copyfile(
+        plot_file,
+        dst,
+    )
+
+    print(f"Plot copied to '{dst}'")
+
+
 
 
 if __name__ == "__main__":
