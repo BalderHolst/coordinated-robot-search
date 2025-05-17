@@ -1,4 +1,3 @@
-\section{Related Work}
 % TODO: How can autonomous robots be used 
 % TODO: Refer to related work
 %         - Nature
@@ -14,19 +13,26 @@
 
 % A whole other approach is deep reinforcement learning. Here, the MRS learns to reduce cost function and find the optimal policy for selecting tasks. Advantages include being adaptive to any environment at the cost of extensive training.
 
-Multi-Robot Systems (MRS) is a well-researched area of robotics with many applications, such as {\color{red} WHAT}. 
-MRS architectures are typically categorized as either centralized or distributed. 
-Centralized approaches typically have a main server, responsible for allocating tasks and path planning, whereas distributed algorithms involve individual planning running on each robot.
-Notable approaches to MRS control include market-based \cite{trigui2014market}, dynamic programming \cite{kato2011dp}, optimization-based, behavior-based, and deep reinforcement learning \cite{huttenrauch2019deep-swarm}.
-Market-based task assignment involves an auction where robots bid on a task, and the highest bidding robot gets assigned the task, which can result in nearly optimal assignments.
-Dynamic programming approaches seek to calculate the optimal task assignment given the location and capabilities of all robots in the system.
-This usually requires global information about the MRS to compute optimal task assignments and can therefore only be used in centralized approaches or in distributed systems where the entire state of the system is shared, as discussed in \cite{multi-robot-search-moving-target}.
-Behavior-based approaches are usually inspired by nature and include ideas such as laying down virtual “pheromones” or other signals, which implicitly communicate tasks to other robots.
-One paper found that “a coordinated group effort is possible without use of direct communication or robot differentiation” \cite{kube2000cooperative-ants}.
-This results in a system that relies less on direct messaging and more on emergent behavior. \\
+\section{Related Work}
+Multi-Robot Systems (MRS) represent a well-established field within robotics, with applications spanning search and rescue, environmental monitoring, warehouse automation, exploration, and surveillance. 
+MRS architectures are generally categorized as either centralized or distributed. 
+In centralized approaches, a central server is responsible for assigning tasks and planning paths for all robots in the system. 
+In contrast, distributed algorithms enable each robot to perform local planning and decision-making, often based on partial knowledge and limited communication.\\
 
-This thesis takes a similar approach by sharing a continuous stream of observations between robots.
-The collective observations are then used to update the internal search map in each robot, which influences the robot's movement.
-This type of implicit communication has the advantage that the search algorithm's time complexity is not dependent on the number of robots in the system, but may still allow for a coordinated search effort, as mentioned in \cite{multi-robot-search-moving-target}.
-In this thesis, four approaches are explored: a simple, computationally cheap, gradient-based algorithm; a frontier exploration algorithm using A* for pathing; a hybrid algorithm switching between the gradient and frontier algorithms; and a deep reinforcement learning-based algorithm.
-These types of algorithms may not find the optimal solution for exploring an area but are robust, resilient, and applicable to a wide range of scenarios.
+Notable approaches to MRS control include market-based methods~\cite{trigui2014market}, dynamic programming~\cite{kato2011dp}, optimization-based methods, behavior-based strategies, and deep reinforcement learning~\cite{huttenrauch2019deep-swarm}. 
+In market-based task assignment, robots participate in an auction by bidding for tasks, with the highest bidder receiving the assignment. 
+This method can lead to near-optimal task distributions, especially when task costs are well-defined.
+
+Dynamic programming approaches aim to compute optimal task allocations and trajectories based on the known locations and capabilities of all robots. 
+These methods typically require complete, up-to-date global information and are thus most suitable for centralized systems, or for distributed systems in which the full system state is shared \cite{multi-robot-search-moving-target}.
+
+Behavior-based approaches often draw inspiration from biological systems, such as ants and bees, and use indirect coordination methods like virtual “pheromones” or other spatial markers to guide robot behavior. 
+One paper found that “a coordinated group effort is possible without use of direct communication or robot differentiation” \cite{kube2000cooperative-ants}.
+Such strategies reduce the reliance on explicit communication and instead emphasize emergent, self-organizing behaviors.\
+
+This project adopts a similar philosophy by enabling robots to share a continuous stream of observations over a communication channel. 
+These collective observations are used to update each robot’s internal representation of the search map, which in turn influences its navigation decisions. 
+This form of implicit communication allows for scalable coordination, as the time complexity of the algorithm does not increase with the number of participating robots \cite{multi-robot-search-moving-target}.\\
+
+Four algorithmic approaches are explored in this work: a lightweight gradient-based method, a frontier exploration algorithm using A* for path planning, a hybrid strategy combining the two, and a deep reinforcement learning-based algorithm. 
+While these methods may not always produce optimal exploration strategies, they are designed to be robust, computationally efficient, and adaptable to a variety of real-world scenarios.

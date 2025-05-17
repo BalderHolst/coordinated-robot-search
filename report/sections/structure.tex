@@ -1,6 +1,6 @@
 \section{Structure}
-The software is divided into three main parts, the robot behavior implementation, a simple custom 2D
-simulator, and a ROS 2 environment with 3D realistic simulations.
+The software is divided into three main components: the robot behavior implementation, a custom lightweight 2D simulator, and a ROS 2-based 3D simulation environment.
+
 % TODO: Find a home for this figure
 % TODO: Find a nice color scheme
 % TODO: Refer to this figure in the text
@@ -8,66 +8,72 @@ simulator, and a ROS 2 environment with 3D realistic simulations.
     \begin{center}
         \includegraphics[width=0.95\textwidth]{figures/software-structure.pdf}
     \end{center}
-    \caption{Software structure of the project. Black arrows indicate a library dependency and green arrows denote ROS 2 communication through topics. Square boxes are Rust crates while green circles are ROS 2 nodes. Notice that the core library \texttt{botbrain} is not part of the ROS 2 dependent code. It can therefore be used by the simple simulator without ROS 2.}\label{fig:}
+    \caption{Software structure of the project. Black arrows indicate library dependencies, while green arrows denote ROS 2 communication through topics. Square boxes represent Rust crates and green circles represent ROS 2 nodes. The core library \texttt{botbrain} is ROS 2-independent and can be reused by the simple simulator without any dependency on ROS 2.}
+    \label{fig:software-structure}
 \end{figure}
 
 \subsection{Simulated Hardware}
 % TODO: Describe the robot we are designing for
 % TODO: Describe the sensors available
 % TODO: Describe that we assume the robot to have some sort of communication method
+A simulated differential-drive robot equipped with a camera, LiDAR, odometry, and communication capabilities is used as the target platform. LiDAR and odometry are employed for localization via Adaptive Monte Carlo Localization (AMCL), as discussed in \cref{sub:localization}. The camera is used for object detection, and a communication channel is assumed for data exchange between robots.\\
 
-For this project, a differential drive robot equipped with a camera, LiDAR, odometry, and communication capabilities was chosen. LiDAR and odometry are utilized for localization via AMCL (as discussed later---{\color{red} DISCUSS THIS} in \cref{sub:localization}). The camera is used to detect the search object and a global communication channel is needed for the robots to share data. To optain realistic parameters and utilize pre-existing 3D models, URDF files, and robot parameters, the Turtlebot 4 \cite{tb4} was chosen as the target platform. However, it is important to note that the software developed in this project can be adapted to run on any robot that meets the specified sensor and communication requirements by adjusting the corresponding parameters in the source code.
-% TODO: I think it has wifi/bluetooth builtin
-The Turtlebot 4 has all the required hardware apart from a {\color{red} designated communication unit}. As this project focuses on simulation, the simulator will be responsible for passing messages between robots as they are sent. The software implementation is therefore {\color{red} communication method agnostic} as long as the messages the robots send are received by the other robots.
+To ensure realism and leverage existing 3D models and URDF files, the Turtlebot 4 \cite{tb4} is selected as the simulated platform. Although the Turtlebot 4 lacks a dedicated communication unit, this project simulates inter-robot messaging, rendering the system agnostic to the specific communication method. The software can be adapted to any robot platform that satisfies the sensor and communication requirements by configuring parameters in the source code.
 
 % TODO: Maybe mark the sensors on the robot
 \begin{figure}[h]
     \begin{center}
         \includegraphics[width=0.55\textwidth]{figures/tb4.png}
     \end{center}
-    \caption{Turtlebot 4}\label{fig:tb4}
+    \caption{Turtlebot 4 platform used in simulation.}
+    \label{fig:tb4}
 \end{figure}
 
 \subsection{Robot Behavior}
-The robot behaviors are implemented in the \texttt{botbrain} library. \texttt{botbrain} defines the \texttt{Robot} interface
-which is the only way for outside programs to interact with a robot’s internal state (see \cref{fig:robot-interface}).
+Robot behavior is implemented in the \texttt{botbrain} library, which defines a common \texttt{Robot} interface that exposes a robot’s internal state to external programs (see \cref{fig:robot-interface}).
 
 \begin{figure}[H]
     \begin{center}
         \begin{minted}[autogobble]{rust}
             pub trait Robot {
-                fn set_id(&mut self, id: RobotId);            // Set the id of the robot
+                fn set_id(&mut self, id: RobotId);            // Set the ID of the robot
                 fn set_map(&mut self, world: Map);            // Set the world map
 
-                fn input_pose(&mut self, pose: RobotPose);    // Input the angle of the robot
-                fn input_cam(&mut self, cam: CamData);        // Input data from the camera
-                fn input_lidar(&mut self, lidar: LidarData);  // Input data from the lidar
+                fn input_pose(&mut self, pose: RobotPose);    // Input the robot's pose
+                fn input_cam(&mut self, cam: CamData);        // Input camera data
+                fn input_lidar(&mut self, lidar: LidarData);  // Input LiDAR data
                 fn input_msgs(&mut self, msgs: Vec<Message>); // Input messages from other robots
 
-                fn get_id(&self) -> &RobotId;                 // Get the id of the robot
+                fn get_id(&self) -> &RobotId;                 // Retrieve the robot's ID
                 ...
             }
         \end{minted}
     \end{center}
-    \caption{Methods of the \texttt{Robot} interface.}\label{fig:robot-interface}
+    \caption{Methods of the \texttt{Robot} interface.}
+    \label{fig:robot-interface}
 \end{figure}
 
-Interface methods prefixed with \texttt{set} are used to set up the internal state of the robot and should be called after creating a robot and before any other methods. The \texttt{input} prefix is used in functions which should be called as often as possible to update the world view of the robot. \texttt{get}-methods do not change the state of the robot and may be called at any time. Notice that there is no method which "runs" the robot to generate a control signal. This is because a \texttt{Robot} only represents the robot state, not the algorithm which uses that state to generate a control output. To generate a control output, the dynamic \texttt{Robot} must be passed to a behavior function. This function is then free to read and write to the robot state, to generate a control signal as well as a list of messages which should be sent to the other robots.
+Methods prefixed with \texttt{set} are intended for initialization and must be called before any other interaction. The \texttt{input} methods are used to provide live sensor data and messages from other robots, while \texttt{get} methods retrieve state information without modifying it.
 
-Separating the robot state from its behavior allows multiple behaviors for the same internal state, which is useful for comparing different algorithms.
+Notably, the interface does not include a method that directly runs the robot’s control loop. Instead, the \texttt{Robot} represents only the internal state. Control logic is implemented as an external function that reads from and writes to this state to produce a control signal and a list of outbound messages. This separation allows for multiple behavior implementations to operate on the same robot state, simplifying algorithm comparison.
 
 \subsection{Using Rust}
 % TODO: Describe how we integrated with colcon
-The core logic of this project is implemented entirely in Rust. While this choice was primarily driven by preference, it presents both advantages and challenges that impact the overall system. ROS 2 does not officially support Rust, which can complicate integration with the ROS 2 ecosystem. To utilize ROS 2 from Rust, the \texttt{r2r} library \cite{r2r} was used. It provides bindings for the ROS Client Library (RCL) and generates code for ROS 2 message types. It functions effectively, although initial compilation times are longer compared to C++, as Rust bindings are generated during the build process. \\
+The core of the system is implemented in Rust. While this choice was primarily based on developer preference, it brings several notable benefits. Although ROS 2 does not officially support Rust, the \texttt{r2r} library \cite{r2r} provides bindings to the ROS Client Library (RCL), enabling message serialization, topic publication/subscription, and integration with other ROS components. The initial build times are longer compared to C++, as Rust bindings are generated during compilation.\\
 
-A key advantage of using Rust is the enhanced robustness and correctness of the codebase. The Rust compiler guarantees no undefined behavior and enforces a strict type system where object lifetimes are verified at compile time. Consequently, the resulting code is less susceptible to errors and easier to refactor, especially in collaborative development environments.
+% TODO: Write about burn or do it in reinforcement learning section
+
+Rust's memory safety guarantees and strong static typing contribute to a more robust and maintainable codebase. The compiler ensures that object lifetimes are correctly managed, eliminating an entire class of memory-related bugs. These features make Rust particularly well-suited for collaborative development, where code clarity and correctness are critical.
 
 \subsection{Two Simulators}
 % TODO: Why two simulators?
 % TODO: Shared behavior
 % TODO: Performance differences
-This project uses a simulator to simulator approach for validating robot behavior, as opposed to a simulator to real world comparison. The \texttt{simple\_sim} simulator provides a naive and simple environment useful for testing and validating robot behavior and was developed during this project. A Gazebo simulation is used to verify that the simple simulator is approximating the sensor inputs and motor commands in a realistic way that leads to similar results. The Gazebo simulation is always considered most correct. A major advantage of the simple simulator, is that it is very light weight and can run faster than real time with deterministic results. 
-\Cref{fig:simulators} shows a screenshots of the simulators running the same world.
+This project uses a simulator-to-simulator approach rather than attempting direct deployment to physical hardware. Two simulators were developed and used: a lightweight custom 2D simulator called \texttt{simple\_sim}, and a more realistic 3D simulation in Gazebo integrated with ROS 2.
+
+The 2D simulator supports rapid prototyping, debugging, and algorithm iteration. It is deterministic, lightweight, and capable of running faster than real time. The Gazebo simulation, by contrast, provides high-fidelity sensor emulation and realistic robot dynamics, and is used to validate that behaviors developed in the simpler simulator transfer correctly.\\
+
+Both simulators run identical robot behavior code using the shared \texttt{botbrain} library, ensuring consistency across testing environments. \Cref{fig:simulators} shows both simulators operating in the same map layout.
 
 % TODO: Insert pictures of the depot in Simple Sim and Gazebo
 \begin{figure}[h]
@@ -83,6 +89,6 @@ This project uses a simulator to simulator approach for validating robot behavio
         \includegraphics[width=\textwidth]{figures/gazebo_sim.png}
         \caption{Gazebo Simulator in ROS 2}
     \end{subfigure}
-    \caption{Screenshots the simulators running the "depot" environment.}
-      \label{fig:simulators}
+    \caption{Screenshots of the simulators running the "depot" environment.}
+    \label{fig:simulators}
 \end{figure}
