@@ -19,7 +19,7 @@ The behavior node publishes control commands to the \texttt{/cmd\_vel} topic, wh
 
 In simulation, the differential drive system is modeled within Gazebo using its built-in plugins. 
 However, as Gazebo is not intended for real-world deployment, a separate controller is required for physical robots. 
-A widely adopted solution is the \texttt{ros2\_control} framework \cite{ros2_control}, which offers a collection of hardware interface controllers, including one for differential drive systems.
+A widely adopted solution is the \texttt{ros2\_control} framework \cite{ros2-control}, which offers a collection of hardware interface controllers, including one for differential drive systems.
 This framework also includes a Gazebo plugin that allows the same controller to be used both in simulation and on real hardware, ensuring consistency across development and deployment environments.
 
 \subsection{Using the Rust Library}
