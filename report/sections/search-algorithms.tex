@@ -48,15 +48,23 @@ To resolve this, each subsystem outputs a directional vector, or "target contrib
 
 Each robot maintains a "search grid," which acts as a heatmap representing the exploredness of each cell in the map. This grid is continuously updated using the robot’s own observations and messages received from other robots via the shared communication channel. Explored areas are considered "cold," while unexplored areas are "hot."\\
 
-Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:search-gradient}.
+Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:search-gradient-no-forward} and \cref{fig:search-gradient-forward}.
 
 % TODO: Maybe not have this picture. But maybe nice to see without forward bias
-\begin{figure}[h]
+\begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.85\textwidth]{./figures/screenshots/no-forward.png}
     \end{center}
     \caption{Gradient-based direction derived from the search grid without forward bias.}
-    \label{fig:search-gradient}
+    \label{fig:search-gradient-no-forward}
+\end{figure}
+
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.85\textwidth]{./figures/screenshots/with-forward.png}
+    \end{center}
+    \caption{Gradient-based direction derived from the search grid with forward bias.}
+    \label{fig:search-gradient-forward}
 \end{figure}
 
 In practice, computing the gradient involves several steps. First, the average heat under the robot ($H$) must be calculated. This is accomplished with the cells underneath the robot ($C_\mathrm{robot}$), as in \cref{eq:robot-heat}. $N$ is the number of cells in $C_\mathrm{robot}$.
@@ -82,15 +90,17 @@ Each cell contributes to the final gradient based on the difference in heat and 
     \label{eq:fade-gradient}
 \end{equation}
 
-This formulation works well in open areas but may behave undesirably near map edges. Since cells outside the map have no heat value, the gradient can incorrectly point toward the map boundary if surrounding cells are colder than the current position. \Cref{fig:edge-gradient} illustrates this issue.
+This formulation works well in open areas but may behave undesirably near map edges. Since cells outside the map have no heat value, the gradient can incorrectly point toward the map boundary if surrounding cells are colder than the current position. 
+% \Cref{fig:edge-gradient} illustrates this issue.
 
-\begin{figure}[h]
-    \begin{center}
-        \includegraphics[width=0.45\textwidth]{./figures/edge-gradient.png}
-    \end{center}
-    \caption{Incorrect gradient pointing toward the edge of the map.}
-    \label{fig:edge-gradient}
-\end{figure}
+% TODO: Comment out for now, I think it makes sense without needing a picture
+% \begin{figure}[h]
+%     \begin{center}
+%         \includegraphics[width=0.45\textwidth]{./figures/edge-gradient.png}
+%     \end{center}
+%     \caption{Incorrect gradient pointing toward the edge of the map.}
+%     \label{fig:edge-gradient}
+% \end{figure}
 
 To address this, only positive heat differences are considered in the gradient calculation. In practice, this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
 \begin{equation}
@@ -105,15 +115,16 @@ To address this, only positive heat differences are considered in the gradient c
     \end{cases}
 \end{equation}
 
-This modification prevents attraction toward map boundaries and ensures the robot continues to seek out unexplored areas. Cells occluded by obstacles are excluded from this computation. \Cref{fig:search-no-proximity} shows robot paths using this approach with a small forward bias added.
+This modification prevents attraction toward map boundaries and ensures the robot continues to seek out unexplored areas. Cells occluded by obstacles are excluded from this computation.
+% \Cref{fig:search-no-proximity} shows robot paths using this approach with a small forward bias added.
 
-\begin{figure}[h]
-    \begin{center}
-        \includegraphics[width=0.85\textwidth]{./figures/screenshots/gradient.png}
-    \end{center}
-    \caption{Robot trajectories using gradient-based exploration.}
-    \label{fig:search-no-proximity}
-\end{figure}
+% \begin{figure}[h]
+%     \begin{center}
+%         \includegraphics[width=0.85\textwidth]{./figures/screenshots/gradient.png}
+%     \end{center}
+%     \caption{Robot trajectories using gradient-based exploration.}
+%     \label{fig:search-no-proximity}
+% \end{figure}
 
 \subsection{Proximity Grid}
 To maintain network connectivity, robots must stay within communication range of each other. Each robot uses a "proximity grid" to estimate which areas of the map are within range of the main robot network (see \cref{fig:proximity-grid}).
