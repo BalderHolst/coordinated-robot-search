@@ -32,6 +32,7 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
     ("gradient", behaviors::gradient),
+    ("no-forward", behaviors::no_forward),
     ("pathing", behaviors::pathing),
     // Experimental to test frontier exploration params
     // s is size weight
@@ -979,6 +980,17 @@ mod behaviors {
                 target += robot.proximity_gradient();
                 target
             },
+        )
+    }
+
+    pub fn no_forward(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+        search(
+            robot,
+            time,
+            |robot, time| {
+                robot.update_search_grid(time);
+            },
+            |robot, _time| robot.search_gradient(),
         )
     }
 

@@ -50,11 +50,12 @@ Each robot maintains a "search grid," which acts as a heatmap representing the e
 
 Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:search-gradient}.
 
+% TODO: Maybe not have this picture. But maybe nice to see without forward bias
 \begin{figure}[h]
     \begin{center}
-        \includegraphics[width=0.45\textwidth]{./figures/search-gradient.png}
+        \includegraphics[width=0.85\textwidth]{./figures/screenshots/no-forward.png}
     \end{center}
-    \caption{Gradient-based direction derived from the search grid.}
+    \caption{Gradient-based direction derived from the search grid without forward bias.}
     \label{fig:search-gradient}
 \end{figure}
 
