@@ -1,2 +1,28 @@
 \section{Further Development}
 % TODO: How could the project be further developed?
+% TODO: Maybe combine this section with real-world implementation?
+
+While this project demonstrates a complete simulation-based framework for coordinated robotic search, several avenues exist for further development and real-world deployment.
+
+\subsection{Transition to Physical Deployment}
+To transition from simulation to a physical system, several components must be tested and refined to ensure reliable performance under real-world conditions:
+\begin{itemize}
+  \item \textbf{Sensor calibration and frame alignment}: Accurate transformations between LiDAR, camera, and base frames are crucial for consistent sensor fusion and localization.
+  \item \textbf{Robust object detection}: The current object detection relies on simple color-based segmentation, which may perform poorly in diverse lighting or background conditions. More robust methods, such as learned object detection or depth filtering, could be introduced.
+  \item \textbf{Communication reliability}: Real-world wireless communication introduces latency, packet loss, and variable range. Testing robustness to communication failure and implementing fault-tolerant strategies (e.g., message queuing or data compression) would be essential.
+  \item \textbf{Real-time performance}: The behavior logic and path planning components should be profiled on embedded hardware to ensure that they meet real-time constraints.
+  \item \textbf{ROS 2 control integration}: In the current setup, differential drive control is handled by Gazebo plugins. For real hardware, transitioning to \texttt{ros2\_control} would allow for unified controller deployment in both simulated and physical environments.
+\end{itemize}
+
+Developing a small-scale multi-robot testbed using platforms such as TurtleBot~4 would be a natural next step. This would allow for physical validation of the distributed algorithms, hardware-in-the-loop testing, and identification of practical implementation bottlenecks.
+
+\subsection{Advancing Deep Reinforcement Learning}
+The reinforcement learning component could also be extended in multiple directions:
+\begin{itemize}
+  \item \textbf{Domain randomization}: To improve generalization to real-world conditions, domain randomization techniques could be employed during training (e.g., noise in sensors, and robot dynamics).
+  \item \textbf{Curriculum learning}: Starting with simpler maps and gradually increasing complexity may improve convergence and performance.
+  \item \textbf{Transfer learning}: Fine-tuning a trained policy in a physical environment could bridge the sim-to-real gap more efficiently than retraining from scratch.
+  \item \textbf{Reward shaping}: More nuanced reward functions incorporating communication efficiency, time, and safety metrics could be explored to guide agent behavior more effectively.
+\end{itemize}
+
+Incorporating these techniques could help develop policies that are not only more effective but also more transferable and robust under real-world deployment conditions.
