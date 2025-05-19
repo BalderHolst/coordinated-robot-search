@@ -21,6 +21,7 @@ pub struct PolarState {
     search_gradient: Vec2,
     // global_gradient: Vec2,
     closest_robot: Vec2,
+    group_size: usize,
     group_center: Vec2,
     group_spread: Vec2,
 }
@@ -30,7 +31,7 @@ impl PolarState {
     const SHORTEST_RAY_SIZE: usize = 2;
     const POSE_SIZE: usize = 1;
     const SEARCH_GRADIENT_SIZE: usize = 2;
-    const GROUP_SIZE: usize = 7;
+    const GROUP_SIZE: usize = 8;
 
     /// Returns the interpolated lidar data in a list of `(angle, distance)` pairs
     pub fn lidar_rays(&self) -> [(f32, f32); Self::LIDAR_RAYS] {
@@ -76,6 +77,7 @@ impl PolarState {
         let closest_robot_angle = self.closest_robot.angle() - self.angle;
         let closest_robot_length = self.closest_robot.length();
         [
+            self.group_size as f32,
             group_angle,
             group_center_angle,
             group_center_length,
@@ -140,6 +142,12 @@ impl PolarState {
             category,
             "Group Center",
             DebugItem::Vector(self.group_center),
+        );
+
+        soup.add(
+            category,
+            "Group Size",
+            DebugItem::Number(self.group_size as f32),
         );
 
         soup.add(
@@ -224,6 +232,7 @@ impl State for PolarState {
             lidar: robot.lidar.clone(),
             search_gradient: robot.search_gradient,
             closest_robot,
+            group_size: n,
             group_center,
             group_spread,
         }
