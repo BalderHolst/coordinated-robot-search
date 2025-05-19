@@ -164,14 +164,14 @@ impl State for PolarState {
         + Self::GROUP_SIZE;
 
     fn to_tensor<B: Backend>(&self, device: &B::Device) -> Tensor<B, 1> {
-        let mut data = [0.0; Self::SIZE];
-        {
-            let mut w = ArrayWriter::new(&mut data);
+        let data: [f32; Self::SIZE] = {
+            let mut w = ArrayWriter::new();
             w.write_array(&self.lidar_data());
             w.write_array(&self.pose_data());
             w.write_array(&self.search_gradient_data());
             w.write_array(&self.group_data());
-        }
+            w.finish()
+        };
         Tensor::from_floats(data, device)
     }
 

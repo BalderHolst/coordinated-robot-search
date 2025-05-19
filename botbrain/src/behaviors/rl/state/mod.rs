@@ -28,14 +28,17 @@ pub use single_ray::RayState;
 pub use small::SmallState;
 
 mod utils {
-    pub struct ArrayWriter<'a> {
-        data: &'a mut [f32],
+    pub struct ArrayWriter<const SIZE: usize> {
+        data: [f32; SIZE],
         cursor: usize,
     }
 
-    impl<'a> ArrayWriter<'a> {
-        pub fn new(data: &'a mut [f32]) -> Self {
-            Self { data, cursor: 0 }
+    impl<const SIZE: usize> ArrayWriter<SIZE> {
+        pub fn new() -> Self {
+            Self {
+                data: [Default::default(); SIZE],
+                cursor: 0,
+            }
         }
 
         pub fn write(&mut self, value: f32) {
@@ -48,6 +51,11 @@ mod utils {
             for &value in array {
                 self.write(value);
             }
+        }
+
+        pub fn finish(self) -> [f32; SIZE] {
+            assert_eq!(self.cursor, SIZE, "ArrayWriter: Not finished");
+            self.data
         }
     }
 }
