@@ -99,6 +99,7 @@ struct EpisodeStats {
     sim_time: f32,
     avg_loss: f32,
     actions: Vec<usize>,
+    robots: usize,
 }
 
 impl fmt::Display for EpisodeStats {
@@ -257,6 +258,7 @@ fn train<
             sim_time: env.sim().state.time.as_secs_f32(),
             avg_loss: total_loss / episode_duration as f32,
             actions: action_stats,
+            robots: state.len(),
         };
         println!("{stat}");
 

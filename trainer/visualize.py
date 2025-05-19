@@ -21,8 +21,7 @@ def live_plot(file_path: str):
 
     gs = gridspec.GridSpec(4, 2, figure=fig)
 
-    axes = [fig.add_subplot(gs[i // 2, i % 2]) for i in range(6)]
-    action_ax = fig.add_subplot(gs[3, :])
+    axes = [fig.add_subplot(gs[i // 2, i % 2]) for i in range(8)]
 
     try:
         while True:
@@ -31,7 +30,6 @@ def live_plot(file_path: str):
             if not df.is_empty():
                 for ax in axes:
                     ax.clear()
-                action_ax.clear()
 
                 # Standard plots
                 axes[0].plot(df["episode"], df["reward"], color='tab:blue')
@@ -58,6 +56,15 @@ def live_plot(file_path: str):
                 axes[5].set_title("Simulation Time")
                 axes[5].set_xlabel("Episode")
 
+                n = df["robots"].max()
+                axes[6].scatter(df["episode"], df["robots"], color='tab:pink', marker='o', s=50)
+                axes[6].set_title("Robots")
+                axes[6].set_xlabel("Episode")
+                axes[6].set_ylim(0, n + 1)
+                axes[6].set_yticks(range(0, n + 1))
+                # Horizontal grid lines
+                axes[6].yaxis.grid(True, linestyle='--', alpha=0.7)
+
                 # Stacked area chart: Action percentage distribution
                 episodes = df["episode"].to_list()
                 num_episodes = len(df)
@@ -77,7 +84,7 @@ def live_plot(file_path: str):
 
                 colors = plt.cm.tab20.colors  # Up to 20 distinct colors
 
-                action_ax.stackplot(
+                axes[7].stackplot(
                     episodes,
                     actions_percentages,
                     labels=[f"Action {i}" for i in range(max_actions)],
@@ -85,9 +92,9 @@ def live_plot(file_path: str):
                     alpha=0.8
                 )
 
-                action_ax.set_title("Action Distribution per Episode (Stacked Area)")
-                action_ax.set_xlabel("Episode")
-                action_ax.set_ylim(0, 100)
+                axes[7].set_title("Action Distribution per Episode (Stacked Area)")
+                axes[7].set_xlabel("Episode")
+                axes[7].set_ylim(0, 100)
 
             plt.pause(1)
     except KeyboardInterrupt:
