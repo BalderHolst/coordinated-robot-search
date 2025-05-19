@@ -126,6 +126,12 @@ impl PolarState {
 
         soup.add(
             category,
+            "Avg Angle Value",
+            DebugItem::Number(self.avg_angle),
+        );
+
+        soup.add(
+            category,
             "Avg Angle",
             DebugItem::Vector(Vec2::angled(self.avg_angle)),
         );
@@ -181,18 +187,18 @@ impl State for PolarState {
             .unwrap_or(robot.pos)
             - robot.pos;
 
-        let mut robot_posrs = other_positions;
-        robot_posrs.push(robot.pos);
+        let mut robot_positions = other_positions;
+        robot_positions.push(robot.pos);
 
-        let n = robot_posrs.len();
+        let n = robot_positions.len();
 
-        let group_center = robot_posrs
+        let group_center = robot_positions
             .iter()
             .fold(Vec2::ZERO, |acc, p| acc + p.to_vec2())
             / n as f32
             - robot.pos.to_vec2();
 
-        let group_spread = robot_posrs.iter().fold(Vec2::ZERO, |acc, p| {
+        let group_spread = robot_positions.iter().fold(Vec2::ZERO, |acc, p| {
             let center = robot.pos + group_center;
             let d = Vec2 {
                 x: p.x - center.x,
@@ -202,17 +208,18 @@ impl State for PolarState {
             acc + d
         }) / n as f32;
 
-        let avg_angle = normalize_angle(
-            (robot
-                .others
-                .values()
-                .fold(0.0, |acc, (_, angle)| acc + (*angle - robot.angle).abs())
-                + robot.angle)
-                / n as f32,
-        );
+        let robot_angle = normalize_angle(robot.angle);
+
+        let avg_angle = (robot
+            .others
+            .values()
+            .map(|(_, angle)| Vec2::angled(*angle))
+            .fold(Vec2::ZERO, |acc, p| acc + p)
+            + Vec2::angled(robot_angle))
+        .angle();
 
         Self {
-            angle: normalize_angle(robot.angle),
+            angle: robot_angle,
             avg_angle,
             lidar: robot.lidar.clone(),
             search_gradient: robot.search_gradient,
