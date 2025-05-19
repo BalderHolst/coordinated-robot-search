@@ -3,7 +3,7 @@
 % TODO: Say we can load pgm maps from ROS 2
 The simple simulator was developed to enable rapid testing and debugging of robot swarm behavior in a controlled 2D environment. It simulates multiple robots operating in a discretized world, rendering them as circles with their respective IDs displayed at their centers. The simulator advances in discrete time steps at 60 updates per simulated second and executes in a multi-threaded fashion to maintain performance across large robot groups.\\
 
-The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} files, allowing it to closely mirror environments used in the 3D Gazebo simulations. This compatibility facilitates seamless testing of behaviors across both simulation platforms.
+The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} files, allowing it to closely mirror environments used in the 3D Gazebo simulations. This compatibility facilitates seamless testing of behaviors across both simulation platforms. \\
 
 \Cref{fig:simple-sim-interface} shows the graphical user interface of the simulator, displaying a scenario where three robots are performing a coordinated search in the left region of the map.
 
@@ -17,11 +17,11 @@ The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} f
 
 % TODO: ray-marching cite
 \subsection{Sensor Approximation}
-To run behaviors, each robot requires input from three sources: pose, LiDAR, and camera data. The pose is set directly by the simulator and requires no approximation. However, both LiDAR and camera inputs are simulated using ray marching techniques \cite{raymarching}, a lightweight yet effective method for approximating line-of-sight sensor data in a 2D grid world.
+To run behaviors, each robot requires three inputs: pose, LiDAR, and camera data. The pose is set directly by the simulator and requires no approximation. However, both LiDAR and camera inputs are emulated using ray marching techniques \cite{raymarching}, a lightweight yet effective method for approximating line-of-sight sensor data in a 2D grid world. \\
 
-LiDAR is simulated by emitting a series of radial rays from the robot's position at fixed angular intervals. Each ray is advanced incrementally until it intersects with an obstacle in the environment. The resulting distance data mimics real-world LiDAR output and is illustrated in \cref{fig:lidar-approximation}.
+LiDAR is emulated by emitting a series of radial rays from the robot's position at fixed angular intervals. Each ray is advanced incrementally until it intersects with an obstacle in the environment. The resulting distance data mimics real-world LiDAR output and is illustrated in \cref{fig:lidar-approximation}. \\
 
-The camera simulation follows a similar ray-marching procedure but is constrained to a defined field of view, replicating the properties of the Turtlebot 4’s camera. Rather than applying a full object detection algorithm, the camera rays directly infer object identity upon intersection, allowing simplified yet functional input for the behavior algorithms.
+The camera emulation follows a similar ray-marching procedure but is constrained to a defined field of view, replicating the properties of the Turtlebot 4’s camera. Rather than applying a full object detection algorithm, the camera rays directly infer object identity upon intersection, allowing simplified yet functional input for the behavior algorithms.
 
 % TODO: Maybe better colors for camera and lidar?
 \begin{figure}
@@ -43,23 +43,20 @@ The camera simulation follows a similar ray-marching procedure but is constraine
     \label{fig:sensor-approximation}
 \end{figure}
 
-\subsection{Debugging}
-To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and internal state. The \texttt{botbrain} library exposes a debugging interface known as \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items—such as occupancy grids, path vectors, target points, and internal decision states—can be visualized in both \texttt{simple\_sim} and ROS 2 via RViz2. The debug item in \texttt{simple\_sim} can be seen on the right side in \cref{fig:simple-sim-interface}.
-This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm.
+\subsection{Behavior Debugging}
+To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and internal state. The \texttt{botbrain} library exposes a debugging interface known as the \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items --- such as occupancy grids, path vectors, target points, and internal decision states --- can be visualized in both \texttt{simple\_sim} and ROS 2 via RViz2. The debug items are located on the right panel i the \texttt{simple\_sim} user interface as seen on \cref{fig:simple-sim-interface} and their overlays can be toggled at will. This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm. The \texttt{Debug Soup} can be disabled to save memory and increase performance after development is done.
 
-\subsection{Library}
-The simulator architecture is built around the shared \texttt{botbrain} behavior library, which encapsulates each robot’s internal state and provides a standardized interface for behavior control. This modular design allows the same behavior code to be executed seamlessly in both the lightweight \texttt{simple\_sim} environment and the more realistic Gazebo/ROS~2 simulation without requiring any code changes.
+\subsection{Using as a Library}
+The \texttt{simple\_sim} simulator is also implemented as a reusable library. In addition to running with a graphical user interface, it can be executed in headless mode, without visualization. This is particularly useful when running reinforcement learning experiments as explored in \cref{sec:rl}.
 
-By decoupling the behavior logic from the underlying simulation platform, the system supports consistent benchmarking and fair comparisons between algorithms. This separation also promotes cleaner, more testable, and reusable code, making it easier to iterate on behaviors and evaluate improvements.\\
-
-The \texttt{simple\_sim} simulator itself is also implemented as a reusable library. In addition to running with a graphical user interface, it can be executed in headless mode—without visualization—for fast batch execution. This is particularly useful when collecting performance metrics, generating plots, or running reinforcement learning experiments where a large number of episodes must be simulated efficiently.
-
-Moreover, the headless mode enables integration with external scripts or training pipelines, allowing behaviors to be evaluated or learned in a fully automated manner. This versatility makes \texttt{simple\_sim} an effective tool for both development and research use cases.
+% Moreover, the headless mode enables integration with external scripts or training pipelines, allowing behaviors to be evaluated or learned in a fully automated manner. This versatility makes \texttt{simple\_sim} an effective tool for both development and research use cases.
 
 % TODO: Should this be here?
 \subsection{Performance} 
-The simple simulator is designed to be lightweight and performant. It supports deterministic execution, enabling reproducible tests for debugging and reinforcement learning. Simulation speed can be accelerated beyond real time, depending on CPU capacity and the number of robots simulated.
+The simple simulator is designed to be lightweight and performant. It supports deterministic execution, enabling reproducible tests for debugging. Simulation speed can be accelerated beyond real time, depending on CPU capacity and the number of robots simulated. \\
 
-Multi-threading is used to parallelize sensor simulation and robot state updates, allowing the system to scale to larger swarms. In practical testing, the simulator is capable of running over 30 to 50 robots in real time on a standard desktop CPU depending on the behavior. Because the environment is purely 2D and avoids expensive physics calculations, the performance overhead is minimal compared to full 3D simulation.
+% TODO: Specify CPU used
+Multi-threading is used to parallelize sensor simulation and robot state updates, allowing the system to scale to larger swarms. In practical testing, the simulator is capable of 30 to 50 robots in real time on a standard desktop CPU depending on the behavior. Because the environment is purely 2D and avoids expensive physics calculations, the performance overhead is minimal compared to full 3D simulation.
 
-This high-performance execution makes the simulator well-suited for training deep reinforcement learning agents, where a large number of episodes must be executed within a reasonable timeframe.
+% TODO: Maybe move this to section 8?
+% This high-performance execution makes the simulator well-suited for training deep reinforcement learning agents, where a large number of episodes must be executed within a reasonable timeframe.
