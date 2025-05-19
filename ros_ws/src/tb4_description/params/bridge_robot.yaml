@@ -13,7 +13,6 @@
   gz_type_name: "gz.msgs.Pose_V"
   direction: GZ_TO_ROS
 
-# TODO: Remove imu?
 # - topic_name: "imu"
 #   ros_type_name: "sensor_msgs/msg/Imu"
 #   gz_type_name: "gz.msgs.IMU"

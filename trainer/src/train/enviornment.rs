@@ -172,7 +172,6 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
                 r.model.set_action(a);
             });
 
-        // TODO: Maybe store the last coverage instead of recalculating it here
         let before_coverage = self.sim.state.diagnostics.coverage_grid.coverage();
 
         // Step internal simulator

@@ -40,10 +40,6 @@ To resolve this, each subsystem outputs a directional vector, or "target contrib
     \label{fig:target-contributions}
 \end{figure}
 
-
-% TODO: Describe the idea, that different factors contribute to the target vector. The target vector is the sum over all contributions.
-% TODO: Describe how we take gradients on a grid
-
 \subsection{Search Grid}
 
 Each robot maintains a "search grid," which acts as a heatmap representing the exploredness of each cell in the map. This grid is continuously updated using the robot’s own observations and messages received from other robots via the shared communication channel. Explored areas are considered "cold," while unexplored areas are "hot."\\
@@ -91,16 +87,6 @@ Each cell contributes to the final gradient based on the difference in heat and 
 \end{equation}
 
 This formulation works well in open areas but may behave undesirably near map edges. Since cells outside the map have no heat value, the gradient can incorrectly point toward the map boundary if surrounding cells are colder than the current position.  \\
-% \Cref{fig:edge-gradient} illustrates this issue.
-
-% TODO: Comment out for now, I think it makes sense without needing a picture
-% \begin{figure}[h]
-%     \begin{center}
-%         \includegraphics[width=0.45\textwidth]{./figures/edge-gradient.png}
-%     \end{center}
-%     \caption{Incorrect gradient pointing toward the edge of the map.}
-%     \label{fig:edge-gradient}
-% \end{figure}
 
 To address this, only positive heat differences are considered in the gradient calculation. In practice, this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
 

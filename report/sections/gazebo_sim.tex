@@ -26,7 +26,7 @@ For environments without an available map, SLAM (Simultaneous Localization And M
 The core objective of this project is to locate a predefined target object in the environment. For this, a simple rule-based object detection system is used instead of a machine learning-based detector, as object detection is not a focus of the project.
 
 The camera feed is accessed through a ROS 2 topic. The object of interest is defined as a yellow ball, and the detection pipeline proceeds as follows:
-% TODO: Make flow chart if it makes sense.
+
 \begin{enumerate}
     \item Convert the input image from BGR to HSV color space (Hue, Saturation, Value), as HSV is more robust for color detection.
     \item Apply a mask to isolate yellow hues (typically around 60° in hue).
@@ -60,5 +60,3 @@ After receiving the latest sensor data, each robot's behavior is called. The res
 % > The \texttt{botbrain} library exposes a debugging interface called \texttt{Debug Soup}, which aggregates internal state and diagnostic data for visualization. In \texttt{simple\_sim}, this is rendered directly within the GUI. In the Gazebo/ROS 2 environment, visualization is performed using RViz2.
 
 RViz2 supports visualization of sensor data, robot poses, and user-defined topics. \texttt{Debug Soup} elements such as occupancy grids, goal paths, and goal markers can be converted into ROS 2 message formats (e.g., \texttt{OccupancyGrid}) for real-time display. This enables introspection of robot behavior during simulations and is invaluable for development and debugging.
-
-% TODO: Insert image of RViz2 and simple_sim side-by-side showing the same data

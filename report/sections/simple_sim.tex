@@ -1,6 +1,5 @@
 \section{Simple Simulator}
 \label{sec:simple-simulator}
-% TODO: Say we can load pgm maps from ROS 2
 The simple simulator was developed to enable rapid testing and debugging of robot swarm behavior in a controlled 2D environment. It simulates multiple robots operating in a discretized world, rendering them as circles with their respective IDs displayed at their centers. The simulator advances in discrete time steps at 60 updates per simulated second and executes in a multi-threaded fashion to maintain performance across large robot groups.\\
 
 The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} files, allowing it to closely mirror environments used in the 3D Gazebo simulations. This compatibility facilitates seamless testing of behaviors across both simulation platforms. \\
@@ -48,7 +47,6 @@ The \texttt{simple\_sim} simulator is also implemented as a reusable library. In
 
 % Moreover, the headless mode enables integration with external scripts or training pipelines, allowing behaviors to be evaluated or learned in a fully automated manner. This versatility makes \texttt{simple\_sim} an effective tool for both development and research use cases.
 
-% TODO: Should this be here?
 \subsection{Performance} 
 The simple simulator is designed to be lightweight and performant. It supports deterministic execution, enabling reproducible tests for debugging. Simulation speed can be accelerated beyond real time, depending on CPU capacity and the number of robots simulated. \\
 

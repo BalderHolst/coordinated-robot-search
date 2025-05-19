@@ -21,9 +21,9 @@
 #### Tune Simulations
 
 - [x] Match robot parameters in simulations
-- [ ] Create ROS2 data logger
-- [ ] Compare ROS2 and simple_sim output for same scenario
-    - [ ] Create coverage logger node
+- [x] Create ROS2 data logger
+- [x] Compare ROS2 and simple_sim output for same scenario
+    - [x] Create coverage logger node
 
 #### Benchmarks
 
@@ -41,12 +41,11 @@
 #### Report
 
 - [ ] Find examples of bandwidth
-- [ ] Create missing figures
-- [ ] Compare manual search algorithms
+- [x] Compare manual search algorithms
 
 #### Repository
 
-- [ ] Document `botbrain` library
+- [x] Document `botbrain` library
 - [ ] Document `simple_sim` library
 - [ ] Make a nice README
   - [ ] How to run code

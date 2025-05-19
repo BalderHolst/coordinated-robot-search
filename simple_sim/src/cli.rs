@@ -27,7 +27,7 @@ pub struct GlobArgs {
     #[arg(long, default_value = "1.0")]
     pub ui_scale: f32,
 
-    // TODO: This does not work for some reason
+    // FIX: This does not work for some reason
     /// Target frames per second
     #[arg(long("fps"), default_value = "60")]
     pub target_fps: f32,
