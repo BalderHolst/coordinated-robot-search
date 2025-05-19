@@ -332,6 +332,7 @@ impl<C: Clone + Default> ScaledGrid<C> {
 }
 
 /// The result of a ray cast
+#[derive(Debug, Clone)]
 pub enum RayCastResult<'a, C> {
     /// The ray hit an object
     Hit(f32, &'a C),

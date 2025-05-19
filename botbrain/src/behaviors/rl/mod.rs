@@ -94,6 +94,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Robot for RlRobot<B, 
 
     fn set_map(&mut self, map: super::Map) {
         let size = map.size();
+        self.map = map;
         self.search_grid = ScaledGrid::new(size.x, size.y, SEARCH_GRID_SCALE);
     }
 

@@ -125,14 +125,13 @@ fn infer_lidar(map: &Map, robot_pos: Pos2, robot_angle: f32) -> LidarData {
 
     let points: Vec<LidarPoint> = angles
         .map(|angle| {
-            let distance = map
-                .cast_ray(
-                    robot_pos,
-                    angle + robot_angle,
-                    params::LIDAR_RANGE,
-                    |cell| *cell != MapCell::Free,
-                )
-                .distance();
+            let res = map.cast_ray(
+                robot_pos,
+                angle + robot_angle,
+                params::LIDAR_RANGE,
+                |cell| *cell != MapCell::Free,
+            );
+            let distance = res.distance();
 
             LidarPoint { angle, distance }
         })
@@ -163,7 +162,6 @@ fn process_search_messages(
             }
             MessageKind::CamDiff { cone, diff } => {
                 // Update the position of the other robot
-
                 let pos = cone.center;
                 let angle = cone.angle;
 

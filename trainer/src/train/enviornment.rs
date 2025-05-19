@@ -17,10 +17,12 @@ use simple_sim::{
 use burn::prelude::*;
 
 const TERMINATION_COVERAGE: f32 = 0.95;
-const TERMINATION_REWARD: f32 = -500.0;
+const TERMINATION_REWARD: f32 = -200.0;
 
-const CONSTANT_REWARD: f32 = -0.5;
-const COLLISION_REWARD: f32 = -10.0;
+const COVERAGE_REWARD: f32 = 3.0;
+
+const CONSTANT_REWARD: f32 = -1.0;
+const COLLISION_REWARD: f32 = -1.0;
 
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     max_robots: usize,
@@ -185,7 +187,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
 
         let botbrain::Vec2 { x: w, y: h } = self.sim.world().size();
 
-        reward += (after_coverage - before_coverage) * w * h;
+        reward += (after_coverage - before_coverage) * w * h * COVERAGE_REWARD;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot<B, S, A, N>>().unwrap();
@@ -199,6 +201,14 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
         }
 
         let state = self.states();
+
+        println!(
+            "Coverage: {:.2} -> {:.2} | Reward: {:.2} | Time: {:.2}",
+            before_coverage,
+            after_coverage,
+            reward,
+            self.sim.state.time.as_secs_f32()
+        );
 
         self.total_reward += reward;
 

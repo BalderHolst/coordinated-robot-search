@@ -6,8 +6,8 @@ use crate::{behaviors::BehaviorOutput, cast_robot, RobotRef};
 
 pub mod medium_polar;
 pub mod minimal;
-pub mod polar;
 pub mod small;
+pub mod small_polar;
 
 use super::{action::Action, network::Network, state::State, RlRobot, REACT_HZ};
 
@@ -38,5 +38,6 @@ pub fn run_robot<B: Backend, S: State, A: Action, N: Network<B, S, A>>(
     robot.postbox.clean();
 
     let msgs = robot.postbox.empty();
+
     (robot.control.clone(), msgs)
 }

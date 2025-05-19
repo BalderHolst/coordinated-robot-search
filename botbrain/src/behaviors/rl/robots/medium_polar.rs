@@ -31,7 +31,7 @@ impl<B: Backend> network::TrainedNetwork<B, St, Ac> for Net<B> {
     }
 }
 
-impl<B: Backend, N: network::Network<B, St, Ac>> RlRobot<B, St, Ac, N> {
+impl<B: Backend> RlRobot<B, St, Ac, Net<B>> {
     fn visualize_state(&mut self) {
         if !self.debug_enabled() {
             return;

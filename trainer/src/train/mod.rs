@@ -7,7 +7,7 @@ use std::{fmt, fs};
 
 use botbrain::behaviors::rl;
 use botbrain::behaviors::rl::robots::medium_polar::MediumPolarRlRobot;
-use botbrain::behaviors::rl::robots::polar::PolarRlRobot;
+use botbrain::behaviors::rl::robots::small_polar::SmallPolarRlRobot;
 use botbrain::{
     behaviors::{
         rl::{
@@ -74,7 +74,7 @@ pub fn run<B: Backend, DB: AutodiffBackend>(args: TrainArgs) -> Result<(), Strin
             train(train_config, args.episodes, args, r, dr);
         }
         RobotKind::SmallPolarRl => {
-            type R<B> = PhantomData<PolarRlRobot<B>>;
+            type R<B> = PhantomData<SmallPolarRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
             train(train_config, args.episodes, args, r, dr);
         }
@@ -176,17 +176,27 @@ fn train<
         .with_grad_clipping(config.clip_grad.clone())
         .init();
 
+    let mut episode_done;
+    let mut episode_reward: f32;
+    let mut episode_duration;
+    let mut state: SwarmState<S>;
+
+    let mut total_loss: f32;
+    let mut action_stats;
+
+    let mut eps;
+    let eps_base = f64::powf(2.0, 1.0 / args.eps_half);
+
     for episode in 0..num_episodes {
-        let mut episode_done = false;
-        let mut episode_reward: f32 = 0.0;
-        let mut episode_duration = 0_usize;
-        let mut state: SwarmState<S> = env.states().clone();
+        episode_done = false;
+        episode_reward = 0.0;
+        episode_duration = 0_usize;
+        state = env.states().clone();
 
-        let mut total_loss: f32 = 0.0;
-        let mut action_stats = vec![0; A::SIZE];
+        total_loss = 0.0;
+        action_stats = vec![0; A::SIZE];
 
-        let mut eps = 0.0;
-        let eps_base = f64::powf(2.0, 1.0 / args.eps_half);
+        eps = 0.0;
 
         while !episode_done {
             eps = (1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end;

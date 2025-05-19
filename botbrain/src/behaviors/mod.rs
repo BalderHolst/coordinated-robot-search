@@ -74,7 +74,7 @@ impl RobotKind {
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
             #[cfg(feature = "rl")]
-            RobotKind::SmallPolarRl => &[("run", rl::robots::polar::run::<MyBackend>)],
+            RobotKind::SmallPolarRl => &[("run", rl::robots::small_polar::run::<MyBackend>)],
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
             #[cfg(feature = "rl")]
@@ -116,12 +116,12 @@ impl RobotKind {
             }
             #[cfg(feature = "rl")]
             RobotKind::SmallPolarRl => {
-                || Box::new(rl::robots::polar::PolarRlRobot::<MyBackend>::new_trained())
+                || Box::new(rl::robots::small_polar::SmallPolarRlRobot::<MyBackend>::new_trained())
             }
             #[cfg(feature = "rl")]
-            RobotKind::MediumPolarRl => {
-                || Box::new(rl::robots::medium_polar::MediumPolarRlRobot::<MyBackend>::default())
-            }
+            RobotKind::MediumPolarRl => || {
+                Box::new(rl::robots::medium_polar::MediumPolarRlRobot::<MyBackend>::new_trained())
+            },
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => {
                 || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new_trained())
