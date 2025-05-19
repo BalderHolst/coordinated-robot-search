@@ -4,7 +4,7 @@ This section describes the development of distributed algorithms that enable a g
 Two approaches are explored for controlling the behavior of the robot swarm: manually developed algorithms and a learning-based algorithm using reinforcement learning. This section presents the design and implementation of the manually developed approaches.
 
 \subsection{The {\color{red}Roomba} Algorithm}
-The \textcolor{red}{Roomba} algorithm serves as a baseline for evaluating the performance of more advanced behaviors. This simple obstacle avoidance algorithm moves in a straight line until the robot encounters an obstacle, at which point it turns away until it can resume moving forward.
+The \textcolor{red}{Roomba} algorithm serves as a baseline for evaluating the performance of more advanced behaviors. This simple obstacle avoidance algorithm moves in a straight line until the robot encounters an obstacle, at which point it turns away until it can resume moving forward. \\
 
 In this implementation, the robot uses LiDAR data to locate the nearest obstacle. If the obstacle is within a predefined safety threshold, the robot rotates away. The resulting paths from this behavior are shown in \cref{fig:roomba-paths}.
 
@@ -28,7 +28,7 @@ In this implementation, the robot uses LiDAR data to locate the nearest obstacle
 \end{figure}
 
 \subsection{Target Contributions}
-Each robot maintains an internal state, which—combined with sensor input—drives its movement and exploration behavior. Conflicting objectives may arise; for instance, the robot may detect an unexplored area ahead but find its path blocked by an obstacle. One subsystem may suggest moving forward, while another recommends avoiding the obstacle.
+Each robot maintains an internal state, which—combined with sensor input—drives its movement and exploration behavior. Conflicting objectives may arise; for instance, the robot may detect an unexplored area ahead but find its path blocked by an obstacle. One subsystem may suggest moving forward, while another recommends avoiding the obstacle. \\
 
 To resolve this, each subsystem outputs a directional vector, or "target contribution," indicating its preferred movement. These vectors are then summed to produce a single target vector, which dictates the robot’s final motion. Subsystems can be weighted according to their importance—obstacle avoidance, for instance, is typically given higher priority. \Cref{fig:target-contributions} illustrates this principle.
 
@@ -90,7 +90,7 @@ Each cell contributes to the final gradient based on the difference in heat and 
     \label{eq:fade-gradient}
 \end{equation}
 
-This formulation works well in open areas but may behave undesirably near map edges. Since cells outside the map have no heat value, the gradient can incorrectly point toward the map boundary if surrounding cells are colder than the current position. 
+This formulation works well in open areas but may behave undesirably near map edges. Since cells outside the map have no heat value, the gradient can incorrectly point toward the map boundary if surrounding cells are colder than the current position.  \\
 % \Cref{fig:edge-gradient} illustrates this issue.
 
 % TODO: Comment out for now, I think it makes sense without needing a picture
@@ -103,6 +103,7 @@ This formulation works well in open areas but may behave undesirably near map ed
 % \end{figure}
 
 To address this, only positive heat differences are considered in the gradient calculation. In practice, this means that the gradient points towards the "hottest" direction, but not necessarily away from the "coldest" direction.
+
 \begin{equation}
 \label{eq:robot-gradient}
     \nabla = \sum_c^{C_\mathrm{r}}
@@ -137,9 +138,9 @@ To maintain network connectivity, robots must stay within communication range of
     \label{fig:proximity-grid}
 \end{figure}
 
-The proximity grid is computed by identifying the largest set of connected robots and "coloring" the reachable area from them. Tiles partially connected (e.g., by only one robot) are half-shaded to indicate weaker signal reliability. A gradient is computed over this grid and added as a weighted contribution to the robot’s overall target vector.
+The proximity grid is computed by identifying the largest set of connected robots and "coloring" the reachable area from them. Tiles partially connected (e.g., by only one robot) are half-shaded to indicate weaker signal reliability. A gradient is computed over this grid and added as a weighted contribution to the robot’s overall target vector. \\
 
-Importantly, each robot excludes itself when calculating the proximity grid. This ensures that if a robot is the sole link between two clusters, it will move toward the main network and draw disconnected robots with it.
+Importantly, each robot excludes itself when calculating the proximity grid. This ensures that if a robot is the sole link between two clusters, it will move toward the main network and draw disconnected robots with it. \\
 
 This behavior is demonstrated in \cref{fig:proximity-pull}, where a single robot moves to reestablish group connectivity.
 
@@ -171,7 +172,7 @@ This behavior is demonstrated in \cref{fig:proximity-pull}, where a single robot
 
 
 \subsection{Gradient Based-Algorithm}
-The gradient-based algorithm calculates the robot's "target" vector using contributions from both the search and proximity grid gradients. However, when relying solely on these contributions, the resulting target vector often points sideways or even backward. This behavior occurs because the robot continuously "cools" down the area in front of its camera's field of view, which leads to excessive turning and minimal forward progress.
+The gradient-based algorithm calculates the robot's "target" vector using contributions from both the search and proximity grid gradients. However, when relying solely on these contributions, the resulting target vector often points sideways or even backward. This behavior occurs because the robot continuously "cools" down the area in front of its camera's field of view, which leads to excessive turning and minimal forward progress. \\
 
 To mitigate this, a small constant forward vector is added to the total target vector to maintain movement and promote map coverage. \Cref{fig:gradient-paths} illustrates the paths of four robots executing this behavior.
 
@@ -226,7 +227,7 @@ The costmap is a grid-based representation of the environment with a resolution 
 % TODO: Show cost map and example of a planned route
 \subsubsection{Frontier Exploration}
 \label{sec:frontier_exploration}
-A frontier is defined as a boundary between explored and unexplored regions. These frontiers are discovered using a Breadth-First Search (BFS) starting from the robot's current position. This approach avoids a full costmap scan, thereby reducing computational overhead.
+A frontier is defined as a boundary between explored and unexplored regions. These frontiers are discovered using a Breadth-First Search (BFS) starting from the robot's current position. This approach avoids a full costmap scan, thereby reducing computational overhead. \\
 
 Detected frontier cells are grouped into regions and scored based on:
 
@@ -255,21 +256,21 @@ Frontiers must also meet a minimum obstacle clearance threshold to be considered
     \label{fig:frontier-eval-params}
 \end{figure}
 
-These evaluations were conducted in two distinct environments. Line labels in \cref{fig:frontier-eval-params} indicate the parameter weightings used: \texttt{sXX} for frontier size, \texttt{dXX} for distance to the frontier, and \texttt{tXX} for the required turn angle. All tested configurations successfully achieved full map coverage; therefore, performance is evaluated based on coverage speed.
+These evaluations were conducted in two distinct environments. Line labels in \cref{fig:frontier-eval-params} indicate the parameter weightings used: \texttt{sXX} for frontier size, \texttt{dXX} for distance to the frontier, and \texttt{tXX} for the required turn angle. All tested configurations successfully achieved full map coverage; therefore, performance is evaluated based on coverage speed. \\
 
 As shown in \cref{fig:frontier-eval-params}, configurations that prioritized distance and turn angle produced the fastest coverage. This outcome suggests that minimizing rotation allows for higher sustained forward velocity. In contrast, configurations that emphasized frontier size alone often resulted in inefficient behavior, such as long detours and frequent turning, which slowed down overall progress.
 
 \subsubsection{Path Planning}
 \label{sec:path_planning}
-Once a goal is selected, the planner first attempts to use a direct straight-line path. If this path violates the clearance requirement, the A* algorithm is used instead.
+Once a goal is selected, the planner first attempts to use a direct straight-line path. If this path violates the clearance requirement, the A* algorithm is used instead. \\
 
 A* explores cells using a heuristic that combines cumulative path cost and estimated distance to the goal. A min-heap is used to prioritize cells with the lowest estimated total cost. Only collision-free cells that meet clearance requirements are considered.
 
 \subsubsection{Path Following}
 \label{sec:path_following}
-The robot follows the planned path as a sequence of waypoints. When it reaches a waypoint within a predefined threshold, that waypoint is marked as visited and removed from the path.
+The robot follows the planned path as a sequence of waypoints. When it reaches a waypoint within a predefined threshold, that waypoint is marked as visited and removed from the path. \\
 
-The path is continuously validated to account for dynamic changes in the environment. If a path segment becomes invalid, the robot continues toward the next waypoint while enabling LiDAR-based obstacle avoidance. If repeated validation fails, the robot replans. If replanning also fails, a new goal is selected.
+The path is continuously validated to account for dynamic changes in the environment. If a path segment becomes invalid, the robot continues toward the next waypoint while enabling LiDAR-based obstacle avoidance. If repeated validation fails, the robot replans. If replanning also fails, a new goal is selected. \\
 
 To maintain communication, if a robot becomes disconnected from the swarm, it selects a new goal that helps it reconnect with the main network, using the proximity grid.
 
