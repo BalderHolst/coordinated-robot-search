@@ -27,9 +27,10 @@ To ensure realism and leverage existing 3D models and URDF files, the Turtlebot 
     \label{fig:tb4}
 \end{figure}
 
-
+% TODO: Where to put this??
 \subsection{Using Rust}
 % TODO: Describe how we integrated with colcon
+
 The core of the system is implemented in Rust. While this choice was primarily based on developer preference, it brings several notable benefits. Although ROS 2 does not officially support Rust, the \texttt{r2r} library \cite{r2r} provides bindings to the ROS Client Library (RCL), enabling message serialization, topic publication/subscription, and integration with other ROS components. The initial build times are longer compared to C++, as Rust bindings are generated during compilation.\\
 
 % TODO: Write about burn or do it in reinforcement learning section
@@ -62,6 +63,9 @@ Robot behavior is implemented in the \texttt{botbrain} library, which defines a 
 
 Methods prefixed with \texttt{set} are intended for initialization and must be called before any other interaction. The \texttt{input} methods are used to provide live sensor data and messages from other robots, while \texttt{get} methods retrieve state information without modifying it. Notably, the interface does not include a method that directly runs the robot’s control loop. Instead, the \texttt{Robot} represents only the internal state. Control logic is implemented as an external function that reads from and writes to this state to produce a control signals and a list of outbound messages. This separation allows for multiple behavior implementations to operate on the same robot state, simplifying algorithm comparison.
 
+\subsection{Behavior Debugging}
+To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and internal state. The \texttt{botbrain} library exposes a debugging interface known as the \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items --- such as occupancy grids, path vectors, target points, and internal decision states --- can be visualized in both \texttt{simple\_sim} and ROS 2 via RViz2. The debug items are located on the right panel i the \texttt{simple\_sim} user interface as seen on \cref{fig:simple-sim-interface} and their overlays can be toggled at will. This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm. The \texttt{Debug Soup} can be disabled to save memory and increase performance after development is done.
+
 \subsection{Two Simulators}
 This project uses a simulator-to-simulator approach rather than attempting direct deployment to physical hardware. Two simulators were developed and used: a lightweight custom 2D simulator called \texttt{simple\_sim}, and a more realistic 3D simulation in Gazebo integrated with ROS 2. \\
 
@@ -70,6 +74,7 @@ The 2D simulator supports rapid prototyping, debugging, and algorithm iteration.
 % Both simulators run identical robot behavior code using the shared \texttt{botbrain} library as shown in \cref{fig:software-structure}. This ensuring consistent robot behavior in both simulators.
 
 % TODO: Insert pictures of the depot in Simple Sim and Gazebo
+% TODO: Insert image of RViz2 and simple_sim side-by-side showing the same data
 \begin{figure}[h]
     \centering
     \begin{subfigure}[b]{0.45\textwidth}
