@@ -24,6 +24,8 @@ const COVERAGE_REWARD: f32 = 3.0;
 const CONSTANT_REWARD: f32 = -1.0;
 const COLLISION_REWARD: f32 = -1.0;
 
+const INACTIVITY_MULTIPLIER: f32 = 0.1;
+
 pub struct Enviornment<B: Backend, S: State, A: Action, N: Network<B, S, A>> {
     max_robots: usize,
     behavior: Behavior,
@@ -187,7 +189,15 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
 
         let botbrain::Vec2 { x: w, y: h } = self.sim.world().size();
 
-        reward += (after_coverage - before_coverage) * w * h * COVERAGE_REWARD;
+        let coverage_diff = after_coverage - before_coverage;
+        reward += coverage_diff * w * h * COVERAGE_REWARD;
+
+        let time = self.sim.state.time.as_secs_f32();
+        if coverage_diff > 0.0 {
+            self.last_coverage_increase = time;
+        }
+
+        reward -= (time - self.last_coverage_increase) * INACTIVITY_MULTIPLIER;
 
         for robot in self.sim.robots() {
             let robot = robot.any().downcast_ref::<RlRobot<B, S, A, N>>().unwrap();
