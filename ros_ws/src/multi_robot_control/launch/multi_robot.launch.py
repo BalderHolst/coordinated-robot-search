@@ -256,7 +256,7 @@ def spawn_robots(context):
         ros_x = ros_pose["x"]
         ros_y = ros_pose["y"]
         ros_z = ros_pose["z"]
-        ros_R = ros_pose["R"]
+        ros_Y = ros_pose["Y"]
 
         namespace = f"robot_{i}"
         print(f"Launching robot {pose} with namespace '{namespace}'")
@@ -273,7 +273,7 @@ def spawn_robots(context):
                 "z_pose": ros_z,
                 "roll": "0.0",
                 "pitch": "0.0",
-                "yaw": ros_R,
+                "yaw": ros_Y,
             }.items(),
         )
 

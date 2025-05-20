@@ -6,6 +6,7 @@ use super::{
 
 pub const MENU: &[(&str, BehaviorFn)] = &[
     ("nothing", behaviors::nothing),
+    ("straight", behaviors::straight),
     ("circle", behaviors::circle),
 ];
 
@@ -69,6 +70,16 @@ pub mod behaviors {
 
     pub fn nothing(_robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
         (Control::default(), vec![])
+    }
+
+    pub fn straight(_robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
+        (
+            Control {
+                speed: 1.0,
+                steer: 0.0,
+            },
+            vec![],
+        )
     }
 
     pub fn circle(_robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOutput {
