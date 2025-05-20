@@ -38,7 +38,8 @@
                 installPhase = ''
                     mkdir -p $out
                     cp -r ${report} $out/report.pdf
-                    cp -r ${botbrain-docs} $out/docs
+                    cp -r ${botbrain-docs} $out/docs/botbrain
+                    cp -r ${simple_sim-docs} $out/docs/simple_sim
                 '';
             };
             report = pkgs.stdenv.mkDerivation {
@@ -57,8 +58,23 @@
                 installPhase = "cp main.pdf $out";
             };
             botbrain-docs = pkgs.stdenv.mkDerivation rec {
-                name = "docs";
+                name = "botbrain";
                 src = ./botbrain;
+                cargoDeps = pkgs.rustPlatform.importCargoLock {
+                    lockFile = src + "/Cargo.lock";
+                };
+                buildInputs = with pkgs; [ cargo rustPlatform.cargoSetupHook ];
+                buildPhase = ''
+                    cargo doc --no-deps --frozen
+                '';
+                installPhase = ''
+                    mkdir -p $out
+                    cp -r target/doc/* $out
+                '';
+            };
+            simple_sim-docs = pkgs.stdenv.mkDerivation rec {
+                name = "simple_sim";
+                src = ./simple_sim;
                 cargoDeps = pkgs.rustPlatform.importCargoLock {
                     lockFile = src + "/Cargo.lock";
                 };
