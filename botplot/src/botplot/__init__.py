@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import random
+import time
 from math import sqrt
 from dataclasses import dataclass
 from typing import Self
@@ -313,9 +314,18 @@ class ResultCollection:
     def populate_dfs(self, dfs: list[pl.DataFrame]):
         cols = dfs[0].columns
 
+        l = len(dfs[0])
+
         for df in dfs:
             if set(cols) != set(df.columns):
                 print("\nError: Result columns do not match")
+                exit(1)
+            if l > len(df):
+                l = len(df)
+
+        # Trim dfs to the same length
+        for i, df in enumerate(dfs):
+            dfs[i] = df.head(l)
 
         self.min = pl.DataFrame()
         self.max = pl.DataFrame()
@@ -474,6 +484,7 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
         ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=len(scenario.robots), output=data_file)
 
+
     elif isinstance(scenario, str):
         raise NotImplemented("ROS simulation does not support string scenarios.")
     else:
@@ -484,6 +495,8 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
     print("Killing simulation...")
     proc.kill()
     utils.kill_gazebo()
+
+    time.sleep(2) # Wait a bit for gazebo to shut down
 
     print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
 

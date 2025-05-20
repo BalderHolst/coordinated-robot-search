@@ -57,7 +57,7 @@ class ColconWorkspace:
         if self.needs_rebuild():
             self.build()
 
-        ros_args += [f"-p {key}:={str(value).lower()}" for key, value in rosparams.items()]
+        ros_args += [f"-p {key}:='{str(value).lower()}'" for key, value in rosparams.items()]
 
         setup_file = self.setup_file()
         command = f"source {setup_file} && ros2 run {package} {node} --ros-args {' '.join(ros_args)}"
