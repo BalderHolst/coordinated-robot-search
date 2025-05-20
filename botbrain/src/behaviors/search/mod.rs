@@ -639,15 +639,27 @@ impl SearchRobot {
                 self.path_fails += 1;
                 return None;
             }
-
-            match frontiers::evaluate_frontiers(
+            let frontier_goal = frontiers::evaluate_frontiers(
                 self.pos,
                 self.angle,
                 self.frontier_evaluation_weights,
-                ROBOT_OBSTACLE_CLEARANCE * 2.0,
+                ROBOT_OBSTACLE_CLEARANCE * 1.5,
                 &frontiers,
                 &self.costmap_grid,
-            ) {
+            )
+            .or_else(|| {
+                println!("Smaller goal clearance");
+                frontiers::evaluate_frontiers(
+                    self.pos,
+                    self.angle,
+                    self.frontier_evaluation_weights,
+                    ROBOT_OBSTACLE_CLEARANCE,
+                    &frontiers,
+                    &self.costmap_grid,
+                )
+            });
+
+            match frontier_goal {
                 Some(goal) => self.path_planner_goal = Some(goal),
                 None => {
                     // Should only happen in the beginning
@@ -712,7 +724,7 @@ impl SearchRobot {
                         self.pos,
                         self.angle,
                         self.frontier_evaluation_weights,
-                        ROBOT_OBSTACLE_CLEARANCE * 2.0,
+                        ROBOT_OBSTACLE_CLEARANCE * 1.5,
                         &frontiers,
                         &masked_costmap,
                     )

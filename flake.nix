@@ -74,17 +74,19 @@
             };
             simple_sim-docs = pkgs.stdenv.mkDerivation rec {
                 name = "simple_sim";
-                src = ./simple_sim;
+                src = ./.;
+                path = ./simple_sim;
                 cargoDeps = pkgs.rustPlatform.importCargoLock {
-                    lockFile = src + "/Cargo.lock";
+                    lockFile = path + "/Cargo.lock";
                 };
                 buildInputs = with pkgs; [ cargo rustPlatform.cargoSetupHook ];
                 buildPhase = ''
+                    cd ${path}
                     cargo doc --no-deps --frozen
                 '';
                 installPhase = ''
                     mkdir -p $out
-                    cp -r target/doc/* $out
+                    cp -r ${path}/target/doc/* $out
                 '';
             };
         };

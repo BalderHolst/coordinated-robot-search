@@ -27,8 +27,8 @@ impl Default for FrontierEvaluationWeights {
     fn default() -> Self {
         Self {
             frontier_region_size: 0.1,
-            frontier_distance: 0.3,
-            frontier_turn: 0.6,
+            frontier_distance: 0.45,
+            frontier_turn: 0.45,
         }
     }
 }

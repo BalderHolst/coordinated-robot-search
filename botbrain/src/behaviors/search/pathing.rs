@@ -32,7 +32,7 @@ pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &Costmap) -> Option<
         find_a_star_path(
             robot_pos,
             goal,
-            ROBOT_OBSTACLE_CLEARANCE * 2.0,
+            ROBOT_OBSTACLE_CLEARANCE * 1.5,
             costmap_grid,
         )
         .or_else(|| {
