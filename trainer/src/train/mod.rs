@@ -188,6 +188,12 @@ fn train<
     let mut eps;
     let eps_base = f64::powf(2.0, 1.0 / args.eps_half);
 
+    let mut loss;
+    let mut action: SwarmAction<A>;
+    let mut snapshot;
+
+    let mut stat;
+
     for episode in 0..num_episodes {
         episode_done = false;
         episode_reward = 0.0;
@@ -202,7 +208,7 @@ fn train<
         while !episode_done {
             eps = (1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end;
 
-            let action: SwarmAction<A> = state
+            action = state
                 .iter()
                 .map(|s| {
                     let action = policy_net.react_with_exploration(s, eps);
@@ -211,7 +217,7 @@ fn train<
                 })
                 .collect();
 
-            let snapshot = env.step(action.clone());
+            snapshot = env.step(action.clone());
 
             episode_reward += snapshot.reward;
 
@@ -226,7 +232,6 @@ fn train<
             }
 
             if config.batch_size < memory.len() {
-                let loss;
                 (policy_net, target_net, loss) = train_agent(
                     policy_net,
                     target_net,
@@ -249,7 +254,7 @@ fn train<
             step += 1;
         }
 
-        let stat = EpisodeStats {
+        stat = EpisodeStats {
             episode,
             eps,
             reward: episode_reward,
