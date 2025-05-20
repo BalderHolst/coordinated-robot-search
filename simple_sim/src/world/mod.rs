@@ -104,8 +104,6 @@ pub fn desc_from_path(path: &PathBuf) -> Result<WorldDescription, String> {
                 .canonicalize()
                 .map_err(|e| format!("Failed to canonicalize image path: {}", e))?;
 
-            dbg!(bitmap_desc.image.display());
-
             Ok(WorldDescription::Bitmap(bitmap_desc))
         }
         _ => Err(format!("Unknown file type for {:?}", path))?,

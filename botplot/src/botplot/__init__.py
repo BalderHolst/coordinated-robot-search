@@ -121,7 +121,7 @@ class World:
     @classmethod
     def from_description_file(cls, file: str) -> Self:
 
-        if file.endswith(".ron"):
+        if file.endswith(".ron") or file.endswith(".yaml"):
             abs_file = os.path.abspath(file)
             hash = hashlib.sha256(abs_file.encode()).hexdigest()
             name = os.path.basename(file)
@@ -143,7 +143,10 @@ class World:
         with open(file) as f:
             data = json.load(f)
 
-        return cls(file, data["world"])
+        if "world" in data:
+            data = data["world"]
+
+        return cls(file, data)
 
     def is_obj(self) -> bool:
         return OBJ_LABEL in self.data
@@ -160,8 +163,6 @@ class World:
 
         desc_name = os.path.basename(self.file).replace(".json", "-world-desc.json")
         desc_file = os.path.join(data_dir(), desc_name)
-
-        print(self.file)
 
         json.dump(self.desc(), open(desc_file, "w"), indent=4)
 
@@ -455,25 +456,23 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
+
         print(s)
 
-        robots = None
-        match scenario.robots:
-            case list(): robots = len(scenario.robots)
-            case int(): robots = scenario.robots
+        robots = ":".join([f"{r.x},{r.y},{r.angle}" for r in scenario.robots])
 
         proc = ros_ws.launch(
             "multi_robot_control",
             "multi_robot.launch.py",
-            behavior=scenario.behavior,
-            n_robots=robots,
             block=False,
+            behavior=scenario.behavior,
+            robots=robots,
             map=scenario.world,
             headless=headless,
             use_rviz=not headless,
         )
 
-        ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=robots, output=data_file)
+        ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=len(scenario.robots), output=data_file)
 
     elif isinstance(scenario, str):
         raise NotImplemented("ROS simulation does not support string scenarios.")

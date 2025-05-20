@@ -2,6 +2,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import tempfile
+import yaml
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -133,7 +134,6 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "behavior",
-                default_value="dumb:circle",
                 description="What behavior to run on the robots",
             ),
             DeclareLaunchArgument(
@@ -162,16 +162,25 @@ class RobotPose:
     z: float = 0.1
     angle: float = 0.0
 
-    def to_amcl_pose(self):
+    def to_ros_pose(self, width: float, height: float) -> dict:
+        _ = width
+        _ = height
         return {
             "x": str(self.x),
-            "y": str(self.y),
+            "y": str(-self.y),
             "z": str(self.z),
             "R": "0.00",
             "P": "0.00",
             "Y": str(self.angle),
         }
 
+    def to_amcl_pose(self, width: float, height: float, origin_x: float, origin_y: float) -> dict:
+        return {
+            "x": str(self.x + width / 2 + origin_x),
+            "y": str(-self.y - height / 2 - origin_y),
+            "z": str(self.z),
+            "yaw": str(self.angle),
+        }
 
 def get_robot_poses(context) -> list[RobotPose]:
     robots_arg = context.perform_substitution(LaunchConfiguration("robots"))
@@ -191,16 +200,36 @@ def get_robot_poses(context) -> list[RobotPose]:
                 print(f"Invalid robot pose: {str_pose}")
                 exit(1)
 
-        print("Something went wrong with the robots value")
-
     return poses
-
 
 def spawn_robots(context):
     desc_dir = get_package_share_directory("tb4_description")
     sim_dir = get_package_share_directory("multi_robot_control")
 
     robot_poses = get_robot_poses(context)
+
+    map_file = context.perform_substitution(LaunchConfiguration("map"))
+
+    map = yaml.safe_load(open(map_file, "r"))
+    print(map)
+
+    resolution = map["resolution"]
+    image_file = os.path.join(os.path.dirname(map_file), map["image"])
+
+    with open(image_file, "rb") as f:
+
+        # Skip magic number
+        print(f.readline())
+
+        # Get the width and height in pixels
+        line = f.readline().split()
+        print(line)
+        pw = int(line[0])
+        ph = int(line[1])
+
+    width, height = pw * resolution, ph * resolution
+
+    [amcl_origin_x, amcl_origin_y, _] = map["origin"]
 
     use_sim_time = LaunchConfiguration("use_sim_time")
     behavior = LaunchConfiguration("behavior")
@@ -220,6 +249,18 @@ def spawn_robots(context):
     params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
 
     for i, pose in enumerate(robot_poses):
+<<<<<<< HEAD
+=======
+
+        ros_pose = pose.to_ros_pose(width, height)
+        amcl_pose = pose.to_amcl_pose(width, height, amcl_origin_x, amcl_origin_y)
+
+        ros_x = ros_pose["x"]
+        ros_y = ros_pose["y"]
+        ros_z = ros_pose["z"]
+        ros_R = ros_pose["R"]
+
+>>>>>>> 676d4691 (Fix coordinate translations)
         namespace = f"robot_{i}"
         print(f"Launching robot {pose} with namespace '{namespace}'")
         gz_robot = IncludeLaunchDescription(
@@ -230,12 +271,12 @@ def spawn_robots(context):
                 "namespace": namespace + "/",
                 "robot_name": namespace,
                 "use_sim_time": use_sim_time,
-                "x_pose": str(pose.x),
-                "y_pose": str(pose.y),
-                "z_pose": str(pose.z),
+                "x_pose": ros_x,
+                "y_pose": ros_y,
+                "z_pose": ros_z,
                 "roll": "0.0",
                 "pitch": "0.0",
-                "yaw": str(pose.angle),
+                "yaw": ros_R,
             }.items(),
         )
 
@@ -251,9 +292,9 @@ def spawn_robots(context):
                 param_rewrites={
                     "base_frame_id": namespace + "/base_link",
                     "odom_frame_id": namespace + "/odom",
-                    "x": str(pose.x),
-                    "y": str(pose.y),
-                    "yaw": str(pose.angle),
+                    "x": amcl_pose["x"],
+                    "y": amcl_pose["y"],
+                    "yaw": amcl_pose["yaw"],
                 },
                 convert_types=True,
             ),

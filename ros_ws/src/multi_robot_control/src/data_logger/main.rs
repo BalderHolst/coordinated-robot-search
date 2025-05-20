@@ -319,7 +319,7 @@ impl DataLogger {
         // Utility for calculating map coverage
         let coverage_grid = Rc::new(RwLock::new(CoverageGrid::new(map)));
 
-        let mut robot_poses_ready = Rc::new(Mutex::new(vec![false; self.robot_count]));
+        let robot_poses_ready = Rc::new(Mutex::new(vec![false; self.robot_count]));
         let poses_ready = Rc::new(RwLock::new(false));
 
         // Spawn message listener
@@ -360,9 +360,8 @@ impl DataLogger {
                         let map_size = coverage_grid.map().size();
 
                         let pos = &msg.pose.pose.position;
-                        let pos: Pos2 = Pos2::new(pos.x as f32, pos.y as f32);
                         let pos =
-                            Pos2::new(pos.x as f32, pos.y as f32) - *map_origin - map_size / 2.0;
+                            Pos2::new(pos.x as f32, -pos.y as f32) - *map_origin - map_size / 2.0;
 
                         let Quaternion { x, y, z, w } = &msg.pose.pose.orientation;
                         let angle =

@@ -56,5 +56,5 @@ class RustCrate:
         proc = subprocess.run([self.executable()] + flags, **kwargs)
         if proc.returncode != 0:
             print(f"Error: {proc.stderr}")
-            exit(1)
+            raise RuntimeError(f"Error running '{self.name}': {proc.stderr}")
         return proc
