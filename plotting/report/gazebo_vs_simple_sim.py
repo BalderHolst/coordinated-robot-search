@@ -1,17 +1,21 @@
 import botplot as bp
+import shutil
+import os
 
 SEED = 42
 DURATION = 400
 ROBOTS = 4
 BEHAVIORS = [
     ("search:pathing", "Pure Pathing"),
-    ("search:gradient", "Gradient"),
-    ("search:hybrid", "hybrid"),
+    # ("search:gradient", "Gradient"),
+    # ("search:hybrid", "hybrid"),
 ]
 
 RUNS = 6
 
 WORLD = bp.repo_path("worlds/bitmap/depot/depot.yaml")
+
+FIG_DIR = bp.repo_path("report", "figures", "plots")
 
 def main():
 
@@ -56,7 +60,16 @@ def main():
         simple_collection = bp.ResultCollection("Simple Simulator", simple_results)
         gazebo_collection = bp.ResultCollection("Gazebo", ros_results)
 
-        bp.plot_coverage([simple_collection, gazebo_collection], f"Simulator Coverage over {RUNS} Runs ({behavior_name})")
+        src = bp.plot_coverage([simple_collection, gazebo_collection], f"Simulator Coverage over {RUNS} Runs ({behavior_name})")
+        dst = os.path.join(FIG_DIR,  f"gazebo_vs_simple_sim_{behavior_name.replace(" ", "_").lower()}.png")
+
+        os.makedirs(FIG_DIR, exist_ok=True)
+        shutil.copy(
+            src,
+            dst
+        )
+
+        print(f"Copied plot to '{dst}'")
 
 if __name__ == "__main__":
     main()
