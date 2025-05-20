@@ -8,13 +8,15 @@ from launch import LaunchDescription
 from launch.actions import (
     AppendEnvironmentVariable,
     DeclareLaunchArgument,
+    EmitEvent,
     ExecuteProcess,
     IncludeLaunchDescription,
     OpaqueFunction,
     RegisterEventHandler,
 )
 from launch.conditions import IfCondition, UnlessCondition
-from launch.event_handlers import OnShutdown
+from launch.event_handlers import OnProcessExit, OnShutdown
+from launch.events import Shutdown
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
@@ -127,7 +129,7 @@ def generate_launch_description():
             DeclareLaunchArgument(
                 "robots",
                 default_value="1",
-                description="How many robots to spawn (a number) or a list of robot poses (ex \"0,0,0:1,0,0\")",
+                description='How many robots to spawn (a number) or a list of robot poses (ex "0,0,0:1,0,0")',
             ),
             DeclareLaunchArgument(
                 "behavior",
@@ -152,6 +154,7 @@ def generate_launch_description():
     )
     return ld
 
+
 @dataclass
 class RobotPose:
     x: float = 0.0
@@ -169,6 +172,7 @@ class RobotPose:
             "Y": str(self.angle),
         }
 
+
 def get_robot_poses(context) -> list[RobotPose]:
     robots_arg = context.perform_substitution(LaunchConfiguration("robots"))
 
@@ -176,7 +180,7 @@ def get_robot_poses(context) -> list[RobotPose]:
 
     try:
         n = int(robots_arg)
-        poses = [RobotPose(x=i - n/2) for i in range(n)]
+        poses = [RobotPose(x=i - n / 2) for i in range(n)]
 
     except ValueError:
         for str_pose in robots_arg.split(":"):
@@ -216,14 +220,13 @@ def spawn_robots(context):
     params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
 
     for i, pose in enumerate(robot_poses):
-
         namespace = f"robot_{i}"
         print(f"Launching robot {pose} with namespace '{namespace}'")
         gz_robot = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(desc_dir, "launch", "spawn_tb4.launch.py")
             ),
-            launch_arguments = {
+            launch_arguments={
                 "namespace": namespace + "/",
                 "robot_name": namespace,
                 "use_sim_time": use_sim_time,
@@ -264,7 +267,7 @@ def spawn_robots(context):
             namespace=namespace,
             output="screen",
             respawn=True,
-            respawn_delay=2.0,
+            respawn_delay=1.0,
             parameters=[configured_params],
             arguments=["--ros-args", "--log-level", "info"],
             remappings=[("/tf", "tf"), ("/tf_static", "tf_static")],
@@ -286,17 +289,23 @@ def spawn_robots(context):
         robot_launch.append(nav2_amcl)
 
         print("Starting behavior for " + namespace)
-        robot_launch.append(
-            Node(
-                condition=IfCondition(LaunchConfiguration("use_control")),
-                package="multi_robot_control",
-                executable="ros_agent",
-                namespace=namespace,
-                name="ros_agent",
-                output="screen",
-                parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
+        agent_node = Node(
+            condition=IfCondition(LaunchConfiguration("use_control")),
+            package="multi_robot_control",
+            executable="ros_agent",
+            namespace=namespace,
+            name="ros_agent",
+            output="screen",
+            parameters=[{"use_sim_time": use_sim_time}, {"behavior": behavior}],
+        )
+        shutdown_event = RegisterEventHandler(
+            OnProcessExit(
+                target_action=agent_node,
+                on_exit=[EmitEvent(event=Shutdown(reason=f"ros_agent {i} crached"))],
             )
         )
+        robot_launch.append(agent_node)
+        robot_launch.append(shutdown_event)
 
     map_yaml = LaunchConfiguration("map")
     map_server = Node(
