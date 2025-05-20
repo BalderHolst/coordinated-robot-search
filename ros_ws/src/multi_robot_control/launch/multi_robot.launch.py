@@ -249,8 +249,6 @@ def spawn_robots(context):
     params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
 
     for i, pose in enumerate(robot_poses):
-<<<<<<< HEAD
-=======
 
         ros_pose = pose.to_ros_pose(width, height)
         amcl_pose = pose.to_amcl_pose(width, height, amcl_origin_x, amcl_origin_y)
@@ -260,7 +258,6 @@ def spawn_robots(context):
         ros_z = ros_pose["z"]
         ros_R = ros_pose["R"]
 
->>>>>>> 676d4691 (Fix coordinate translations)
         namespace = f"robot_{i}"
         print(f"Launching robot {pose} with namespace '{namespace}'")
         gz_robot = IncludeLaunchDescription(
