@@ -28,9 +28,11 @@ env C_INCLUDE_PATH=/usr/lib/gcc/x86_64-linux-gnu/13/include
 # Set up ROS environment
 RUN echo "source /opt/ros/jazzy/setup.bash" >> ~/.bashrc
 
+# Install latex packages for matplotlib
+RUN apt install -y texlive texlive-fonts-extra texlive-fonts-recommended texlive-latex-extra texlive-xetex dvipng
+
 # Terminal multiplexer for convenience
 RUN apt install -y tmux
-
 
 # Install the botplot python package
 RUN apt install -y python3-pip yq
@@ -39,6 +41,3 @@ RUN pip install --break-system-packages /pip/botplot
 
 # Add botplot to PYTHONPATH if it exists
 RUN echo "[[ -d /root/ws/botplot ]] && export PYTHONPATH=/root/ws/botplot/src:\$PYTHONPATH" >> ~/.bashrc
-
-# Install latex packages for matplotlib
-RUN apt install -y texlive texlive-fonts-extra texlive-fonts-recommended texlive-latex-extra texlive-xetex dvipng
