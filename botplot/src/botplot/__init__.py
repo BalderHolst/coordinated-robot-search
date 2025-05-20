@@ -465,7 +465,7 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
         proc = ros_ws.launch(
             "multi_robot_control",
             "multi_robot.launch.py",
-            behavior="search:pure-pathing",
+            behavior=scenario.behavior,
             n_robots=robots,
             block=False,
             map=scenario.world,

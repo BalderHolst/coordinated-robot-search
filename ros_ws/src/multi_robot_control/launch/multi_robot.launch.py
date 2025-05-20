@@ -130,7 +130,7 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "behavior",
-                default_value="dumb:nothing",
+                default_value="dumb:circle",
                 description="What behavior to run on the robots",
             ),
             DeclareLaunchArgument(

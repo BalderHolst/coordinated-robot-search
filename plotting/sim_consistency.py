@@ -8,7 +8,7 @@ def main():
         title="ROS 2",
         world=bp.repo_path("worlds/bitmap/depot/depot.yaml"),
         behavior="dumb:circle",
-        duration=30,
+        duration=10,
         robots=1,
     )
     res_ros2 = bp.run_ros(scenario_ros2, headless=False)
@@ -18,9 +18,9 @@ def main():
         title="Simple Sim",
         world="worlds/bitmap/depot/depot.yaml",
         behavior="dumb:circle",
-        duration=30,
+        duration=10,
         robots=[
-            bp.Robot(x=0, y=0),
+            bp.Robot(x=-8, y=0.2),
         ],
     )
     res_simple = bp.run_sim(scenario_simple)
