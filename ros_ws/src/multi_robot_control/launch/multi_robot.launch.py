@@ -1,4 +1,5 @@
 import os
+from dataclasses import dataclass
 from pathlib import Path
 import tempfile
 
@@ -124,9 +125,9 @@ def generate_launch_description():
                 description="Full path to map yaml file to load",
             ),
             DeclareLaunchArgument(
-                "n_robots",
+                "robots",
                 default_value="1",
-                description="How many robots to spawn",
+                description="How many robots to spawn (a number) or a list of robot poses (ex \"0,0,0:1,0,0\")",
             ),
             DeclareLaunchArgument(
                 "behavior",
@@ -151,15 +152,55 @@ def generate_launch_description():
     )
     return ld
 
+@dataclass
+class RobotPose:
+    x: float = 0.0
+    y: float = 0.0
+    z: float = 0.1
+    angle: float = 0.0
 
-def spawn_robots(context, *args, **kwargs):
+    def to_amcl_pose(self):
+        return {
+            "x": str(self.x),
+            "y": str(self.y),
+            "z": str(self.z),
+            "R": "0.00",
+            "P": "0.00",
+            "Y": str(self.angle),
+        }
+
+def get_robot_poses(context) -> list[RobotPose]:
+    robots_arg = context.perform_substitution(LaunchConfiguration("robots"))
+
+    poses = []
+
+    try:
+        n = int(robots_arg)
+        poses = [RobotPose(x=i - n/2) for i in range(n)]
+
+    except ValueError:
+        for str_pose in robots_arg.split(":"):
+            try:
+                x, y, angle = str_pose.split(",")
+                poses.append(RobotPose(x=float(x), y=float(y), angle=float(angle)))
+            except ValueError:
+                print(f"Invalid robot pose: {str_pose}")
+                exit(1)
+
+        print("Something went wrong with the robots value")
+
+    return poses
+
+
+def spawn_robots(context):
     desc_dir = get_package_share_directory("tb4_description")
     sim_dir = get_package_share_directory("multi_robot_control")
 
-    n_robots_value = int(context.perform_substitution(LaunchConfiguration("n_robots")))
+    robot_poses = get_robot_poses(context)
+
     use_sim_time = LaunchConfiguration("use_sim_time")
     behavior = LaunchConfiguration("behavior")
-    print(f"Spawning {n_robots_value} robots...")
+    print(f"Spawning {len(robot_poses)} robots...")
 
     robot_launch = []
 
@@ -168,41 +209,37 @@ def spawn_robots(context, *args, **kwargs):
         executable="tf_topic_combiner",
         name="tf_topic_combiner",
         output="screen",
-        arguments=[f"{n_robots_value}"],
+        arguments=[f"{len(robot_poses)}"],
     )
     robot_launch.append(tf_combiner)
 
     params_file = os.path.join(sim_dir, "config", "nav2", "amcl.yaml")
-    for i in range(n_robots_value):
-        pose = {
-            "x": str(-8.00 + float(i)),
-            "y": "0.00",
-            "z": "0.01",
-            "R": "0.00",
-            "P": "0.00",
-            "Y": "0.00",
-        }
+
+    for i, pose in enumerate(robot_poses):
+
         namespace = f"robot_{i}"
-        print("Launching robot " + namespace)
+        print(f"Launching robot {pose} with namespace '{namespace}'")
         gz_robot = IncludeLaunchDescription(
             PythonLaunchDescriptionSource(
                 os.path.join(desc_dir, "launch", "spawn_tb4.launch.py")
             ),
-            launch_arguments={
+            launch_arguments = {
                 "namespace": namespace + "/",
                 "robot_name": namespace,
                 "use_sim_time": use_sim_time,
-                "x_pose": pose["x"],
-                "y_pose": pose["y"],
-                "z_pose": pose["z"],
-                "roll": pose["R"],
-                "pitch": pose["P"],
-                "yaw": pose["Y"],
+                "x_pose": str(pose.x),
+                "y_pose": str(pose.y),
+                "z_pose": str(pose.z),
+                "roll": "0.0",
+                "pitch": "0.0",
+                "yaw": str(pose.angle),
             }.items(),
         )
+
         robot_launch.append(gz_robot)
 
         print("Starting AMCL for " + namespace)
+
         # Only used to add namespace to topics
         configured_params = ParameterFile(
             RewrittenYaml(
@@ -211,9 +248,9 @@ def spawn_robots(context, *args, **kwargs):
                 param_rewrites={
                     "base_frame_id": namespace + "/base_link",
                     "odom_frame_id": namespace + "/odom",
-                    "x": str(float(i)),
-                    # "y": str(float(i)),   # Not relevant ATM
-                    # "yam": str(float(i)), # Not relevant ATM
+                    "x": str(pose.x),
+                    "y": str(pose.y),
+                    "yaw": str(pose.angle),
                 },
                 convert_types=True,
             ),
