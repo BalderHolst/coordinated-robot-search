@@ -305,6 +305,7 @@ class ResultCollection:
     min: pl.DataFrame
     max: pl.DataFrame
     avg: pl.DataFrame
+    std: pl.DataFrame
 
     def __init__(self, name: str, results: list[Result]) -> None:
         self.name = name
@@ -332,6 +333,7 @@ class ResultCollection:
         self.min = pl.DataFrame()
         self.max = pl.DataFrame()
         self.avg = pl.DataFrame()
+        self.std = pl.DataFrame()
 
         for col in cols:
             runs = [df[col] for df in dfs]
@@ -341,9 +343,12 @@ class ResultCollection:
             min = df_temp.min_horizontal()
             avg = df_temp.mean_horizontal()
 
+            std = df_temp.map_rows(lambda row: sqrt(sum((x - sum(row) / len(row)) ** 2 for x in row) / len(row)), return_dtype=pl.Float64)["map"]
+
             self.max = self.max.with_columns((max).alias(col))
             self.min = self.min.with_columns((min).alias(col))
             self.avg = self.avg.with_columns((avg).alias(col))
+            self.std = self.std.with_columns((std).alias(col))
 
     def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
         time = self.avg["time"]
@@ -355,9 +360,11 @@ class ResultCollection:
         line, = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
         if spread:
             color = line.get_color()
-            ax.fill_between(time, self.min[col], self.max[col], color=color, alpha=0.2)
-            ax.plot(time, self.min[col], color=color, alpha=0.8, linewidth=0.5)
-            ax.plot(time, self.max[col], color=color, alpha=0.8, linewidth=0.5)
+            top = self.avg[col] + self.std[col]
+            bot = self.avg[col] - self.std[col]
+            ax.fill_between(time, bot, top, color=color, alpha=0.2)
+            ax.plot(time, bot, color=color, alpha=0.8, linewidth=0.5)
+            ax.plot(time, top, color=color, alpha=0.8, linewidth=0.5)
         return line
 
     def with_spread(self) -> Self:
