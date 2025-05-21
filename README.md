@@ -3,8 +3,8 @@
 Bachelor Project 2025
 
 - [Thesis Report](https://balderholst.github.io/coordinated-robot-search/report.pdf)
-- [botbrain documentation](https://balderholst.github.io/coordinated-robot-search/docs/botbrain/botbrain/)
-- [simple_sim documentation](https://balderholst.github.io/coordinated-robot-search/docs/simple_sim/simple_sim/)
+- [botbrain documentation](https://balderholst.github.io/coordinated-robot-search/docs/botbrain/)
+- [simple_sim documentation](https://balderholst.github.io/coordinated-robot-search/docs/simple_sim/)
 
 ---
 

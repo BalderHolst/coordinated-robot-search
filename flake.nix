@@ -36,7 +36,7 @@
                 name = "site";
                 unpackPhase = "true";
                 installPhase = ''
-                    mkdir -p $out
+                    mkdir -p $out/docs
                     cp -r ${report} $out/report.pdf
                     cp -r ${botbrain-docs} $out/docs/botbrain
                     cp -r ${simple_sim-docs} $out/docs/simple_sim
@@ -46,11 +46,6 @@
                 name = "report";
                 src = ./report;
                 buildInputs = with pkgs; [ texliveFull ];
-                shellHook = ''
-                    export SIMULATOR="$(pwd)/simple_sim/target/release/simple_sim"
-                    export DATA_DIR="$(pwd)/data"
-                    export PLOT_DIR="$(pwd)/plot"
-                '';
                 buildPhase = ''
                     latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex || true
                     latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex || true
@@ -75,18 +70,17 @@
             simple_sim-docs = pkgs.stdenv.mkDerivation rec {
                 name = "simple_sim";
                 src = ./.;
-                path = ./simple_sim;
+                cargoRoot = name;
                 cargoDeps = pkgs.rustPlatform.importCargoLock {
-                    lockFile = path + "/Cargo.lock";
+                    lockFile = src + "/${cargoRoot}/Cargo.lock";
                 };
                 buildInputs = with pkgs; [ cargo rustPlatform.cargoSetupHook ];
                 buildPhase = ''
-                    cd ${path}
-                    cargo doc --no-deps --frozen
+                    cargo doc --no-deps --frozen --manifest-path ${cargoRoot}/Cargo.toml
                 '';
                 installPhase = ''
                     mkdir -p $out
-                    cp -r ${path}/target/doc/* $out
+                    cp -r ./${cargoRoot}/target/doc/* $out
                 '';
             };
         };
