@@ -59,7 +59,7 @@ const GRADIENT_WEIGHT: f32 = 2.0;
 const LIDAR_WEIGHT: f32 = 0.3;
 const FORWARD_BIAS: f32 = 0.20;
 
-const ANGLE_THRESHOLD: f32 = PI / 8.0;
+const ANGLE_THRESHOLD: f32 = PI / 60.0;
 
 const SEARCH_GRID_SCALE: f32 = 0.10;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
@@ -483,7 +483,7 @@ impl SearchRobot {
         }
         let angle_error = normalize_angle(self.angle - target.angle());
         let t = (angle_error * angle_error / ANGLE_THRESHOLD).clamp(0.0, 1.0);
-        let speed = (1.0 - t).sqrt();
+        let speed = (1.0 - t).abs();
         let steer = normalize_angle(target.angle() - self.angle);
 
         Control { speed, steer }
@@ -606,6 +606,7 @@ impl SearchRobot {
         if self.path_fails > PATHING_ATEMPTS {
             self.path_fails = 0;
             self.set_path_timeout(time);
+            self.path_planner_path.clear();
             println!("[{}] Pathing failed too many times", self.id.as_u32());
             return None;
         }
@@ -668,8 +669,6 @@ impl SearchRobot {
                 }
             }
         }
-
-        self.set_path_success();
 
         // Don't stop pathing if there are no other robots in map
         if !self.others.is_empty() && self.robot_mode != RobotMode::ProximityPathing {
@@ -802,15 +801,16 @@ impl SearchRobot {
 
             let target = (self.path_planner_path[0] - self.pos).normalized();
 
-            match costmap::validate_thick_line(line, ROBOT_OBSTACLE_CLEARANCE, &self.costmap_grid) {
+            match costmap::validate_thick_line(line, params::RADIUS, &self.costmap_grid) {
                 true => {
                     self.path_fails = 0;
+                    self.set_path_success();
                     Ok(target)
                 }
                 false => {
                     // Track failures to set new goal or path
                     self.path_fails += 1;
-                    Ok((target + self.lidar()).normalized())
+                    Ok((target + self.lidar().normalized()).normalized())
                 }
             }
         } else {

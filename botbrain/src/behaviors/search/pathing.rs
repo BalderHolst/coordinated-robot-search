@@ -13,7 +13,7 @@ use super::{
 };
 
 /// When a goal/point is within this distance from the robot
-pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = params::DIAMETER;
+pub(super) const PATH_PLANNER_DISTANCE_TOLERANCE: f32 = params::RADIUS;
 pub(super) const NEIGHBORS_4: [(isize, isize); 4] = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 pub(super) const NEIGHBORS_8: [(isize, isize); 8] = [
     (0, 1),
