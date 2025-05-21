@@ -27,7 +27,7 @@ use r2r::{
 
 const DEFAULT_CHANNEL_TOPIC: &str = "/search_channel";
 
-const STEER_MULTIPLIER: f64 = 0.5;
+const STEER_MULTIPLIER: f64 = 1.0;
 
 pub struct RosAgent {
     node: Arc<Mutex<r2r::Node>>,

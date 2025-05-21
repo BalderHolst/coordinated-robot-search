@@ -6,9 +6,10 @@ SEED = 42
 DURATION = 400
 ROBOTS = 4
 BEHAVIORS = [
+    ("avoid-obstacles", "Roomba"),
+    ("search:gradient", "Gradient"),
     ("search:pathing", "Pure Pathing"),
-    # ("search:gradient", "Gradient"),
-    # ("search:hybrid", "hybrid"),
+    ("search:hybrid", "hybrid"),
 ]
 
 RUNS = 6
