@@ -37,7 +37,8 @@
 
     <include>
       <uri>
-        https://fuel.gazebosim.org/1.0/OpenRobotics/models/Depot
+        <!-- https://fuel.gazebosim.org/1.0/OpenRobotics/models/Depot -->
+        ./depot
       </uri>
 
       <!-- Remove annoying things that get in the way of visualizing the robot -->
