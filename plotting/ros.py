@@ -1,14 +1,17 @@
 import botplot as bp
 
+world = "warehouse"
+
 def main():
     bp.seed(42)
 
     scenario = bp.Scenario(
         title = "ROS 2 Example",
-        world = bp.repo_path("worlds/bitmap/depot/depot.yaml"),
+        world = bp.repo_path(f"worlds/bitmap/{world}/{world}.yaml"),
+        gazebo_world=world,
         behavior = "search:pathing",
-        duration = 30,
-        robots = [bp.Robot(x=0, y=-2)],
+        duration = 100,
+        robots = 1,
     )
 
     res1 = bp.run_sim(scenario)

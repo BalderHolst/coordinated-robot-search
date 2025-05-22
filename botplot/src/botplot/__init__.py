@@ -84,12 +84,14 @@ class Scenario:
     behavior: str
     duration: int
     robots: list[Robot]
+    gazebo_world: str | None = None
 
-    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot] | int):
+    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot] | int, gazebo_world: str | None = None):
         self.title = title
         self.world = world
         self.behavior = behavior
         self.duration = duration
+        self.gazebo_world = gazebo_world
 
         if isinstance(robots, int):
             robots = place_robots(world, robots)
@@ -464,8 +466,13 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
     proc = None
 
+
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
+
+        if not scenario.gazebo_world:
+            print(f"Error: Scenario must have a gazebo world to be run in gazebo.")
+            exit(1)
 
         print(s)
 
@@ -480,6 +487,7 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
             map=scenario.world,
             headless=headless,
             use_rviz=not headless,
+            world=scenario.gazebo_world
         )
 
         ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=len(scenario.robots), output=data_file)
