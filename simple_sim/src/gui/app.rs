@@ -77,7 +77,12 @@ impl Theme {
 
     fn pallete(&self, n: usize) -> Color32 {
         let hue = n as f32 * PI / 10.0;
-        Hsva::new(hue, 0.8, 0.8, 1.0).into()
+        let value = match self {
+            Self::Light => 0.5,
+            Self::Dark => 0.8,
+            Self::Grayscale => 0.5,
+        };
+        Hsva::new(hue, 0.8, value, 1.0).into()
     }
 
     fn robot(&self) -> Color32 {
@@ -578,8 +583,17 @@ impl App {
                     }
                     DebugItem::RobotRays(rays) => {
                         for (angle, distance) in rays {
-                            let color =
-                                Hsva::new(distance / self.world.width() * 2.0, 0.8, 0.8, 0.5);
+                            let (saturation, value) = match theme {
+                                Theme::Light => (1.0, 0.2),
+                                Theme::Dark => (0.8, 0.8),
+                                Theme::Grayscale => (0.8, 0.8),
+                            };
+                            let color = Hsva::new(
+                                distance / self.world.width() * 2.0,
+                                saturation,
+                                value,
+                                0.5,
+                            );
                             let dir = Vec2::angled(robot_angle + angle);
                             let start = robot_pos + dir * self.cam.scaled(RADIUS);
                             let end = robot_pos + dir * self.cam.scaled(*distance);
