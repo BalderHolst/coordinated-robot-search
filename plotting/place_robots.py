@@ -3,13 +3,13 @@ import botplot.colors as colors
 import matplotlib.pyplot as plt
 import random
 
+
 def main():
     random.seed(2)
 
     path = bp.repo_path("trainer/worlds/world_0.ron")
-    # path = bp.repo_path("simple_sim/worlds/bitmap/depot/depot.yaml")
+    # path = bp.repo_path("worlds/bitmap/depot/depot.yaml")
     world = bp.World.from_description_file(path)
-
 
     fig, ax = plt.subplots()
 
@@ -35,9 +35,14 @@ def main():
 
         # Draw a circle at robot positions
         for i, robot in enumerate(robots):
-            circle = plt.Circle((robot.x, robot.y), 0.35, color=colors.get_color(i), alpha=1, linewidth=0)
+            circle = plt.Circle(
+                (robot.x, robot.y),
+                0.35,
+                color=colors.get_color(i),
+                alpha=1,
+                linewidth=0,
+            )
             ax.add_artist(circle)
-
 
     bp.plot_world(fig, ax, world, "Robot Placement", "placement")
 

@@ -25,8 +25,8 @@ N = [3, 4, 5, 6, 7, 8]
 N = [3]
 DURATION = 300
 
-def main():
 
+def main():
     results = {}
 
     for behavior in BEHAVIORS:
@@ -35,7 +35,7 @@ def main():
 
             scenario = bp.Scenario(
                 title=f"{behavior}",
-                world="simple_sim/worlds/objectmap/medium_obstacles.ron",
+                world="worlds/objectmap/medium_obstacles.ron",
                 behavior=behavior,
                 duration=DURATION,
                 robots=ROBOTS[:n],
@@ -56,7 +56,7 @@ def main():
 
         print("\n=====> Plotting Combined", dir, "<=====")
         bp.plot_coverage(runs, dir + "/coverage")
-        bp.plot_performance(runs, dir + "/performance", max = 12)
+        bp.plot_performance(runs, dir + "/performance", max=12)
         bp.plot_spread(runs, dir + "/spread")
 
 

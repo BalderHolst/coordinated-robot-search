@@ -3,7 +3,7 @@ import botplot as bp
 if __name__ == "__main__":
     scenario = bp.Scenario(
         title=f"robots",
-        world="simple_sim/worlds/objectmap/medium_obstacles.ron",
+        world="worlds/objectmap/medium_obstacles.ron",
         behavior="search",
         duration=400,
         robots=[
