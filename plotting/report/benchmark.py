@@ -2,17 +2,24 @@ import botplot as bp
 import shutil
 import os
 
-WORLD = bp.repo_path("worlds/objectmap/pathing_example.ron")
+from plotting.report.gazebo_vs_simple_sim import WORLD
+
+# WORLD = bp.repo_path("worlds/objectmap/pathing_example.ron")
 
 RUNS = 10
 DURATION = 800
 ROBOTS = [i+1 for i in range(6)]
 
 BEHAVIORS = [
-    ("avoid-obstacles", "Roomba"),
-    ("search:gradient", "Gradient"),
-    ("search:hybrid", "Hybrid"),
-    ("search:pathing", "Pure Pathing"),
+    ("Roomba",       "avoid-obstacles"),
+    ("Gradient",     "search:gradient"),
+    ("Hybrid",       "search:hybrid"),
+    ("Pure Pathing", "search:pathing"),
+]
+
+WORLDS = [
+    ("Warehouse", bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml")),
+    ("Depot",     bp.repo_path("worlds/bitmap/depot/depot.yaml")),
 ]
 
 DIR = bp.repo_path("report", "figures", "plots", "benchmarks")
@@ -20,44 +27,44 @@ DIR = bp.repo_path("report", "figures", "plots", "benchmarks")
 def main():
     plot_files = []
 
-    for robots in ROBOTS:
+    for world_name, world in WORLDS:
 
-        collections = []
+        for robots in ROBOTS:
 
-        for behavior, name in BEHAVIORS:
-            results: list[bp.Result] = []
+            collections = []
 
-            bp.seed(42)
-            for i in range(RUNS):
-                print(f"\n========== [{i+1}/{RUNS}] {name} with {robots} robots ==========")
+            for behavior_name, behavior in BEHAVIORS:
+                results: list[bp.Result] = []
 
-                scenario = bp.Scenario(
-                    title=f"{name} run {i+1}",
-                    world=WORLD,
-                    behavior=behavior,
-                    duration=DURATION,
-                    robots=robots,
-                )
+                bp.seed(42)
+                for i in range(RUNS):
+                    print(f"\n========== [{i+1}/{RUNS}] {behavior_name} with {robots} robots in '{world_name}' ==========")
 
-                res = bp.run_sim(scenario, f"multiple_runs/run-{i+1}")
-                results.append(res)
+                    scenario = bp.Scenario(
+                        title=f"{behavior_name} run {i+1}",
+                        world=world,
+                        behavior=behavior,
+                        duration=DURATION,
+                        robots=robots,
+                    )
 
-            collections.append(bp.ResultCollection(f"{name} with {robots} robots", results))
+                    res = bp.run_sim(scenario)
+                    results.append(res)
+
+                collections.append(bp.ResultCollection(behavior_name, results))
 
 
-        plot_files.append(
-            bp.plot_coverage(collections, f"Coverage over {RUNS} runs")
-        )
+            plot_files.append(
+                bp.plot_coverage(collections, f"Coverage over {RUNS} runs with {robots} robots in {world_name}")
+            )
 
-        plot_files.append(
-            bp.plot_spread(collections, f"Spread over {RUNS} runs")
-        )
+            bp.plot_spread(collections, f"Spread over {RUNS} runs with {robots} robots in {world_name}")
 
-    for plot_file in plot_files:
-        dst = os.path.join(DIR, os.path.basename(plot_file))
-        os.makedirs(os.path.dirname(dst), exist_ok=True)
-        shutil.copyfile(plot_file, dst)
-        print(f"Plot copied to '{bp.relpath(dst)}'")
+        for plot_file in plot_files:
+            dst = os.path.join(DIR, os.path.basename(plot_file))
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            shutil.copyfile(plot_file, dst)
+            print(f"Plot copied to '{bp.relpath(dst)}'")
 
 
 
