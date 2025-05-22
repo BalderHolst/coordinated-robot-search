@@ -372,7 +372,7 @@ class ROSResult(Result):
     """Result from running a scenario with ROS."""
 
 
-def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True) -> SimpleResult:
+def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, no_debug_soup: bool = False) -> SimpleResult:
 
     match scenario:
         case Scenario():
@@ -404,6 +404,7 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
     flags = ["-o", data_file, "--description", desc_file]
     if headless: flags.append("--headless")
+    if no_debug_soup: flags.append("--no-debug-soup")
 
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
@@ -760,9 +761,9 @@ def plot_spread(result: Result | list[Result] | ResultCollection | list[ResultCo
 def plot_performance(result: Result | list[Result], title: str, max=None, force=False) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
-    if os.path.exists(file) and not force:
-        print(f"Plot already exists: '{relpath(file)}'.")
-        return
+    # if os.path.exists(file) and not force:
+    #     print(f"Plot already exists: '{relpath(file)}'.")
+    #     return
 
     if isinstance(result, Result): result = [result]
 

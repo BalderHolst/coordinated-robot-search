@@ -16,7 +16,7 @@ if __name__ == "__main__":
         ],
     )
 
-    res = bp.run_sim(scenario)
+    res = bp.run_sim(scenario, no_debug_soup=True)
 
     bp.plot_performance(res, "performance", max=5)
     bp.plot_coverage(res, "coverage")
