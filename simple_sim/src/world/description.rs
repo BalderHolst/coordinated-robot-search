@@ -61,7 +61,7 @@ impl WorldDescription {
                             Cell::Empty
                         }
                     };
-                    grid.set(x, y, cell);
+                    grid.set(x, image.height - y, cell);
                 }
 
                 ScaledGrid::from_grid(grid, resolution)

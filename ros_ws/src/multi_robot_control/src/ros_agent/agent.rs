@@ -365,7 +365,7 @@ impl RosAgent {
 
                 // Only linear x and angular z are used by robot
                 let mut twist = geometry_msgs::msg::Twist::default();
-                // Check for
+
                 twist.linear.x = if control.speed.is_finite() {
                     control.speed as f64
                 } else {
