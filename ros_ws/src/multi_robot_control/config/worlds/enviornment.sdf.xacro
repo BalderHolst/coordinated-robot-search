@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <sdf version="1.6" xmlns:xacro="http://www.ros.org/wiki/xacro" xmlns:experimental="http://sdformat.org/schemas/experimental">
-  <xacro:arg name="headless" default="true"/>
+
+  <xacro:arg name="headless" default="False"/>
+  <xacro:arg name="world"    default="depot"/>
+
   <world name="depot">
     <scene>
       <grid>false</grid>
@@ -37,17 +40,8 @@
 
     <include>
       <uri>
-        <!-- https://fuel.gazebosim.org/1.0/OpenRobotics/models/Depot -->
-        ./depot
+        $(arg world)
       </uri>
-
-      <!-- Remove annoying things that get in the way of visualizing the robot -->
-      <experimental:params>
-        <visual element_id="Fan1::visual" action="remove"/>
-        <visual element_id="Fan2::visual" action="remove"/>
-        <visual element_id="main::ROOF_visual" action="remove"/>
-        <visual element_id="main::FANS_visual" action="remove"/>
-      </experimental:params>
 
     </include>
 

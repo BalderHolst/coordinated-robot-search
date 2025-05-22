@@ -37,11 +37,22 @@ def generate_launch_description():
     headless = LaunchConfiguration("headless")
     world = LaunchConfiguration("world")
 
+    worlds_dir = os.path.join(sim_dir, "config", "worlds")
+    enviornment_xacro = os.path.join(worlds_dir, "enviornment.sdf.xacro")
+
     # The Gazebo command line doesn't take SDF strings for worlds, so the output of xacro needs to be saved into
     # a temporary file and passed to Gazebo.
-    world_sdf = tempfile.mktemp(prefix="tb4_", suffix=".sdf")
+
+    world_sdf = tempfile.mktemp(suffix=".sdf")
+
     world_sdf_xacro = ExecuteProcess(
-        cmd=["xacro", "-o", world_sdf, ["headless:=", headless], world]
+        cmd=[
+            "xacro",
+            "-o", world_sdf,
+            ["headless:=", headless],
+            [f"world:={worlds_dir}/", world],
+            enviornment_xacro,
+        ]
     )
 
     gazebo_server = IncludeLaunchDescription(
@@ -119,8 +130,8 @@ def generate_launch_description():
             ),
             DeclareLaunchArgument(
                 "world",
-                default_value=os.path.join(sim_dir, "config", "worlds", "depot.sdf"),
-                description="Full path to xacro world model file to load",
+                default_value="depot",
+                description="Name of the world to load",
             ),
             DeclareLaunchArgument(
                 "map",
