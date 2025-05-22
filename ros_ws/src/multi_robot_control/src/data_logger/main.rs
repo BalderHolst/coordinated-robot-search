@@ -361,7 +361,7 @@ impl DataLogger {
 
                         let pos = &msg.pose.pose.position;
                         let pos =
-                            Pos2::new(pos.x as f32, -pos.y as f32) - *map_origin - map_size / 2.0;
+                            Pos2::new(pos.x as f32, pos.y as f32) - *map_origin - map_size / 2.0;
 
                         let Quaternion { x, y, z, w } = &msg.pose.pose.orientation;
                         let angle =
