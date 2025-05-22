@@ -26,6 +26,7 @@ pub struct RobotThreadPool {
     output_channel: Receiver<WorkerOutput>,
     handles: Vec<thread::JoinHandle<()>>,
     next_id: u32,
+    no_debug_soup: bool,
 }
 
 struct ThreadCtx {
@@ -40,7 +41,6 @@ impl ThreadCtx {
         let mut robot = (self.create_robot_fn)();
         robot.set_id(id);
         robot.set_map(world::convert_to_botbrain_map(&self.world));
-        robot.get_debug_soup_mut().activate();
         robot
     }
 }
@@ -51,6 +51,7 @@ impl RobotThreadPool {
         behavior_fn: BehaviorFn,
         create_robot_fn: CreateFn,
         world: World,
+        no_debug_soup: bool,
     ) -> RobotThreadPool {
         let (output_tx, output_rx) = mpsc::channel();
 
@@ -76,7 +77,11 @@ impl RobotThreadPool {
                                         println!(
                                             "[INFO] [thread {thread_id}] Creating new robot with id {id:?}!"
                                         );
-                                        let robot = ctx.create_robot(id);
+                                        let mut robot = ctx.create_robot(id);
+
+                                        if !no_debug_soup {
+                                            robot.get_debug_soup_mut().activate();
+                                        }
                                         ctx.robots.push(robot);
                                         ctx.robots.last_mut().unwrap()
                                     }
@@ -101,6 +106,7 @@ impl RobotThreadPool {
             handles,
             robot_map: HashMap::new(),
             next_id: 0,
+            no_debug_soup,
         }
     }
 

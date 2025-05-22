@@ -103,6 +103,7 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
             .unwrap_or(scenario.behavior.clone()),
         #[cfg(not(feature = "single-thread"))]
         threads: args.threads,
+        no_debug_soup: args.no_debug_soup,
     });
 
     for robot in &scenario.robots {

@@ -261,6 +261,7 @@ pub struct SimArgs {
     pub behavior: Behavior,
     #[cfg(not(feature = "single-thread"))]
     pub threads: usize,
+    pub no_debug_soup: bool,
 }
 
 #[allow(clippy::type_complexity)]
@@ -287,6 +288,7 @@ impl Simulator {
             behavior,
             #[cfg(not(feature = "single-thread"))]
             threads,
+            no_debug_soup,
         } = args;
 
         let state = SimState {
@@ -308,6 +310,7 @@ impl Simulator {
             behavior.behavior_fn(),
             behavior.create_fn(),
             world.clone(),
+            no_debug_soup,
         );
 
         Self {
@@ -364,6 +367,7 @@ impl Simulator {
             let mut robot = (self.behavior.create_fn())();
             robot.set_id(id);
             robot.set_map(crate::world::convert_to_botbrain_map(&self.world));
+            // FIX: Remove activation here in single-thread mode
             robot.get_debug_soup_mut().activate();
             robot.input_pose(robot_pose);
             self.robots.push(robot);
@@ -449,6 +453,7 @@ struct StepArgs {
 #[allow(unused)]
 impl Simulator {
     pub fn with_robots(sim_args: SimArgs, robots: Vec<(RobotPose, Box<dyn Robot>)>) -> Self {
+        let no_debug_soup = sim_args.no_debug_soup;
         let mut sim = Self::new(sim_args);
         for (pose, mut robot) in robots {
             sim.state.robot_states.push(RobotState {
@@ -458,7 +463,9 @@ impl Simulator {
             });
 
             robot.set_map(crate::world::convert_to_botbrain_map(&sim.world));
-            robot.get_debug_soup_mut().activate();
+            if !no_debug_soup {
+                robot.get_debug_soup_mut().activate();
+            }
             robot.input_pose(pose);
             sim.robots.push(robot);
         }

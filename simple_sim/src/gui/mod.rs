@@ -22,6 +22,7 @@ pub fn run_interactive(args: GlobArgs, run_args: RunArgs) -> Result<(), String> 
         behavior: run_args.behavior.clone(),
         #[cfg(not(feature = "single-thread"))]
         threads: args.threads,
+        no_debug_soup: args.no_debug_soup,
     };
     let app_args = args.into();
     let sim = Simulator::new(sim_args);

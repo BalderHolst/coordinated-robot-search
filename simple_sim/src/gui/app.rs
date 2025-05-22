@@ -188,6 +188,7 @@ pub struct AppArgs {
     pub target_fps: f32,
     pub paused: bool,
     pub pause_at: Option<f32>,
+    pub no_debug_soup: bool,
 }
 
 impl From<GlobArgs> for AppArgs {
@@ -198,6 +199,7 @@ impl From<GlobArgs> for AppArgs {
             target_sps,
             theme,
             ui_scale,
+            no_debug_soup,
             ..
         } = args;
         Self {
@@ -207,6 +209,7 @@ impl From<GlobArgs> for AppArgs {
             target_fps,
             target_sps,
             pause_at: None,
+            no_debug_soup,
         }
     }
 }

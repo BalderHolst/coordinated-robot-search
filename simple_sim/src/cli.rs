@@ -45,6 +45,10 @@ pub struct GlobArgs {
     #[arg(short, long)]
     pub paused: bool,
 
+    /// Deactivate `DebugSoup` for all robots
+    #[arg(long, default_value = "false")]
+    pub no_debug_soup: bool,
+
     #[command(subcommand)]
     pub command: Command,
 }
