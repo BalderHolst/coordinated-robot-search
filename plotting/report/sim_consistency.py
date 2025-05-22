@@ -36,7 +36,7 @@ def main_search():
         title="ROS 2",
         world=bp.repo_path("worlds/bitmap/depot/depot.yaml"),
         behavior="search:pathing",
-        duration=20,
+        duration=180,
         robots=[bp.Robot(x=-8, y=0.2)],
     )
     res_ros2 = bp.run_ros(scenario_ros2, headless=False)
@@ -46,7 +46,7 @@ def main_search():
         title="Simple Sim",
         world="worlds/bitmap/depot/depot.yaml",
         behavior="search:pathing",
-        duration=20,
+        duration=180,
         robots=[
             bp.Robot(x=-8, y=0.2),
         ],
@@ -57,4 +57,4 @@ def main_search():
 
 if __name__ == "__main__":
     main_dumb()
-    # main_search()
+    main_search()
