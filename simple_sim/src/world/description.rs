@@ -51,15 +51,21 @@ impl WorldDescription {
                 bitmap: image,
                 ..
             }) => {
+                let mut skip = std::collections::HashSet::new();
+
                 let mut grid = Grid::new(image.width, image.height);
                 for (x, y, value) in image.iter() {
+                    // REFERENCE: http://wiki.ros.org/map_server
                     let cell = match value {
-                        0 | 205 => Cell::Wall,
-                        254 => Cell::Empty,
-                        other => {
+                        0 | 205 => Cell::Wall, // ROS Wall
+                        254 => Cell::Empty,    // ROS Empty
+                        255 => Cell::Empty,    // ROS Unknown
+                        other if !skip.contains(&other) => {
+                            skip.insert(other);
                             eprintln!("Invalid value in PGM image: {}", other);
                             Cell::Empty
                         }
+                        _ => Cell::Empty,
                     };
                     grid.set(x, image.height - y, cell);
                 }
