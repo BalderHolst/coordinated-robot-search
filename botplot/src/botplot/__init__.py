@@ -462,11 +462,7 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
     os.makedirs(os.path.dirname(data_file), exist_ok=True)
 
-    flags = ["-o", data_file, "--description", desc_file]
-    if headless: flags.append("--headless")
-
     proc = None
-
 
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()

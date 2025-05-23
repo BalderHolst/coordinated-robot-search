@@ -14,7 +14,8 @@ BEHAVIORS = [
 
 RUNS = 6
 
-WORLD = bp.repo_path("worlds/bitmap/depot/depot.yaml")
+WORLD = bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml")
+GZ_WORLD = "warehouse"
 
 FIG_DIR = bp.repo_path("report", "figures", "plots")
 
@@ -28,6 +29,7 @@ def main():
             behavior=behavior,
             duration=DURATION,
             robots=ROBOTS,
+            gazebo_world=GZ_WORLD,
         )
 
         simple_results = []
@@ -52,7 +54,7 @@ def main():
 
             scenario = create_scenario(f"Gazebo ({behavior_name}) ({i+1} of {RUNS})")
 
-            res = bp.run_ros(scenario, headless=False)
+            res = bp.run_ros(scenario, headless=True)
 
             bp.plot_paths(res, f"ROS 2 Paths ({behavior_name}) ({i+1} of {RUNS})")
 
