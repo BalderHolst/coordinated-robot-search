@@ -362,14 +362,18 @@ class ResultCollection:
             color = line.get_color()
             top = self.avg[col] + self.std[col]
             bot = self.avg[col] - self.std[col]
-            ax.fill_between(time, bot, top, color=color, alpha=0.2)
-            ax.plot(time, bot, color=color, alpha=0.8, linewidth=0.5)
-            ax.plot(time, top, color=color, alpha=0.8, linewidth=0.5)
+            ax.fill_between(time, bot, top, color=color, alpha=0.15)
+            ax.plot(time, bot, color=color, alpha=0.5, linewidth=0.5)
+            ax.plot(time, top, color=color, alpha=0.5, linewidth=0.5)
         return line
 
     def with_spread(self) -> Self:
         dfs = [r.df_with_spread() for r in self.results]
         self.populate_dfs(dfs)
+        return self
+
+    def with_name(self, name: str) -> Self:
+        self.name = name
         return self
 
 class SimpleResult(Result):
