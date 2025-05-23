@@ -84,7 +84,7 @@ def plot(store: RunStore) -> list[str]:
                 collections.append(store.get(world_name, robots, behavior).with_name(f"{robots} robots"))
 
             plot_files.append(
-                bp.plot_coverage(collections, f"Coverage over using {behavior_name} behavior in {world_name}")
+                bp.plot_coverage(collections, f"Coverage over {RUNS} runs using {behavior_name} behavior in {world_name}")
             )
 
     return plot_files

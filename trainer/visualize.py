@@ -44,9 +44,10 @@ def live_plot(file_path: str):
                 axes[2].set_title("Epsilon")
                 axes[2].set_xlabel("Episode")
 
-                axes[3].plot(df["episode"], df["coverage"], color='tab:green')
-                axes[3].set_title("Coverage")
+                axes[3].plot(df["episode"], df["coverage"]*100, color='tab:green')
+                axes[3].set_title(r"Coverage (%)")
                 axes[3].set_xlabel("Episode")
+                axes[3].set_ylim(0, 100)
 
                 axes[4].plot(df["episode"], df["steps"], color='tab:purple')
                 axes[4].set_title("Steps per Episode")
