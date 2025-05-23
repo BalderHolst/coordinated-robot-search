@@ -49,11 +49,11 @@ const MEMORY_SIZE: usize = 4096;
 pub struct TrainingConfig {
     #[config(default = 32)]
     pub batch_size: usize,
-    #[config(default = 0.001)]
+    #[config(default = 0.002)]
     pub lr: f64,
     #[config(default = 0.990)]
     pub gamma: f64,
-    #[config(default = 0.005)]
+    #[config(default = 0.010)]
     pub tau: f64,
 
     pub clip_grad: Option<GradientClippingConfig>,
