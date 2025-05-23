@@ -3,8 +3,8 @@ This section describes the development of distributed algorithms that enable a g
 
 Two approaches are explored for controlling the behavior of the robot swarm: manually developed algorithms and a learning-based algorithm using reinforcement learning. This section presents the design and implementation of the manually developed approaches.
 
-\subsection{The {\color{red}Roomba} Algorithm}
-The \textcolor{red}{Roomba} algorithm serves as a baseline for evaluating the performance of more advanced behaviors. This simple obstacle avoidance algorithm moves in a straight line until the robot encounters an obstacle, at which point it turns away until it can resume moving forward. \\
+\subsection{The Roomba Algorithm}
+The Roomba algorithm serves as a baseline for evaluating the performance of more advanced behaviors. This simple obstacle avoidance algorithm moves in a straight line until the robot encounters an obstacle, at which point it turns away until it can resume moving forward. \\
 
 In this implementation, the robot uses LiDAR data to locate the nearest obstacle. If the obstacle is within a predefined safety threshold, the robot rotates away. The resulting paths from this behavior are shown in \cref{fig:roomba-paths}.
 
