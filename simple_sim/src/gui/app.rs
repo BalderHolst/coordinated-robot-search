@@ -45,7 +45,7 @@ pub enum Theme {
 impl Theme {
     fn main_background(&self) -> Color32 {
         match self {
-            Self::Light => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
+            Self::Light => Hsva::new(0.0, 0.0, 0.80, 1.0).into(),
             Self::Dark => Hsva::new(0.0, 0.0, 0.01, 1.0).into(),
             Self::Grayscale => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
         }
@@ -53,7 +53,7 @@ impl Theme {
 
     pub fn world_background(&self) -> Color32 {
         match self {
-            Self::Light => Hsva::new(0.0, 0.0, 0.80, 1.0).into(),
+            Self::Light => Hsva::new(0.0, 0.0, 0.90, 1.0).into(),
             Self::Dark => Hsva::new(0.0, 0.0, 0.02, 1.0).into(),
             Self::Grayscale => Hsva::new(0.0, 0.0, 1.0, 1.0).into(),
         }
