@@ -35,9 +35,9 @@ impl<B: Backend, S: State, A: Action> Network<B, S, A> for TinyNet<B> {
     }
 
     fn forward(&self, input: Tensor<B, 2>) -> Tensor<B, 2> {
-        let x = activation::relu(self.linear1.forward(input));
-        let x = activation::relu(self.linear2.forward(x));
-        activation::relu(self.linear3.forward(x))
+        let x = activation::sigmoid(self.linear1.forward(input));
+        let x = activation::sigmoid(self.linear2.forward(x));
+        activation::sigmoid(self.linear3.forward(x))
     }
 
     fn soft_update(this: Self, that: &Self, tau: f64) -> Self {
