@@ -1,17 +1,18 @@
 \section{Deep Reinforcement Learning}
 \label{sec:rl}
-In contrast to the manually developed algorithms, a Deep Q-learning approach as also explored. The agents are trained using the simple simulator. Reinforcement learning suits this problem well, as coverage can serve as a reward function. Traditional Q-learning methods store a table of discrete state-action pairs and their expected reward in memory {\color{red}[SOURCE]}, which can be cumbersome in real world applications where state is often continuous. Another pitfall of traditional Q-learning is that the size of the Q-table grows with the state space. Neural networks solve both of these problems. The Q-table can be approximated by using a neural network, then used to pick an action given a state. This is network is called a DQN (Deep Q Network). \\
+In contrast to the manually developed algorithms, a Deep Q-learning approach as also explored. Reinforcement learning suits this problem well, as coverage can serve as a reward function. These types of systems are also very adaptable to new environments as they can be retrained on new data to expand and tune their capabilities. \\
 
-Designing a neural network involves several important considerations, including selecting the number of layers and neurons, choosing appropriate activation functions, and determining key hyperparameters such as the learning rate. After the architecture is defined, the network must be trained, evaluated, and iteratively optimized to ensure stable and effective learning. Finally, the trained model can be validated on unseen environments and integrated into the broader system for deployment.
+Traditional Q-learning methods store a table of discrete state-action pairs and their expected reward in memory {\color{red}[SOURCE]}, which can be cumbersome in real world applications where state is often continuous. Another pitfall of traditional Q-learning is that the size of the Q-table grows with the state space. Neural networks solve both of these problems. The Q-table can be approximated by using a neural network, then used to pick an action given a state. These networks are called a DQNs (Deep Q Networks). \\
 
-% TODO: How much should we explain neural networks and Q-learning?
-\subsection{Network}
-The general idea of a neural network is to construct a layered architecture where each layer, consists of multiple interconnected neurons. Each neuron applies a learned weight and bias to its inputs and passes the result through an activation function. The final output of the network determines the action that the agent should take based on the current input state.
+Designing a neural network involves several important considerations, including selecting the number of layers and neurons, choosing appropriate activation functions, and determining key hyperparameters. After the architecture is defined, the network must be trained, evaluated, and iteratively optimized to ensure stable and effective learning. Finally, the trained model can be validated on unseen environments and integrated into the broader system for deployment.
+
+% \subsection{Network}
+% The general idea of a neural network is to construct a layered architecture where each layer, consists of multiple interconnected neurons. Each neuron applies a learned weight and bias to its inputs and passes the result through an activation function. The final output of the network determines the action that the agent should take based on the current input state.
 
 \subsection{Learning Framework}
-The framework for defining robots controlled by neural networks is implemented as a part of the \texttt{botbrain} library and can be enabled by the "rl" feature flag. The models are implemented using the \texttt{burn} \cite{burn} library, which is a Rust Deep Learning Framework. \texttt{burn} provides a high-level API for building and training deep learning networks with multiple backends. \\
+The framework for defining robots controlled by neural networks is implemented as a part of the \texttt{botbrain} library and can be enabled by the "rl" feature flag. The models are implemented using the \texttt{burn} \cite{burn} library, which is a Deep Learning Framework for Rust. \texttt{burn} provides a high-level API for building and training deep learning networks with multiple backends. \\
 
-\texttt{botbrain} defines the \texttt{RlRobot} which is generic across four parameters: the \texttt{burn} backend, the state type which the robots provides as input to the network, the action type which defines the discrete actions the robot can take, and the network which defined how the input and output layers should be connected. Several state, action and network implementations are also provided, which can be combined in any combination to create specializations of \texttt{RlRobot}. This system facilitates composition and expansion the \texttt{RlRobot} state and makes it easy to swap out single elements and compare differing architectures.
+\texttt{botbrain} defines the \texttt{RlRobot} which is generic across four parameters: the \texttt{burn} backend, the state type which the robots provides as input to the network, the action type which defines the discrete actions the robot can take, and the network which defined how the input and output layers should be connected. Several state, action and network implementations are also provided, which can be combined in any combination to create specializations of \texttt{RlRobot}. This system facilitates composition and expansion the \texttt{RlRobot} components and makes it easy to swap out single elements and compare differing architectures.
 
 % TODO: Maybe create a figure
 
@@ -33,26 +34,22 @@ In this project, the reward is primarily based on map coverage. At each time ste
 % TODO: Actually implement negative reward outside of range
 To maintain network connectivity among robots, a penalty is also introduced if the agent moves outside of the communication range of the rest of the swarm. This helps keep the robots together to allow them to communicate.
 
-% TODO: Write this section
-\subsection{Target and Policy Networks}
-
 \subsection{Training}
 Training the neural network involves allowing the agent to interact with the environment over multiple episodes while incrementally improving its policy based on received rewards. The \texttt{trainer} is implemented as a seperate program and was inspired by the \texttt{burn-rl-examples} repository \cite{burn-rl-examples}. \\
 
 Each training episode starts with one or more robots placed in a randomly generated environment, as described in the next subsection {\color{red}DESCRIBE?}. The episode proceeds step by step, during which the agent observes its current state, selects an action using an $\epsilon$-greedy policy, balancing exploration and exploitation, executes the action, and receives a reward. The transition tuple,  containing state, action, reward and next state, is stored in a replay buffer. \\
 
-Each time step, mini-batches of transitions are sampled randomly from the replay buffer and used to train the policy network by performing gradient decent on the loss function. Loss is calculated as the mean square error of the state-action-values, as infered by the policy network, and the target state-action values as calculated by the 
+\subsubsection{Target and Policy Networks}
+When training a DQN, two networks with identical structure are used called te target and policy networks. The policy network is encodes the current best policy and is updated each time step using gradient decent. The target network is used as a reference when calculating the loss. Each time step, the weights of the target network are updated in a small linear step towards the policy network. The size of the step is configured with the hyperparameter $\tau$. These networks both continually continually approach the optimal policy during training, the policy network approaches faster and is used to get on policy action and the target network trails behind, but provides more stable state action values.
 
-% $$Q_{\text{target}} = r_t + \gamma \max_{a'} Q(s_{t+1}, a')$$
-% where $\gamma$ is the discount factor.\\
+\subsubsection{Calculating Loss}
+Each time step, mini-batches of transitions are sampled randomly from the replay buffer and used to train the policy network by performing gradient decent on the loss function. Loss is calculated as the mean square error between the value of an action as determined by the policy network, and the expected value of the action. The expected value is the value of the best action from the next state as given by the target network plus the reward gotten from taking the current action. \\
 
 Training continues for a fixed number of episodes or until the performance converges. An episode is terminated early if the agent fails to make significant progress (i.e., no new area is explored for a defined number of steps), or when the entire map is successfully covered.
 
 
 \subsubsection{Generating Training Environments}
-As to not overfit the network, it must be trained on many different environments. A simple program was created to generate worlds populated by line and circle obstacles.
-
-% The use of randomly generated maps with varying obstacle layouts (see Fig.~\ref{fig:generated-enviornments}) ensures that the agent generalizes its behavior across diverse spatial configurations, rather than overfitting to a single scenario.
+As to not overfit the network, agents must be trained on different environments. A simple program was created to generate worlds populated by line and circle obstacles. The generator is however quite simplistic and does not check that the entire map is reachable which could lead to problems during training. \Cref{fig:generated-enviornments} shows examples of generated environments. 
 
 \def\w{0.31\textwidth}
 \begin{figure}[H]
@@ -93,7 +90,8 @@ As to not overfit the network, it must be trained on many different environments
             \includegraphics[width=\linewidth]{figures/generated-worlds/world_5.png}
         }
     \end{subfigure}
-    \caption{Examples of generated environments} \label{fig:generated-enviornments}
+    \caption{Examples of generated environments}
+    \label{fig:generated-enviornments}
 \end{figure}
 
 
