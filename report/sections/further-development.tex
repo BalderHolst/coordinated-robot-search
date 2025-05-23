@@ -76,3 +76,21 @@ Neuroevolution of Augmenting Topologies (NEAT) \cite{neat} is a genetic algorith
 NEAT offers the advantage of automatic architecture discovery, potentially outperforming manually designed networks. However, it is computationally intensive and typically requires many training cycles.
 
 A hybrid approach could involve using NEAT to discover promising network architectures, which are then fine-tuned using standard DQN training. This could accelerate learning and yield more effective policies.
+
+\subsubsection{Proximal Policy Optimization (PPO)}
+Another promising direction for advancing the reinforcement learning component is the use of Proximal Policy Optimization (PPO) \cite{ppo}. PPO is a widely used on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
+
+Unlike DQN, which is value-based and limited to discrete action spaces, PPO belongs to the family of policy gradient methods and naturally supports continuous action spaces. This makes it particularly well-suited for real-world robotics applications, where actions such as velocity commands are typically continuous.
+
+PPO improves training stability by preventing large updates to the policy. It achieves this by clipping the policy objective function, ensuring that new policies do not deviate too far from the current one. This balances the trade-off between exploration and exploitation while maintaining sample efficiency.
+
+Integrating PPO into the current framework would enable:
+\begin{itemize}
+  \item Learning of smoother, continuous control policies.
+  \item Better handling of stochastic environments and sensor noise.
+  \item More natural extension to multi-agent reinforcement learning setups.
+\end{itemize}
+
+To support PPO, the environment interface must provide not only scalar rewards but also policy gradients and advantage estimates, which can be implemented through Generalized Advantage Estimation (GAE). Furthermore, parallelized simulation environments would significantly accelerate data collection and improve sample efficiency.
+
+Overall, PPO offers a robust and scalable alternative to DQN for learning complex behaviors in dynamic environments. Exploring this method could enhance policy quality and ease the transition to real-world deployment, especially in continuous control domains.
