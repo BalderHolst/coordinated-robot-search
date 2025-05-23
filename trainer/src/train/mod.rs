@@ -8,6 +8,7 @@ use std::{fmt, fs};
 use botbrain::behaviors::rl;
 use botbrain::behaviors::rl::robots::medium_polar::MediumPolarRlRobot;
 use botbrain::behaviors::rl::robots::small_polar::SmallPolarRlRobot;
+use botbrain::behaviors::rl::robots::tiny_polar::TinyPolarRlRobot;
 use botbrain::{
     behaviors::{
         rl::{
@@ -70,6 +71,11 @@ pub fn run<B: Backend, DB: AutodiffBackend>(args: TrainArgs) -> Result<(), Strin
         }
         RobotKind::SmallRl => {
             type R<B> = PhantomData<SmallRlRobot<B>>;
+            let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
+            train(train_config, args.episodes, args, r, dr);
+        }
+        RobotKind::TinyPolarRl => {
+            type R<B> = PhantomData<TinyPolarRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
             train(train_config, args.episodes, args, r, dr);
         }
@@ -319,17 +325,18 @@ fn train_agent<
     let next_state_batch = get_batch(memory.next_states(), &sample_indices, |state: &S| {
         ref_to_state_tensor(state, device)
     });
-    let next_state_values = target_net.forward(next_state_batch).max_dim(1).detach();
+
+    let next_max_state_action_values = target_net.forward(next_state_batch).max_dim(1).detach();
 
     let not_done_batch = get_batch(memory.dones(), &sample_indices, ref_to_not_done_tensor);
     let reward_batch = get_batch(memory.rewards(), &sample_indices, ref_to_reward_tensor);
 
-    let expected_state_action_values =
-        (next_state_values * not_done_batch).mul_scalar(config.gamma) + reward_batch;
+    let target_state_action_values =
+        (next_max_state_action_values * not_done_batch).mul_scalar(config.gamma) + reward_batch;
 
     let loss = MseLoss.forward(
         state_action_values,
-        expected_state_action_values,
+        target_state_action_values,
         Reduction::Mean,
     );
 

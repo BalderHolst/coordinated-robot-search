@@ -55,6 +55,10 @@ pub enum RobotKind {
     #[cfg(feature = "rl")]
     SmallPolarRl,
 
+    /// Reinforcement learning using a small state with polar coordinates. Uses a single layer network.
+    #[cfg(feature = "rl")]
+    TinyPolarRl,
+
     /// Reinforcement learning using polar coordinates in its state. Uses a medium sized network.
     #[cfg(feature = "rl")]
     MediumPolarRl,
@@ -73,6 +77,8 @@ impl RobotKind {
             RobotKind::Search => search::MENU,
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => &[("run", rl::robots::small::run::<MyBackend>)],
+            #[cfg(feature = "rl")]
+            RobotKind::TinyPolarRl => &[("run", rl::robots::tiny_polar::run::<MyBackend>)],
             #[cfg(feature = "rl")]
             RobotKind::SmallPolarRl => &[("run", rl::robots::small_polar::run::<MyBackend>)],
             #[cfg(feature = "rl")]
@@ -115,6 +121,10 @@ impl RobotKind {
                 || Box::new(rl::robots::small::SmallRlRobot::<MyBackend>::new_trained())
             }
             #[cfg(feature = "rl")]
+            RobotKind::TinyPolarRl => {
+                || Box::new(rl::robots::tiny_polar::TinyPolarRlRobot::<MyBackend>::default())
+            }
+            #[cfg(feature = "rl")]
             RobotKind::SmallPolarRl => {
                 || Box::new(rl::robots::small_polar::SmallPolarRlRobot::<MyBackend>::new_trained())
             }
@@ -137,6 +147,8 @@ impl RobotKind {
             RobotKind::Search => "search",
             #[cfg(feature = "rl")]
             RobotKind::SmallRl => "small-rl",
+            #[cfg(feature = "rl")]
+            RobotKind::TinyPolarRl => "tiny-polar-rl",
             #[cfg(feature = "rl")]
             RobotKind::SmallPolarRl => "small-polar-rl",
             #[cfg(feature = "rl")]

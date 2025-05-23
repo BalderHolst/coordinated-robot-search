@@ -3,6 +3,7 @@
 mod polar;
 mod single_ray;
 mod small;
+mod tiny_polar;
 
 use burn::prelude::*;
 
@@ -26,6 +27,7 @@ pub trait State: Clone + Send + 'static {
 pub use polar::PolarState;
 pub use single_ray::RayState;
 pub use small::SmallState;
+pub use tiny_polar::TinyPolarState;
 
 mod utils {
     pub struct ArrayWriter<const SIZE: usize> {

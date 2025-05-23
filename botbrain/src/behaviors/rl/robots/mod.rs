@@ -8,6 +8,7 @@ pub mod medium_polar;
 pub mod minimal;
 pub mod small;
 pub mod small_polar;
+pub mod tiny_polar;
 
 use super::{action::Action, network::Network, state::State, RlRobot, REACT_HZ};
 

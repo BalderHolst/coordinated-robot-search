@@ -38,7 +38,7 @@ pub struct TrainArgs {
     #[arg(long, default_value_t = 1000)]
     pub episodes: usize,
 
-    #[arg(long, default_value_t = 6000.0)]
+    #[arg(long, default_value_t = 10000.0)]
     pub eps_half: f64,
 
     #[arg(long, default_value_t = 0.05)]
