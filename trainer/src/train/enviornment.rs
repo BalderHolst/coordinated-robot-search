@@ -17,7 +17,7 @@ use simple_sim::{
 use burn::prelude::*;
 
 const TERMINATION_COVERAGE: f32 = 0.95;
-const TERMINATION_REWARD: f32 = -200.0;
+// const TERMINATION_REWARD: f32 = -200.0;
 
 const COVERAGE_REWARD: f32 = 3.0;
 
@@ -227,7 +227,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
         self.total_reward += reward;
 
         done |= after_coverage >= TERMINATION_COVERAGE;
-        done |= self.total_reward < TERMINATION_REWARD;
+        // done |= self.total_reward < TERMINATION_REWARD;
 
         Snapshot {
             state,

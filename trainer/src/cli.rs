@@ -32,7 +32,7 @@ pub struct TrainArgs {
     #[arg(short, long)]
     pub world_dir: PathBuf,
 
-    #[arg(long, default_value_t = (1200.0 * REACT_HZ) as usize)]
+    #[arg(long, default_value_t = (240.0 * REACT_HZ) as usize)]
     pub max_steps: usize,
 
     #[arg(long, default_value_t = 1000)]
