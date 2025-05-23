@@ -32,6 +32,7 @@ Each robot maintains an internal state, which—combined with sensor input—dri
 
 To resolve this, each subsystem outputs a directional vector, or "target contribution," indicating its preferred movement. These vectors are then summed to produce a single target vector, which dictates the robot’s final motion. Subsystems can be weighted according to their importance—obstacle avoidance, for instance, is typically given higher priority. \Cref{fig:target-contributions} illustrates this principle.
 
+% TODO: Make picture
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.75\textwidth]{figures/target-contribtions.png}
@@ -128,37 +129,8 @@ The proximity grid is computed by identifying the largest set of connected robot
 
 Importantly, each robot excludes itself when calculating the proximity grid. This ensures that if a robot is the sole link between two clusters, it will move toward the main network and draw disconnected robots with it. \\
 
-This behavior is demonstrated in \cref{fig:proximity-pull}, where a single robot moves to reestablish group connectivity.
-
-\def\w{0.329\textwidth}
-\begin{figure}[h]
-    \begin{center}
-        \begin{subfigure}[b]{\w}
-            \centering
-            \includegraphics[width=\textwidth]{figures/proximity-pull1.png}
-            \caption{Proximity grid for a \textcolor{red}{single-link} robot.}
-            \label{fig:proximity-pull1}
-        \end{subfigure}
-        \begin{subfigure}[b]{\w}
-            \centering
-            \includegraphics[width=\textwidth]{figures/proximity-pull2.png}
-            \caption{The robot moves toward the main network.}
-            \label{fig:proximity-pull2}
-        \end{subfigure}
-        \begin{subfigure}[b]{\w}
-            \centering
-            \includegraphics[width=\textwidth]{figures/proximity-pull3.png}
-            \caption{Stray robots are pulled back into the network.}
-            \label{fig:proximity-pull3}
-        \end{subfigure}
-    \end{center}
-    \caption{Example of a \textcolor{red}{single-link} robot reestablishing group connectivity.}
-    \label{fig:proximity-pull}
-\end{figure}
-
-
 \subsection{Gradient Based-Algorithm}
-The gradient-based algorithm calculates the robot's "target" vector using contributions from both the search and proximity grid gradients. However, when relying solely on these contributions, the resulting target vector often points sideways or even backward. This behavior occurs because the robot continuously "cools" down the area in front of its camera's field of view, which leads to excessive turning and minimal forward progress. \\
+The gradient-based algorithm calculates the robot's "target" vector using contributions from both the search and proximity grid gradients. However, when relying solely on these contributions, the resulting target vector often points sideways or even backward. This behavior occurs because the robot continuously "cools" down the area in front of its camera's field of view, which leads to excessive turning and minimal forward progrese. \\
 
 To mitigate this, a small constant forward vector is added to the total target vector to maintain movement and promote map coverage. \Cref{fig:gradient-paths} illustrates the paths of four robots executing this behavior.
 

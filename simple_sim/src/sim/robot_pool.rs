@@ -26,7 +26,6 @@ pub struct RobotThreadPool {
     output_channel: Receiver<WorkerOutput>,
     handles: Vec<thread::JoinHandle<()>>,
     next_id: u32,
-    no_debug_soup: bool,
 }
 
 struct ThreadCtx {
@@ -106,7 +105,6 @@ impl RobotThreadPool {
             handles,
             robot_map: HashMap::new(),
             next_id: 0,
-            no_debug_soup,
         }
     }
 

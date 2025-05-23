@@ -1,88 +1,78 @@
 \section{Further Development}
 % TODO: How could the project be further developed?
-% TODO: Maybe combine this section with real-world implementation?
 
-While this project demonstrates a complete simulation-based framework for coordinated robotic search, several avenues exist for further development and real-world deployment.
+While this project demonstrates a complete simulation-based framework for coordinated robotic search, several opportunities exist for real-world deployment and further algorithmic enhancements. This section outlines key considerations for transitioning to physical systems and explores future directions in algorithmic development.
 
 \subsection{Real World Implementation}
-While this project has not been deployed on a physical robot, the entire software stack has been developed with real-world implementation in mind. 
-Both the simulation architecture and behavioral algorithms are designed to be modular, portable, and compatible with commonly available robotics hardware and middleware. 
-This section outlines how the system could be transferred from simulation to real-world execution.
+Although this project has not been tested on physical hardware, the entire software stack has been developed with real-world deployment in mind. Both the simulation architecture and behavior algorithms are modular, portable, and compatible with widely available robotics platforms and middleware.
 
-To transition from simulation to a physical system, several components must be tested and refined to ensure reliable performance under real-world conditions:
+To ensure reliable performance in real-world conditions, the following aspects should be evaluated and potentially refined:
+
 \begin{itemize}
-  \item \textbf{Sensor calibration and frame alignment}: Accurate transformations between LiDAR, camera, and base frames are crucial for consistent sensor fusion and localization.
-  \item \textbf{Robust object detection}: The current object detection relies on simple color-based segmentation, which may perform poorly in diverse lighting or background conditions. More robust methods, such as learned object detection or depth filtering, could be introduced.
-  \item \textbf{Communication reliability}: Real-world wireless communication introduces latency, packet loss, and variable range. Testing robustness to communication failure and implementing fault-tolerant strategies (e.g., message queuing or data compression) would be essential.
-  \item \textbf{Real-time performance}: The behavior logic and path planning components should be profiled on embedded hardware to ensure that they meet real-time constraints.
-  \item \textbf{ROS 2 control integration}: In the current setup, differential drive control is handled by Gazebo plugins. For real hardware, transitioning to \texttt{ros2\_control} would allow for unified controller deployment in both simulated and physical environments.
+  \item \textbf{Sensor calibration and frame alignment}: Accurate transformations between the LiDAR, camera, and base frames are essential for sensor fusion and localization.
+  \item \textbf{Robust object detection}: The current color-based detection may perform poorly under varying lighting conditions. More advanced detection techniques (e.g., learned models or depth-based filtering) could improve reliability.
+  \item \textbf{Communication robustness}: Real-world wireless communication introduces latency, packet loss, and range limitations. Fault-tolerant strategies such as message queuing, compression, or redundancy may be necessary.
+  \item \textbf{Real-time performance}: The behavior logic and path planning algorithms should be profiled on embedded hardware to ensure real-time feasibility.
+  \item \textbf{ROS 2 control integration}: Currently, differential drive is simulated via Gazebo plugins. Transitioning to \texttt{ros2\_control} would enable consistent controller behavior on both simulated and physical robots.
 \end{itemize}
 
-Developing a small-scale multi-robot testbed using platforms such as TurtleBot 4 would be a natural next step. This would allow for physical validation of the distributed algorithms, hardware-in-the-loop testing, and identification of practical implementation bottlenecks.
+A practical next step would be to implement a small-scale multi-robot testbed using TurtleBot 4 platforms. This would facilitate hardware-in-the-loop testing and help uncover system-level challenges not observable in simulation.
 
 \subsubsection{Hardware Requirements}
-The project targets a differential drive robot equipped with:
+The project targets differential drive robots equipped with:
 \begin{itemize}
   \item A 2D LiDAR scanner.
   \item An RGB camera with a known field of view.
-  \item Wheel odometry or IMU for dead reckoning.
-  \item A communication module (e.g., Wi-Fi or Zigbee).
+  \item Wheel odometry or an IMU for dead reckoning.
+  \item A communication module (e.g., Wi-Fi, Zigbee, or LoRa).
 \end{itemize}
-
-While the TurtleBot 4 is used in simulation, the system can be adapted to other platforms by updating sensor interfaces and adjusting configuration parameters.
+Although TurtleBot 4 is used in simulation, the software can be adapted to other platforms by adjusting sensor interfaces and configuration parameters.
 
 \subsubsection{Using ROS 2}
-The primary method for deploying the behavior algorithms is through a dedicated ROS 2 node included in the project. 
-This node interfaces with the robot’s onboard sensors and actuators using standard ROS 2 topics. 
-Specifically, it requires subscribtion to the following input topics:
-
+Deployment is primarily managed through a dedicated ROS 2 node that subscribes to standard input topics:
 \begin{itemize}
-  \item \texttt{/scan}: LiDAR data, used for obstacle detection and localization.
-  \item \texttt{/camera/image}: Image stream from the onboard RGB camera, used for object detection.
-  \item \texttt{/amcl\_pose}: Robot pose estimated via AMCL (Adaptive Monte Carlo Localization), providing global localization within a known map.
+  \item \texttt{/scan}: LiDAR data for localization and obstacle detection.
+  \item \texttt{/camera/image}: RGB image stream for object detection.
+  \item \texttt{/amcl\_pose}: Global pose estimated via AMCL.
 \end{itemize}
 
-These topics are typically published by standard ROS 2 packages, such as \texttt{nav2}, and drivers for commonly used platforms like the TurtleBot 4. 
-The behavior node publishes control commands to the \texttt{/cmd\_vel} topic, which specifies linear and angular velocities for the robot.
-
-In simulation, the differential drive system is modeled within Gazebo using its built-in plugins. 
-However, as Gazebo is not intended for real-world deployment, a separate controller is required for physical robots. 
-A widely adopted solution is the \texttt{ros2\_control} framework \cite{ros2-control}, which offers a collection of hardware interface controllers, including one for differential drive systems.
-This framework also includes a Gazebo plugin that allows the same controller to be used both in simulation and on real hardware, ensuring consistency across development and deployment environments.
+Output is published to \texttt{/cmd\_vel}, which controls linear and angular velocities. In simulation, Gazebo handles differential drive via plugins. For physical robots, \texttt{ros2\_control} \cite{ros2-control} is recommended. It offers modular hardware interfaces and is compatible with both real and simulated environments via a Gazebo plugin.
 
 \subsubsection{Using the Rust Library}
-For platforms or embedded systems that do not support ROS 2, the behavior algorithms can be deployed using the standalone \texttt{botbrain} Rust library. 
-This library exposes a high-level \texttt{Robot} interface which accepts sensor data and returns control commands and outgoing messages for communication.
-
+For systems that do not support ROS 2, the behavior algorithms can be used via the standalone \texttt{botbrain} Rust library. This interface allows for integration in embedded or custom platforms by directly feeding sensor data and receiving control outputs and inter-robot messages. This modular design supports deployments outside the ROS ecosystem, such as microcontroller-based robots.
 % TODO: Maybe a simple code example??
 
-This approach allows for flexible integration in environments where ROS 2 is not viable, such as microcontroller-based systems or custom embedded platforms.
-
 \subsubsection{Communication Considerations}\label{sub:communication}
-In simulation, message passing between robots is instantaneous and lossless. 
-In a real-world implementation, communication can become a limiting factor. 
-Several technologies could be considered:
+In simulation, communication is assumed to be instantaneous and lossless. In real-world settings, this is not the case. Communication technologies under consideration include:
 
 \begin{itemize}
-  \item \textbf{Wi-Fi}: High bandwidth, but may suffer from interference or limited range in large-scale outdoor applications.
-  \item \textbf{Zigbee}: Low power and suitable for mesh networks but has limited bandwidth and range. Might not support high-frequency updates or large message payloads.
-  \item \textbf{LoRa}: Long-range communication with minimal bandwidth. Only suitable for infrequent or compact messaging.
+  \item \textbf{Wi-Fi}: High bandwidth but susceptible to interference and limited range.
+  \item \textbf{Zigbee}: Suitable for low-bandwidth mesh networks but limited in data rate.
+  \item \textbf{LoRa}: Extremely long range but low throughput; suitable for infrequent updates.
 \end{itemize}
 
-The system assumes one shared communication channel, where all robots broadcast their observations. 
-Message serialization is already implemented in a compact binary format to reduce communication overhead. 
-If communication becomes a bottleneck, strategies such as message prioritization or selective transmission (e.g., only sending certain changes) may be necessary.
-
+The system assumes a broadcast model where each robot shares observations over a shared channel. Messages are already serialized in a compact binary format. If communication becomes a bottleneck, strategies such as message prioritization, differential updates, or lossy compression may be necessary.
 
 \subsection{Advancing Deep Reinforcement Learning}
-The reinforcement learning component could also be extended in multiple directions:
+The deep reinforcement learning component can be extended in multiple directions to improve both learning performance and real-world applicability:
+
 \begin{itemize}
-  \item \textbf{Domain randomization}: To improve generalization to real-world conditions, domain randomization techniques could be employed during training (e.g., noise in sensors, and robot dynamics).
-  \item \textbf{Curriculum learning}: Starting with simpler maps and gradually increasing complexity may improve convergence and performance.
-  \item \textbf{Transfer learning}: Fine-tuning a trained policy in a physical environment could bridge the sim-to-real gap more efficiently than retraining from scratch.
-  \item \textbf{Reward shaping}: More nuanced reward functions incorporating communication efficiency, time, and safety metrics could be explored to guide agent behavior more effectively.
+  \item \textbf{Network architecture tuning}: Adjusting the number of layers, neurons, and activation functions to improve learning stability and performance.
+  \item \textbf{Hyperparameter optimization}: Fine-tuning learning rate, discount factor, batch size, and exploration parameters for better convergence.
+  \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.
+  \item \textbf{Reward shaping}: Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
+  \item \textbf{Domain randomization}: Introducing variability in sensor noise, dynamics, and environment layouts during training to improve generalization.
+  \item \textbf{Curriculum learning}: Training on progressively more complex environments to facilitate gradual policy improvement.
+  \item \textbf{Transfer learning}: Adapting a pretrained simulation policy to real-world conditions via fine-tuning on physical robots.
 \end{itemize}
 
 Incorporating these techniques could help develop policies that are not only more effective but also more transferable and robust under real-world deployment conditions.
 
-% TODO: Talk about NEAT or DQN with NEAT?
+\subsubsection{Neuroevolution of Augmenting Topologies (NEAT)}
+Designing an optimal neural network architecture for a DQN agent remains a non-trivial task. The architecture can greatly affect both convergence speed and final performance.\\
+
+Neuroevolution of Augmenting Topologies (NEAT) \cite{neat} is a genetic algorithm designed to evolve both the topology and weights of neural networks. Each candidate solution, or genome, is represented as a graph of neurons and connections. Networks are evaluated based on a fitness function, and mutation/crossover operations allow the population to explore a diverse architecture space.\\
+
+NEAT offers the advantage of automatic architecture discovery, potentially outperforming manually designed networks. However, it is computationally intensive and typically requires many training cycles.
+
+A hybrid approach could involve using NEAT to discover promising network architectures, which are then fine-tuned using standard DQN training. This could accelerate learning and yield more effective policies.
