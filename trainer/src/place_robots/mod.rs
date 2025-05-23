@@ -6,7 +6,7 @@ use simple_sim::world::{world_from_path, World};
 
 use crate::cli;
 
-const SPAWN_MARGIN: f32 = params::DIAMETER;
+const SPAWN_MARGIN: f32 = params::DIAMETER * 2.0;
 
 const ROBOT_WIGGLE_ROOM: f32 = params::DIAMETER;
 const ROBOT_MIN_SPACE: f32 = 0.2;

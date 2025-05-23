@@ -87,10 +87,12 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOut
 
     for point in robot.lidar.points() {
         let angle = point.angle;
-        if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV)
-            && point.distance < min_point.distance
-        {
-            min_point = point.clone();
+        let mut distance = point.distance;
+        if distance < 0.0 {
+            distance = 0.0;
+        }
+        if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV) && distance < min_point.distance {
+            min_point = LidarPoint { angle, distance };
         }
     }
 
