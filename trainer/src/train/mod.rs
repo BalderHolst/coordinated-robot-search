@@ -161,7 +161,18 @@ fn train<
     println!("{network:?}");
 
     let stats_file = model_file.with_extension("json");
-    let mut stats = Vec::new();
+
+    let mut stats = Vec::<EpisodeStats>::new();
+
+    if stats_file.exists() {
+        let stats_json = fs::read_to_string(&stats_file).expect("Failed to read stats file");
+        stats = serde_json::from_str(&stats_json).expect("Failed to parse stats file");
+        println!(
+            "Loaded {} episodes of stats from '{}'",
+            stats.len(),
+            stats_file.display()
+        );
+    }
 
     // Create behavior
     let behavior = Behavior::parse(args.robot.get_name()).unwrap();
@@ -172,7 +183,7 @@ fn train<
 
     println!("Enviornment created with {} robots", env.num_robots());
 
-    let mut step: usize = 0;
+    let mut step: usize = stats.iter().map(|s| s.steps).sum();
 
     let mut target_net = network.clone();
     let mut policy_net = network;
@@ -182,6 +193,8 @@ fn train<
     let mut optimizer: OptimizerAdaptor<AdamW, DN, DB> = AdamWConfig::new()
         .with_grad_clipping(config.clip_grad.clone())
         .init();
+
+    let start_episode = stats.last().map_or(0, |s| s.episode + 1);
 
     let mut episode_done;
     let mut episode_reward: f32;
@@ -200,7 +213,7 @@ fn train<
 
     let mut stat;
 
-    for episode in 0..num_episodes {
+    for episode in start_episode..num_episodes {
         episode_done = false;
         episode_reward = 0.0;
         episode_duration = 0_usize;
