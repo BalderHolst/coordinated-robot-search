@@ -810,12 +810,13 @@ def plot_coverage(
 def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
     fig, ax = plt.subplots()
+    ax.axhline(0, color="gray", linestyle="--", linewidth=1)
     for df, behavior in results:
         ax.plot(df["time"], df["diff"], label=behavior)
     if len(results) > 1:
         ax.legend()
     ax.set_xlabel(r"Time (s)")
-    ax.set_ylabel(r"Coverage Diff (\%)")
+    ax.set_ylabel(r"Coverage Diff (\% points)")
     ax.set_title(title)
     return save_figure(fig, file)
 

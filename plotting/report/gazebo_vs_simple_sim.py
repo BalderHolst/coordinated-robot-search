@@ -25,7 +25,7 @@ FIG_DIR = bp.repo_path("report", "figures", "plots")
 
 
 def main():
-    avg_diff_ratios: list[tuple[pl.DataFrame, str]] = []
+    # avg_diff_ratios: list[tuple[pl.DataFrame, str]] = []
     avg_diffs: list[tuple[pl.DataFrame, str]] = []
     for behavior, behavior_name in BEHAVIORS:
 
@@ -54,7 +54,7 @@ def main():
             res = bp.run_sim(scenario)
 
             bp.plot_paths(
-                res, f"Simple Sim Paths ({behavior_name}) ({i + 1} of {RUNS})"
+                res, f"Simple Sim Paths ({behavior_name.title()}) ({i + 1} of {RUNS})"
             )
 
             simple_results.append(res)
@@ -71,7 +71,9 @@ def main():
 
             res = bp.run_ros(scenario, headless=True)
 
-            bp.plot_paths(res, f"ROS 2 Paths ({behavior_name}) ({i + 1} of {RUNS})")
+            bp.plot_paths(
+                res, f"ROS 2 Paths ({behavior_name.title()}) ({i + 1} of {RUNS})"
+            )
 
             ros_results.append(res)
 
@@ -88,17 +90,17 @@ def main():
         simple_collection = bp.ResultCollection("Simple Simulator", simple_results)
         gazebo_collection = bp.ResultCollection("Gazebo", ros_results)
 
-        avg_diff_ratio = diff_radio(
-            gazebo_collection.avg_df(), simple_collection.avg_df()
-        )
-        avg_diff_ratios.append((avg_diff_ratio, behavior_name))
+        # avg_diff_ratio = diff_radio(
+        #     gazebo_collection.avg_df(), simple_collection.avg_df()
+        # )
+        # avg_diff_ratios.append((avg_diff_ratio, behavior_name))
 
         avg_diff = diff(gazebo_collection.avg_df(), simple_collection.avg_df())
         avg_diffs.append((avg_diff, behavior_name))
 
         src = bp.plot_coverage(
             [simple_collection, gazebo_collection],
-            f"Simulator Coverage over {RUNS} Runs ({behavior_name})",
+            f"Simulator Coverage over {RUNS} Runs ({behavior_name.title()})",
         )
         dst = os.path.join(
             FIG_DIR,
@@ -110,8 +112,8 @@ def main():
 
         print(f"Copied plot to '{dst}'")
     # print("Average coverage diff ratios:", avg_diff_ratios)
-    bp.plot_avg_coverage_diff(avg_diff_ratios, "Coverage Diff Ratios")
-    bp.plot_avg_coverage_diff(avg_diffs, "Coverage Diff")
+    # bp.plot_avg_coverage_diff(avg_diff_ratios, "Coverage Diff Ratios")
+    bp.plot_avg_coverage_diff(avg_diffs, f"Coverage Diffs of Averages ({RUNS} Runs)")
 
 
 def diff_radio(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:

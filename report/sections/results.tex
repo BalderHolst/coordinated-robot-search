@@ -27,12 +27,12 @@ As this project is based in a Simulator-to-Simulator approach, it is important t
   \centering
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{./figures/consistency/simple-sim-paths-(after-10s)_rough_tune.png}
+    \includegraphics[width=\textwidth]{./figures/plots/consistency/simple-sim-paths-(after-10s).png}
     \caption{Simple Sim}
   \end{subfigure}
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
-    \includegraphics[width=\textwidth]{./figures/consistency/ros-2-paths-(after-10s)_rough_tune.png}
+    \includegraphics[width=\textwidth]{./figures/plots/consistency/ros-2-paths-(after-10s).png}
     \caption{ROS 2 Gazebo}
   \end{subfigure}
   \caption{Path when running circular behavior in \texttt{simple\_sim} and ROS 2 Gazebo.}
@@ -42,7 +42,6 @@ As this project is based in a Simulator-to-Simulator approach, it is important t
 \subsubsection{Pathing}
 A more complex evaluation was performed by comparing search behavior involving dynamic path planning. As shown in \cref{fig:coverage-benchmark}, the coverage curves produced by each simulator are closely aligned, particularly in early and mid-stage exploration. Minor deviations are attributed to non-determinism in Gazebo and slight differences in physics and sensor modeling.
 
-% TODO: New picture with latex installed
 \begin{figure}[H]
   \centering
   \begin{tabular}{cc}
@@ -51,14 +50,13 @@ A more complex evaluation was performed by comparing search behavior involving d
     \includegraphics[width=0.45\textwidth]{./figures/plots/consistency/gazebo_vs_simple_sim_hybrid.png} &
     \includegraphics[width=0.45\textwidth]{./figures/plots/consistency/gazebo_vs_simple_sim_pure_pathing.png} \\
   \end{tabular}
-  \caption{Comparison of coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}.}
+  \caption{Comparison of coverage with spread over time between ROS 2 Gazebo and \texttt{simple\_sim}.}
   \label{fig:coverage-benchmark-all}
 \end{figure}
 
-% TODO: New picture with y=0, and latex installed
 \begin{figure}[H]
     \begin{center}
-        \includegraphics[width=0.95\textwidth]{./figures/plots/consistency/coverage-diff.png}
+        \includegraphics[width=0.95\textwidth]{./figures/plots/consistency/coverage-diffs-of-averages-(6-runs).png}
     \end{center}
     \caption{Comparison of difference in coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}.}
     \label{fig:coverage-benchmark-diff}
