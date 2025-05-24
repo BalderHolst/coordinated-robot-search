@@ -67,6 +67,18 @@ pub fn convert_scenario_to_json(input: &PathBuf, output: &PathBuf) -> Result<(),
 }
 
 pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), String> {
+    let scenario_root = match scenario_args.scenario.filename() {
+        "-" => std::env::current_dir()
+            .map_err(|e| format!("Failed to get current directory: {}", e))?,
+        path => PathBuf::from(path)
+            .parent()
+            .ok_or(format!(
+                "Failed to get parent directory of scenario file '{}'",
+                path
+            ))?
+            .to_path_buf(),
+    };
+
     let mut scenario = match scenario_args.scenario.clone().contents() {
         Ok(s) if scenario_args.json => serde_json::from_str(&s)
             .map_err(|e| format!("Error deserializing scenario file: {e}"))?,
@@ -91,7 +103,16 @@ pub fn run_scenario(args: GlobArgs, scenario_args: ScenarioArgs) -> Result<(), S
     }
 
     let world = match &scenario.world {
-        ScenarioWorld::Path(path) => world_from_path(path)?,
+        ScenarioWorld::Path(path) => {
+            let world_path = scenario_root.join(path).canonicalize().map_err(|e| {
+                format!(
+                    "Failed to canonicalize world path '{}': {}",
+                    path.display(),
+                    e
+                )
+            })?;
+            world_from_path(&world_path)?
+        }
         ScenarioWorld::Desc(desc) => desc.clone().create(),
     };
 

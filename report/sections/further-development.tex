@@ -1,6 +1,4 @@
 \section{Further Development}
-% TODO: How could the project be further developed?
-
 While this project demonstrates a complete simulation-based framework for coordinated robotic search, several opportunities exist for real-world deployment and further algorithmic enhancements. This section outlines key considerations for transitioning to physical systems and explores future directions in algorithmic development.
 
 \subsection{Real World Implementation}
@@ -39,8 +37,7 @@ Deployment is primarily managed through a dedicated ROS 2 node that subscribes t
 Output is published to \texttt{/cmd\_vel}, which controls linear and angular velocities. In simulation, Gazebo handles differential drive via plugins. For physical robots, \texttt{ros2\_control} \cite{ros2-control} is recommended. It offers modular hardware interfaces and is compatible with both real and simulated environments via a Gazebo plugin.
 
 \subsubsection{Using the Rust Library}
-For systems that do not support ROS 2, the behavior algorithms can be used via the standalone \texttt{botbrain} Rust library. This interface allows for integration in embedded or custom platforms by directly feeding sensor data and receiving control outputs and inter-robot messages. This modular design supports deployments outside the ROS ecosystem, such as microcontroller-based robots.
-% TODO: Maybe a simple code example??
+For systems that do not support ROS 2, the behavior algorithms can be used via the standalone \texttt{botbrain} Rust library. This interface allows for integration in embedded or custom platforms by directly feeding sensor data to \texttt{botbrain}, receiving control outputs and handling communication between robots. This modular design is critical in swarm systems, where individual robots should be cheep and replalable.
 
 \subsubsection{Communication Considerations}\label{sub:communication}
 In simulation, communication is assumed to be instantaneous and lossless. In real-world settings, this is not the case. Communication technologies under consideration include:

@@ -14,9 +14,8 @@ The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} f
     \label{fig:simple-sim-interface}
 \end{figure}
 
-% TODO: ray-marching cite
 \subsection{Sensor Approximation}
-To run behaviors, each robot requires three inputs: pose, LiDAR, and camera data. The pose is set directly by the simulator and requires no approximation. However, both LiDAR and camera inputs are emulated using ray marching techniques \cite{raymarching}, a lightweight yet effective method for approximating line-of-sight sensor data in a 2D grid world. \\
+To run behaviors, each robot requires three inputs: pose, LiDAR, and camera data. The pose is set directly by the simulator and requires no approximation. Both LiDAR and camera inputs are emulated using simplified ray marching techniques with a constant step size. \\
 
 LiDAR is emulated by emitting a series of radial rays from the robot's position at fixed angular intervals. Each ray is advanced incrementally until it intersects with an obstacle in the environment. The resulting distance data mimics real-world LiDAR output and is illustrated in \cref{fig:lidar-approximation}. \\
 
@@ -52,6 +51,3 @@ The simple simulator is designed to be lightweight and performant. It supports d
 
 % TODO: Specify CPU used
 Multi-threading is used to parallelize sensor simulation and robot state updates, allowing the system to scale to larger swarms. In practical testing, the simulator is capable of 30 to 50 robots in real time on a standard desktop CPU depending on the behavior. Because the environment is purely 2D and avoids expensive physics calculations, the performance overhead is minimal compared to full 3D simulation.
-
-% TODO: Maybe move this to section 8?
-% This high-performance execution makes the simulator well-suited for training deep reinforcement learning agents, where a large number of episodes must be executed within a reasonable timeframe.

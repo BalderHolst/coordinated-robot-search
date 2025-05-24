@@ -1,0 +1,10 @@
+Scenario(
+    title: "Depot Example",
+    world: "../bitmap/depot/depot.yaml",
+    behavior: "search:pathing",
+    duration: 50.0,
+    robots: [
+        RobotPose(pos: (x: 0, y: 0), angle: 1),
+        RobotPose(pos: (x: 2, y: 0), angle: -1),
+    ]
+)

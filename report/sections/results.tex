@@ -5,8 +5,6 @@ This section presents the results of simulations meant to determine the performa
 This section presents a comparative evaluation of the developed search algorithms in terms of two key metrics: map coverage over time and computational expense. These metrics are analyzed across environments of varying difficulty. 
 Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup—is evaluated to confirm the robustness and portability of the behavior implementations.
 % TODO: Should we state a threshold for the consistency?
-%
-
 
 % TODO: Efficiency of the search algorithms
     % TODO: Different search algorithms
@@ -60,7 +58,7 @@ To evaluate search efficiency, each algorithm was executed across multiple rando
 
 \begin{figure}[H]
     \begin{center}
-        \includegraphics[width=0.95\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs.png}
+        \includegraphics[width=0.95\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-depot.png}
     \end{center}
     \caption{Coverage performance of search algorithms over 10 runs starting in random positions in the same environment. Shaded regions represent the range between minimum and maximum coverage at each time step.}
     \label{fig:coverage-benchmark}

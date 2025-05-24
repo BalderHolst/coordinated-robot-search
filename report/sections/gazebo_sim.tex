@@ -17,7 +17,7 @@ The Turtlebot 4 is modeled using a URDF (Unified Robot Description Format) file 
 \label{sub:localization} 
 To enable functional behavior, robots require an estimate of their pose within the environment. This project assumes access to a pre-existing map for localization. \\
 
-Localization is handled by the AMCL (Adaptive Monte Carlo Localization) algorithm \cite{amcl} from the ROS 2 \texttt{nav2} stack \cite{nav2}. AMCL uses LiDAR and odometry data to estimate the robot’s pose through a particle filter, yielding a position and orientation with an associated uncertainty.\\
+Localization is handled by the AMCL (Adaptive Monte Carlo Localization) algorithm \cite{amcl} \cite{amcl-docs} from the ROS 2 \texttt{nav2} stack \cite{nav2} \cite{nav2-docs}. AMCL uses LiDAR and odometry data to estimate the robot’s pose through a particle filter, yielding a position and orientation with an associated uncertainty.\\
 
 For environments without an available map, SLAM (Simultaneous Localization And Mapping) is employed to build the map while localizing the robot in real time. The \texttt{nav2} SLAM package is used for this purpose, particularly during map generation phases in 3D simulations.
 

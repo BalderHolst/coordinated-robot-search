@@ -10,15 +10,10 @@ The software is divided into three main components: the robot behavior implement
 \end{figure}
 
 \subsection{Simulated Hardware}
-% TODO: Describe the robot we are designing for
-% TODO: Describe the sensors available
-% TODO: Describe that we assume the robot to have some sort of communication method
-
 A simulated differential-drive robot equipped with a camera, LiDAR, odometry, and communication capabilities is used as the target platform. LiDAR and odometry are used for localization via Adaptive Monte Carlo Localization (AMCL), as discussed in \cref{sub:localization}. The camera is used for object detection, and a communication channel is assumed for data exchange between robots.\\
 
 To ensure realism and leverage existing 3D models and URDF files, the Turtlebot 4 \cite{tb4} is selected as the simulated platform. Although the Turtlebot 4 lacks a dedicated communication unit, this project simulates inter-robot messaging, rendering the system agnostic to the specific communication method. The software can be adapted to any robot platform that satisfies the sensor and communication requirements by configuring parameters in the source code.
 
-% TODO: Maybe mark the sensors on the robot
 \begin{figure}[h]
     \begin{center}
         \includegraphics[width=0.55\textwidth]{figures/tb4.png}
@@ -32,8 +27,6 @@ To ensure realism and leverage existing 3D models and URDF files, the Turtlebot 
 % TODO: Describe how we integrated with colcon
 
 The core of the system is implemented in Rust. While this choice was primarily based on developer preference, it brings several notable benefits. Although ROS 2 does not officially support Rust, the \texttt{r2r} library \cite{r2r} provides bindings to the ROS Client Library (RCL), enabling message serialization, topic publication/subscription, and integration with other ROS components. The initial build times are longer compared to C++, as Rust bindings are generated during compilation.\\
-
-% TODO: Write about burn or do it in reinforcement learning section
 
 Rust's memory safety guarantees and strong static typing contribute to a more robust and maintainable codebase. The compiler ensures that object lifetimes are correctly managed, eliminating an entire class of memory-related bugs. These features make Rust particularly well-suited for collaborative development, where code clarity and correctness are critical. \Cref{fig:simulators} shows screenshots of both simulators operating in the same map layout.
 
@@ -71,21 +64,18 @@ This project uses a simulator-to-simulator approach rather than attempting direc
 
 The 2D simulator supports rapid prototyping, debugging, and algorithm iteration. It is deterministic, lightweight, and capable of much running faster than real time in most cases. The Gazebo simulation, by contrast, is much more computationally heavy and provides high-fidelity sensor emulation and more realistic robot dynamics. It is used to validate that behaviors developed in the simpler simulator transfer correctly to a close to real environment. \\
 
-% Both simulators run identical robot behavior code using the shared \texttt{botbrain} library as shown in \cref{fig:software-structure}. This ensuring consistent robot behavior in both simulators.
-
-% TODO: Insert pictures of the depot in Simple Sim and Gazebo
-% TODO: Insert image of RViz2 and simple_sim side-by-side showing the same data
+\def\w{0.95\textwidth}
 \begin{figure}[h]
     \centering
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{subfigure}[b]{\w}
         \centering
-        \includegraphics[width=\textwidth]{figures/simple_sim.png}
+        \includegraphics[width=\textwidth]{./figures/screenshots/simple_sim_depot.png}
         \caption{Simple Simulator}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.45\textwidth}
+    \end{subfigure} \\
+    \vspace{3mm}
+    \begin{subfigure}[b]{\w}
         \centering
-        \includegraphics[width=\textwidth]{figures/gazebo_sim.png}
+        \includegraphics[width=\textwidth]{./figures/screenshots/gazebo_sim_depot.png}
         \caption{Gazebo Simulator in ROS 2}
     \end{subfigure}
     \caption{Screenshots of the simulators running the "depot" environment.}

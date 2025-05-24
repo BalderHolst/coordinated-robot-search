@@ -1,16 +1,15 @@
 \section{Introduction}
 \label{sec:Introduction}
-Coordinated robotic search presents solutions to a range of real-world challenges.
-Applications include search and rescue in disaster zones, environmental monitoring, industrial inspection, and surveillance. 
-Multi-Robot Systems offer significant advantages in these contexts, such as increased area coverage, improved robustness through redundancy, and the ability to operate in environments that are hazardous or inaccessible to humans.\\
+Coordinated robotic search presents solutions to a range of real-world challenges. Applications include search and rescue in disaster zones, environmental monitoring, industrial inspection, and surveillance. 
+Multi-Robot Systems offer significant advantages in these contexts, such as increased area coverage, improved robustness through redundancy, and the ability to operate in environments that are hazardous or inaccessible to humans. \\
 
 Despite variations in specific mission objectives, many robotic tasks are governed by a common set of principles. 
 Robots must autonomously explore known or partially known environments, interpret sensor data to detect targets or obstacles, and coordinate their behavior while operating under communication constraints. 
-This project focuses on the development and evaluation of distributed algorithms for collaborative search within a mapped environment, with all experiments conducted in simulation.\\
+This project focuses on the development and evaluation of distributed algorithms for collaborative search within a mapped environment, with all experiments conducted in simulation. \\
 
 To facilitate development and evaluation, a dual-simulator approach is employed. 
 A custom lightweight 2D simulator supports rapid prototyping and visual debugging, while a more realistic 3D simulation based on Gazebo and integrated with ROS 2 provides a higher-fidelity testing environment. 
-These environments allow for testing under close to realistic sensing and communication constraints.\\
+These environments allow for testing under close to realistic sensing and communication constraints. \\
 
 The remainder of this report presents the problem statement, reviews relevant literature, and describes the hardware and software architecture used throughout the project. 
 Subsequent sections introduce the simulator designs, detail the developed distributed search algorithms, and explore an alternative approach based on deep reinforcement learning, before concluding with a discussion and evaluation of the results.
