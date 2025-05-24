@@ -88,10 +88,12 @@ def main():
         simple_collection = bp.ResultCollection("Simple Simulator", simple_results)
         gazebo_collection = bp.ResultCollection("Gazebo", ros_results)
 
-        avg_diff_ratio = diff_radio(gazebo_collection.avg, simple_collection.avg)
+        avg_diff_ratio = diff_radio(
+            gazebo_collection.avg_df(), simple_collection.avg_df()
+        )
         avg_diff_ratios.append((avg_diff_ratio, behavior_name))
 
-        avg_diff = diff(gazebo_collection.avg, simple_collection.avg)
+        avg_diff = diff(gazebo_collection.avg_df(), simple_collection.avg_df())
         avg_diffs.append((avg_diff, behavior_name))
 
         src = bp.plot_coverage(
