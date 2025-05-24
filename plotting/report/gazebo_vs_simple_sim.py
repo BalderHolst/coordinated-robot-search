@@ -69,17 +69,18 @@ def main():
 
             ros_results.append(res)
 
+        # Find the reference time
+        reference_time = bp.interpolated_resample_reference_time(
+            ros_results + simple_results
+        )
+        # Fill in the reference time for the other results
+        simple_results = bp.interpolated_resample_coverage(
+            simple_results, reference_time
+        )
+        # Fill in the reference time for the other results
+        ros_results = bp.interpolated_resample_coverage(ros_results, reference_time)
         simple_collection = bp.ResultCollection("Simple Simulator", simple_results)
         gazebo_collection = bp.ResultCollection("Gazebo", ros_results)
-
-        # for result in gazebo_collection.results:
-        #     df = result.df()
-        #     desc = result.desc()
-        #     print(desc["title"], " : ", df["time"])
-        # for result in simple_collection.results:
-        #     df = result.df()
-        #     desc = result.desc()
-        #     print(desc["title"], " : ", df["time"])
 
         src = bp.plot_coverage(
             [simple_collection, gazebo_collection],

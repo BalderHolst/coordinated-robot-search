@@ -3,12 +3,14 @@ import botplot as bp
 
 def main_dumb():
     bp.seed(0)
+    GZ_WORLD = "depot"
 
     scenario_ros2 = bp.Scenario(
         title="ROS 2",
         world=bp.repo_path("worlds/bitmap/depot/depot.yaml"),
         behavior="dumb:circle",
-        duration=10,
+        duration=100,
+        gazebo_world=GZ_WORLD,
         robots=[
             bp.Robot(x=-8, y=0.2),
         ],
@@ -20,7 +22,7 @@ def main_dumb():
         title="Simple Sim",
         world="worlds/bitmap/depot/depot.yaml",
         behavior="dumb:circle",
-        duration=10,
+        duration=100,
         robots=[
             bp.Robot(x=-8, y=0.2),
         ],
@@ -57,4 +59,4 @@ def main_search():
 
 if __name__ == "__main__":
     main_dumb()
-    main_search()
+    # main_search()

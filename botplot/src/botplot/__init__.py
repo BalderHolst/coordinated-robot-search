@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from typing import Self
 
 import polars as pl
+import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -19,23 +20,29 @@ import botplot.utils as utils
 
 from botplot.colors import COLORS
 
-mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=COLORS)
+mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=COLORS)
 
-plt.rcParams.update({
-    "text.usetex": utils.check_installed("latex"), # Use LaTeX to render all text
-    "font.family": "serif",                        # Set font family to serif
-    "font.serif": ["Computer Modern Roman"],       # Default LaTeX font
-})
+plt.rcParams.update(
+    {
+        "text.usetex": utils.check_installed("latex"),  # Use LaTeX to render all text
+        "font.family": "serif",  # Set font family to serif
+        "font.serif": ["Computer Modern Roman"],  # Default LaTeX font
+    }
+)
 
-mpl.rcParams['axes.edgecolor']   = '#888888'   # gray frame around the plot
-mpl.rcParams['xtick.color']      = '#555555'   # gray x ticks
-mpl.rcParams['ytick.color']      = '#555555'   # gray y ticks
-mpl.rcParams['axes.labelcolor']  = '#444444'   # gray axis labels
+mpl.rcParams["axes.edgecolor"] = "#888888"  # gray frame around the plot
+mpl.rcParams["xtick.color"] = "#555555"  # gray x ticks
+mpl.rcParams["ytick.color"] = "#555555"  # gray y ticks
+mpl.rcParams["axes.labelcolor"] = "#444444"  # gray axis labels
+
 
 def seed(seed):
     random.seed(seed)
 
+
 GIT_DIR = ".git"
+
+
 def root_dir() -> str:
     """Find the root directory of the project by looking for the .git directory."""
     # Check if the current directory is the root
@@ -49,33 +56,42 @@ def root_dir() -> str:
             return current_dir
         parent_dir = os.path.dirname(current_dir)
         if parent_dir == current_dir:
-            raise FileNotFoundError(f"{GIT_DIR} directory not found in any parent directories")
+            raise FileNotFoundError(
+                f"{GIT_DIR} directory not found in any parent directories"
+            )
         current_dir = parent_dir
+
 
 def relpath(path: str) -> str:
     """Return the relative path to the given path from the current directory."""
     return os.path.relpath(path, os.path.curdir)
 
+
 def repo_path(*path: str) -> str:
     return os.path.join(os.path.abspath(root_dir()), *path)
+
 
 def data_dir(*file):
     return repo_path("data", *file)
 
+
 def plot_dir(*file):
     return repo_path("plots", *file)
 
-botbrain   = RustCrate(repo_path("botbrain"))
+
+botbrain = RustCrate(repo_path("botbrain"))
 simple_sim = RustCrate(repo_path("simple_sim"), dependencies=[botbrain])
-trainer    = RustCrate(repo_path("trainer"), dependencies=[simple_sim, botbrain])
+trainer = RustCrate(repo_path("trainer"), dependencies=[simple_sim, botbrain])
 
 ros_ws = ColconWorkspace(repo_path("ros_ws"))
+
 
 @dataclass
 class Robot:
     x: float = 0.0
     y: float = 0.0
     angle: float = 0.0
+
 
 @dataclass
 class Scenario:
@@ -86,7 +102,15 @@ class Scenario:
     robots: list[Robot]
     gazebo_world: str | None = None
 
-    def __init__(self, title: str, world: str, behavior: str, duration: int, robots: list[Robot] | int, gazebo_world: str | None = None):
+    def __init__(
+        self,
+        title: str,
+        world: str,
+        behavior: str,
+        duration: int,
+        robots: list[Robot] | int,
+        gazebo_world: str | None = None,
+    ):
         self.title = title
         self.world = world
         self.behavior = behavior
@@ -99,7 +123,9 @@ class Scenario:
         self.robots = robots
 
     def to_ron(self) -> str:
-        robots = ", ".join([f"(pos: (x: {r.x}, y: {r.y}), angle: {r.angle})" for r in self.robots])
+        robots = ", ".join(
+            [f"(pos: (x: {r.x}, y: {r.y}), angle: {r.angle})" for r in self.robots]
+        )
 
         return f"""
         Scenario(
@@ -114,8 +140,11 @@ class Scenario:
     def __str__(self) -> str:
         return self.to_ron()
 
+
 OBJ_LABEL = "Objs"
 BITMAP_LABEL = "Bitmap"
+
+
 @dataclass
 class World:
     file: str
@@ -123,7 +152,6 @@ class World:
 
     @classmethod
     def from_description_file(cls, file: str) -> Self:
-
         if file.endswith(".ron") or file.endswith(".yaml"):
             abs_file = os.path.abspath(file)
             hash = hashlib.sha256(abs_file.encode()).hexdigest()
@@ -135,12 +163,16 @@ class World:
             if os.path.exists(json_file):
                 print(f"Using cached json world description: {relpath(json_file)}")
             else:
-                trainer.run([
-                    "world-to-json",
-                    "--input", file,
-                    "--output", json_file,
-                    "--force",
-                ])
+                trainer.run(
+                    [
+                        "world-to-json",
+                        "--input",
+                        file,
+                        "--output",
+                        json_file,
+                        "--force",
+                    ]
+                )
             file = json_file
 
         with open(file) as f:
@@ -158,12 +190,16 @@ class World:
         return BITMAP_LABEL in self.data
 
     def desc(self) -> dict:
-        if self.is_obj(): return self.data[OBJ_LABEL]
-        if self.is_bitmap(): return self.data[BITMAP_LABEL]
-        else: raise ValueError(f"World must be either a bitmap or an object world. Found keys: {self.data.keys()}")
+        if self.is_obj():
+            return self.data[OBJ_LABEL]
+        if self.is_bitmap():
+            return self.data[BITMAP_LABEL]
+        else:
+            raise ValueError(
+                f"World must be either a bitmap or an object world. Found keys: {self.data.keys()}"
+            )
 
     def img(self):
-
         desc_name = os.path.basename(self.file).replace(".json", "-world-desc.json")
         desc_file = os.path.join(data_dir(), desc_name)
 
@@ -175,13 +211,18 @@ class World:
         if os.path.exists(img_file):
             print(f"Using cached world image: {relpath(img_file)}")
         else:
-            trainer.run([
-                "world-to-img",
-                "--input", desc_file,
-                "--output", img_file,
-                "--theme", "grayscale",
-                "--force",
-            ])
+            trainer.run(
+                [
+                    "world-to-img",
+                    "--input",
+                    desc_file,
+                    "--output",
+                    img_file,
+                    "--theme",
+                    "grayscale",
+                    "--force",
+                ]
+            )
 
         print(f"World image saved to '{relpath(img_file)}'")
 
@@ -205,6 +246,7 @@ class World:
             resolution = desc["resolution"]
 
             return width * resolution, height * resolution
+
 
 @dataclass
 class Result:
@@ -234,7 +276,6 @@ class Result:
         return os.path.join(data_dir(), f"{stem}-with-spread.ipc")
 
     def df_with_spread(self) -> pl.DataFrame:
-
         file = self.df_with_spread_file()
         if os.path.exists(file):
             print(f"Using cached spread file: {relpath(file)}")
@@ -244,14 +285,13 @@ class Result:
         df = self.df()
 
         # Add spread column
-        spread   = pl.Series("spread-sd", [0.0] * len(df))
-        center_x = pl.Series("center_x",  [0.0] * len(df))
-        center_y = pl.Series("center_y",  [0.0] * len(df))
+        spread = pl.Series("spread-sd", [0.0] * len(df))
+        center_x = pl.Series("center_x", [0.0] * len(df))
+        center_y = pl.Series("center_y", [0.0] * len(df))
 
         n = len(desc["robots"])
 
         for i in range(len(df)):
-
             total_x = 0.0
             total_y = 0.0
 
@@ -299,6 +339,7 @@ class Result:
     def world(self) -> World:
         return World.from_description_file(self.description_file)
 
+
 class ResultCollection:
     name: str
     results: list[Result]
@@ -343,7 +384,12 @@ class ResultCollection:
             min = df_temp.min_horizontal()
             avg = df_temp.mean_horizontal()
 
-            std = df_temp.map_rows(lambda row: sqrt(sum((x - sum(row) / len(row)) ** 2 for x in row) / len(row)), return_dtype=pl.Float64)["map"]
+            std = df_temp.map_rows(
+                lambda row: sqrt(
+                    sum((x - sum(row) / len(row)) ** 2 for x in row) / len(row)
+                ),
+                return_dtype=pl.Float64,
+            )["map"]
 
             self.max = self.max.with_columns((max).alias(col))
             self.min = self.min.with_columns((min).alias(col))
@@ -357,7 +403,7 @@ class ResultCollection:
         if label:
             l = self.name
 
-        line, = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
+        (line,) = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
         if spread:
             color = line.get_color()
             top = self.avg[col] + self.std[col]
@@ -376,15 +422,21 @@ class ResultCollection:
         self.name = name
         return self
 
+
 class SimpleResult(Result):
     """Result from running a scenario with simple_sim."""
+
 
 class ROSResult(Result):
     """Result from running a scenario with ROS."""
 
 
-def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, no_debug_soup: bool = False) -> SimpleResult:
-
+def run_sim(
+    scenario: Scenario | str,
+    headless: bool = True,
+    use_cache=True,
+    no_debug_soup: bool = False,
+) -> SimpleResult:
     match scenario:
         case Scenario():
             name = scenario.title
@@ -414,8 +466,10 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, no_
     os.makedirs(os.path.dirname(data_file), exist_ok=True)
 
     flags = ["-o", data_file, "--description", desc_file]
-    if headless: flags.append("--headless")
-    if no_debug_soup: flags.append("--no-debug-soup")
+    if headless:
+        flags.append("--headless")
+    if no_debug_soup:
+        flags.append("--no-debug-soup")
 
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
@@ -427,16 +481,78 @@ def run_sim(scenario: Scenario | str, headless: bool = True, use_cache=True, no_
             exit(1)
         simple_sim.run(["scenario", scenario] + flags)
     else:
-        print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
+        print(
+            "Error: scenario must be a `Scenario` object or a string. Found: ",
+            type(scenario),
+        )
         exit(1)
 
-    print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
+    print(
+        f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'"
+    )
 
     return SimpleResult(data_file, desc_file)
 
 
-def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> ROSResult:
+def interpolated_resample_reference_time(results: list[Result]) -> Result:
+    # Find the result with the most time points
+    max_length = 0
+    max_idx = 0
+    for i, result in enumerate(results):
+        df = result.df()
+        if len(df) > max_length:
+            max_length = len(df)
+            max_idx = i
 
+    return results[max_idx]
+
+
+def interpolated_resample_coverage(
+    results: list[Result], reference_time: Result
+) -> list[Result]:
+    # Get the time points from the longest result
+    reference_times = reference_time.df()["time"].to_list()
+    reference_length = len(reference_times)
+
+    # Create new resampled results
+    resampled_results = []
+
+    for result in results:
+        df = result.df()
+        # Skip if already matches the reference timestamps
+        if len(df) == reference_length and df["time"].to_list() == reference_times:
+            resampled_results.append(result)
+            continue
+
+            # Example (adapt to your variables):
+        time = df["time"]
+        coverage = df["coverage"]
+
+        # Interpolate ROS coverage to match Simple Sim time points
+        interpolated_coverage = np.interp(
+            reference_times,  # target time points (float64)
+            time.cast(
+                pl.Float64
+            ),  # source time points (cast to float64 for matching types)
+            coverage,  # source coverage values
+        )
+
+        # Create new aligned ROS DataFrame
+        interpolated_df = pl.DataFrame(
+            {"time": reference_times, "coverage": interpolated_coverage}
+        )
+
+        stem = os.path.basename(result.dataframe_file).replace(".ipc", "-resampled")
+        new_data_file = data_dir(f"{stem}.ipc")
+        interpolated_df.write_ipc(new_data_file)
+        resampled_results.append(Result(new_data_file, result.description_file))
+
+    return resampled_results
+
+
+def run_ros(
+    scenario: Scenario | str, headless: bool = True, use_cache=True
+) -> ROSResult:
     match scenario:
         case Scenario():
             name = scenario.title
@@ -465,7 +581,7 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
 
     # Save the scenario description to json a file
     ron_desc_file = data_dir(f"{stem}.ron")
-    with open(ron_desc_file, 'w') as f:
+    with open(ron_desc_file, "w") as f:
         f.write(scenario.to_ron())
     simple_sim.run(["world-to-json", ron_desc_file, desc_file])
 
@@ -495,28 +611,38 @@ def run_ros(scenario: Scenario | str, headless: bool = True, use_cache=True) -> 
             map=scenario.world,
             headless=headless,
             use_rviz=not headless,
-            world=scenario.gazebo_world
+            world=scenario.gazebo_world,
         )
 
-        ros_ws.run("multi_robot_control", "data_logger", timeout=scenario.duration, robot_count=len(scenario.robots), output=data_file)
-
+        ros_ws.run(
+            "multi_robot_control",
+            "data_logger",
+            timeout=scenario.duration,
+            robot_count=len(scenario.robots),
+            output=data_file,
+        )
 
     elif isinstance(scenario, str):
         raise NotImplemented("ROS simulation does not support string scenarios.")
     else:
-        print("Error: scenario must be a `Scenario` object or a string. Found: ", type(scenario))
+        print(
+            "Error: scenario must be a `Scenario` object or a string. Found: ",
+            type(scenario),
+        )
         exit(1)
-
 
     print("Killing simulation...")
     proc.kill()
     utils.kill_gazebo()
 
-    time.sleep(2) # Wait a bit for gazebo to shut down
+    time.sleep(2)  # Wait a bit for gazebo to shut down
 
-    print(f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'")
+    print(
+        f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'"
+    )
 
     return ROSResult(data_file, desc_file)
+
 
 def place_robots_data(world: str | World, n: int) -> dict:
     if isinstance(world, World):
@@ -524,12 +650,20 @@ def place_robots_data(world: str | World, n: int) -> dict:
 
     flags = []
 
-    proc = trainer.run([
-        "place-robots",
-        "--world", world,
-        "-n", str(n),
-        "--seed", str(random.randint(0, 2**64 - 1)),
-    ] + flags, capture_output=True, text=True)
+    proc = trainer.run(
+        [
+            "place-robots",
+            "--world",
+            world,
+            "-n",
+            str(n),
+            "--seed",
+            str(random.randint(0, 2**64 - 1)),
+        ]
+        + flags,
+        capture_output=True,
+        text=True,
+    )
 
     data = json.loads(proc.stdout)
     robots = []
@@ -543,19 +677,22 @@ def place_robots_data(world: str | World, n: int) -> dict:
 
     return data
 
+
 def place_robots(world: str | World, n: int) -> list[Robot]:
     data = place_robots_data(world, n)
     return data["robots"]
 
-def plot_world(fig, ax, world: World, title: str, out_file: str, borders: bool, plot_title: bool) -> str:
 
+def plot_world(
+    fig, ax, world: World, title: str, out_file: str, borders: bool, plot_title: bool
+) -> str:
     if title and plot_title:
         ax.set_title(title, fontsize=16)
 
     width, height = world.dims()
 
     xmin, ymin = -width / 2, -height / 2
-    xmax, ymax =  width / 2,  height / 2
+    xmax, ymax = width / 2, height / 2
 
     if not borders:
         for spine in ax.spines.values():
@@ -569,52 +706,61 @@ def plot_world(fig, ax, world: World, title: str, out_file: str, borders: bool, 
 
     ax.set_xlim(xmin, xmax)
     ax.set_ylim(ymax, ymin)
-    ax.set_aspect('equal')
+    ax.set_aspect("equal")
 
     world_img = world.img()
-    ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin='lower', zorder=0)
+    ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin="lower", zorder=0)
 
     plt.tight_layout()
 
-    out_file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}.png")
+    out_file = os.path.join(plot_dir(), f"{title.replace(' ', '-').lower()}.png")
 
     save_figure(fig, out_file)
 
     return out_file
+
 
 def save_figure(fig, output_file: str):
     name = os.path.basename(output_file).replace(" ", "-").lower()
     dir = os.path.dirname(output_file)
     os.makedirs(dir, exist_ok=True)
     output_file = os.path.join(dir, name)
-    fig.savefig(output_file, dpi=300, bbox_inches='tight', pad_inches=0.2)
+    fig.savefig(output_file, dpi=300, bbox_inches="tight", pad_inches=0.2)
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
     return output_file
 
-def plot_coverage(results: Result | list[Result] | ResultCollection | list[ResultCollection], name: str, title=None) -> str:
 
+def plot_coverage(
+    results: Result | list[Result] | ResultCollection | list[ResultCollection],
+    name: str,
+    title=None,
+) -> str:
     fig, ax = plt.subplots(figsize=(9, 5))
 
     file = os.path.join(plot_dir(), f"{name}.png")
 
-    if not isinstance(results, list): results = [results]
+    if not isinstance(results, list):
+        results = [results]
 
-    if isinstance(results, list) and all(isinstance(item, ResultCollection) for item in results):
+    if isinstance(results, list) and all(
+        isinstance(item, ResultCollection) for item in results
+    ):
         lines = [(c, c.plot("coverage", ax, label=False)) for c in results]
         for c, line in lines:
             c.plot("coverage", ax, color=line.get_color(), spread=False)
 
     else:
-
         for result in results:
             df = result.df()
             desc = result.desc()
             ax.plot(df["time"], df["coverage"], label=desc["title"])
 
-    if len(results) > 1: ax.legend()
+    if len(results) > 1:
+        ax.legend()
 
-    if title is None: title = name
+    if title is None:
+        title = name
 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Coverage (\%)")
@@ -622,36 +768,57 @@ def plot_coverage(results: Result | list[Result] | ResultCollection | list[Resul
 
     return save_figure(fig, file)
 
-def show_velocities(ax, df: pl.DataFrame, robot_count: int, label: str | None = None) -> pl.DataFrame:
 
-    df = df.with_columns([
-        pl.col("time").diff().alias("delta_time")
-    ])
+def show_velocities(
+    ax, df: pl.DataFrame, robot_count: int, label: str | None = None
+) -> pl.DataFrame:
+    df = df.with_columns([pl.col("time").diff().alias("delta_time")])
 
     for i in range(robot_count):
-        df = df.with_columns([
-            (pl.col(f"robot_{i}/x").diff().pow(2) + pl.col(f"robot_{i}/y").diff().pow(2)).sqrt().alias(f"robot_{i}/distance"),
-        ]).with_columns([
-            (pl.col(f"robot_{i}/distance") / pl.col("delta_time")).alias(f"robot_{i}/vel")
-        ])
+        df = df.with_columns(
+            [
+                (
+                    pl.col(f"robot_{i}/x").diff().pow(2)
+                    + pl.col(f"robot_{i}/y").diff().pow(2)
+                )
+                .sqrt()
+                .alias(f"robot_{i}/distance"),
+            ]
+        ).with_columns(
+            [
+                (pl.col(f"robot_{i}/distance") / pl.col("delta_time")).alias(
+                    f"robot_{i}/vel"
+                )
+            ]
+        )
 
     velocity_cols = [pl.col(f"robot_{i}/vel") for i in range(robot_count)]
 
-    df = df.with_columns([
-        pl.min_horizontal(velocity_cols).alias("vel_min"),
-        pl.max_horizontal(velocity_cols).alias("vel_max"),
-        pl.mean_horizontal(velocity_cols).alias("vel_mean"),
-    ])
+    df = df.with_columns(
+        [
+            pl.min_horizontal(velocity_cols).alias("vel_min"),
+            pl.max_horizontal(velocity_cols).alias("vel_max"),
+            pl.mean_horizontal(velocity_cols).alias("vel_mean"),
+        ]
+    )
 
-    line, = ax.plot(df["time"], df["vel_mean"], linewidth=2, label=label)
+    (line,) = ax.plot(df["time"], df["vel_mean"], linewidth=2, label=label)
     color = line.get_color()
-    ax.fill_between(df["time"], df["vel_min"], df["vel_max"],
-                     color=color, alpha=0.3, label="Min-Max Range")
+    ax.fill_between(
+        df["time"],
+        df["vel_min"],
+        df["vel_max"],
+        color=color,
+        alpha=0.3,
+        label="Min-Max Range",
+    )
+
 
 def plot_velocity(results: list[Result] | Result, name: str, title=None) -> str:
     file = os.path.join(plot_dir(), f"{name}.png")
 
-    if isinstance(results, Result): results = [results]
+    if isinstance(results, Result):
+        results = [results]
 
     fig, ax = plt.subplots(figsize=(12, 6))
 
@@ -661,19 +828,22 @@ def plot_velocity(results: list[Result] | Result, name: str, title=None) -> str:
         robot_count = len(desc["robots"])
         show_velocities(ax, df, robot_count, label=desc["title"])
 
-    if title is None: title = "Velocity over time"
+    if title is None:
+        title = "Velocity over time"
 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Velocity (m/s)")
     ax.set_title(title)
 
-    if len(results) > 1: plt.legend()
+    if len(results) > 1:
+        plt.legend()
 
     return save_figure(fig, file)
 
-def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> str:
 
-    if isinstance(results, Result): results = [results]
+def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> str:
+    if isinstance(results, Result):
+        results = [results]
 
     fig = plt.figure(figsize=(16, 9))
 
@@ -693,20 +863,54 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> 
         df = df.with_columns(bytes_per_robot.alias("bytes-per-robot"))
 
         # Calculate rolling average
-        df = df.with_columns(pl.col("bytes-per-robot").rolling_mean(60).alias("bytes-per-robot-smooth"))
+        df = df.with_columns(
+            pl.col("bytes-per-robot").rolling_mean(60).alias("bytes-per-robot-smooth")
+        )
 
-        byte_ax.scatter(df["time"], df["bytes-per-robot"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
-        byte_ax.scatter(df["time"], df["bytes-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
+        byte_ax.scatter(
+            df["time"],
+            df["bytes-per-robot"],
+            label=desc["title"],
+            marker="o",
+            alpha=0.5,
+            s=0.5,
+        )
+        byte_ax.scatter(
+            df["time"],
+            df["bytes-per-robot-smooth"],
+            label=desc["title"] + " (1s average)",
+            marker="o",
+            s=1,
+        )
 
-        print(f"Median bytes sent per robot: {df["bytes-per-robot-smooth"].median():.2f} bytes per second")
+        print(
+            f"Median bytes sent per robot: {df['bytes-per-robot-smooth'].median():.2f} bytes per second"
+        )
 
         # Plot the number of messages sent
         msgs_per_robot = df["msg-count"] / len(desc["robots"])
         df = df.with_columns(msgs_per_robot.alias("msg-count-per-robot"))
-        df = df.with_columns(pl.col("msg-count-per-robot").rolling_mean(60).alias("msg-count-per-robot-smooth"))
+        df = df.with_columns(
+            pl.col("msg-count-per-robot")
+            .rolling_mean(60)
+            .alias("msg-count-per-robot-smooth")
+        )
 
-        count_ax.scatter(df["time"], df["msg-count"], label=desc["title"], marker="o", alpha=0.5, s=0.5)
-        count_ax.scatter(df["time"], df["msg-count-per-robot-smooth"], label=desc["title"] + " (1s average)", marker="o", s=1)
+        count_ax.scatter(
+            df["time"],
+            df["msg-count"],
+            label=desc["title"],
+            marker="o",
+            alpha=0.5,
+            s=0.5,
+        )
+        count_ax.scatter(
+            df["time"],
+            df["msg-count-per-robot-smooth"],
+            label=desc["title"] + " (1s average)",
+            marker="o",
+            s=1,
+        )
 
         # Plot the size of the messages sent
 
@@ -718,13 +922,19 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> 
         df = df.with_columns(total_bytes_sent)
         df = df.with_columns(avg_msg_size.alias("avg-msg-size"))
 
-        size_ax.scatter(df["time"], df["avg-msg-size"], label="Average Message Size", marker="o", alpha=0.5, s=0.5)
-
+        size_ax.scatter(
+            df["time"],
+            df["avg-msg-size"],
+            label="Average Message Size",
+            marker="o",
+            alpha=0.5,
+            s=0.5,
+        )
 
         # print(f"Median message size: {df["avg-msg-size-smooth"].median():.2f} bytes")
 
-    if title is None: title = "Data transfer per robot over time"
-
+    if title is None:
+        title = "Data transfer per robot over time"
 
     byte_ax.set_xlabel("Time (s)")
     byte_ax.set_ylabel("Bytes per Second per Robot")
@@ -744,14 +954,21 @@ def plot_bytes(results: list[Result] | Result, output_file: str, title=None) -> 
 
     return save_figure(fig, output_file)
 
-def plot_spread(result: Result | list[Result] | ResultCollection | list[ResultCollection], title: str) -> str:
+
+def plot_spread(
+    result: Result | list[Result] | ResultCollection | list[ResultCollection],
+    title: str,
+) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
     fig, ax = plt.subplots()
 
-    if not isinstance(result, list): result = [result]
+    if not isinstance(result, list):
+        result = [result]
 
-    if isinstance(result, list) and all(isinstance(item, ResultCollection) for item in result):
+    if isinstance(result, list) and all(
+        isinstance(item, ResultCollection) for item in result
+    ):
         result: list[ResultCollection]
         for collection in result:
             collection = collection.with_spread()
@@ -761,39 +978,63 @@ def plot_spread(result: Result | list[Result] | ResultCollection | list[ResultCo
             df = res.df_with_spread()
             ax.plot(df["time"], df["spread-sd"], label=res.title())
 
-    if len(result) > 1: ax.legend()
+    if len(result) > 1:
+        ax.legend()
 
     return save_figure(fig, file)
 
-def plot_performance(result: Result | list[Result], title: str, max=None, force=False) -> str:
+
+def plot_performance(
+    result: Result | list[Result], title: str, max=None, force=False
+) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
     # if os.path.exists(file) and not force:
     #     print(f"Plot already exists: '{relpath(file)}'.")
     #     return
 
-    if isinstance(result, Result): result = [result]
+    if isinstance(result, Result):
+        result = [result]
 
     fig, ax = plt.subplots()
 
     for res in result:
         df = res.df()
-        ax.scatter(df["time"], df["step-time"] * 1000, marker="o", alpha=0.1, s=0.5, label=res.title())
+        ax.scatter(
+            df["time"],
+            df["step-time"] * 1000,
+            marker="o",
+            alpha=0.1,
+            s=0.5,
+            label=res.title(),
+        )
 
-    if len(result) > 1: ax.legend()
+    if len(result) > 1:
+        ax.legend()
 
     ax.set_ylim(0, max)
 
     return save_figure(fig, file)
 
-def plot_paths(result: Result, title: str, segments=1, force=False, borders=False, plot_title: bool = False, time_label: bool=True) -> list[str]:
+
+def plot_paths(
+    result: Result,
+    title: str,
+    segments=1,
+    force=False,
+    borders=False,
+    plot_title: bool = False,
+    time_label: bool = True,
+) -> list[str]:
     df = result.df()
     desc = result.desc()
 
     plot_files = []
 
     for seg in range(segments):
-        file = os.path.join(plot_dir(), f"{title.replace(" ", "-").lower()}-{seg + 1}-of-{segments}.png")
+        file = os.path.join(
+            plot_dir(), f"{title.replace(' ', '-').lower()}-{seg + 1}-of-{segments}.png"
+        )
 
         if os.path.exists(file) and not force:
             print(f"Plot already exists: '{relpath(file)}'.")
@@ -805,7 +1046,6 @@ def plot_paths(result: Result, title: str, segments=1, force=False, borders=Fals
         end = (len(t) // segments) * (seg + 1)
         try:
             for i, _ in enumerate(desc["robots"]):
-
                 x_col = df[f"robot_{i}/x"]
                 y_col = df[f"robot_{i}/y"]
 
@@ -832,10 +1072,29 @@ def plot_paths(result: Result, title: str, segments=1, force=False, borders=Fals
 
                     match mode:
                         case 0:
-                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="-", color=color, alpha=1.0)
+                            ax.plot(
+                                x_col[start:cursor],
+                                y_col[start:cursor],
+                                linestyle="-",
+                                color=color,
+                                alpha=1.0,
+                            )
                         case 1:
-                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="-", color=color, alpha=0.3)
-                            ax.plot(x_col[start:cursor], y_col[start:cursor], linestyle="dotted", color=color, alpha=1.0, linewidth=2)
+                            ax.plot(
+                                x_col[start:cursor],
+                                y_col[start:cursor],
+                                linestyle="-",
+                                color=color,
+                                alpha=0.3,
+                            )
+                            ax.plot(
+                                x_col[start:cursor],
+                                y_col[start:cursor],
+                                linestyle="dotted",
+                                color=color,
+                                alpha=1.0,
+                                linewidth=2,
+                            )
 
                     start = cursor
                     if cursor < len(mode_col):
@@ -843,11 +1102,27 @@ def plot_paths(result: Result, title: str, segments=1, force=False, borders=Fals
 
                 cross_size = 0.4
                 widen = lambda x, size: [x - size, x + size]
-                ax.plot(widen(x_col[0],  cross_size), widen(y_col[0], cross_size), color=color, linewidth=4, alpha=0.7)
-                ax.plot(widen(x_col[0], -cross_size), widen(y_col[0], cross_size), color=color, linewidth=4, alpha=0.7)
+                ax.plot(
+                    widen(x_col[0], cross_size),
+                    widen(y_col[0], cross_size),
+                    color=color,
+                    linewidth=4,
+                    alpha=0.7,
+                )
+                ax.plot(
+                    widen(x_col[0], -cross_size),
+                    widen(y_col[0], cross_size),
+                    color=color,
+                    linewidth=4,
+                    alpha=0.7,
+                )
 
                 # Draw circle at starting position
-                ax.add_patch(patches.Circle((x_col[-1], y_col[-1]), color=color, radius=0.5, alpha=0.7))
+                ax.add_patch(
+                    patches.Circle(
+                        (x_col[-1], y_col[-1]), color=color, radius=0.5, alpha=0.7
+                    )
+                )
 
         except pl.exceptions.ColumnNotFoundError as e:
             data_path, desc_path = result.paths()
@@ -856,7 +1131,7 @@ def plot_paths(result: Result, title: str, segments=1, force=False, borders=Fals
             print(f"    => {e}")
             exit(1)
 
-        end_time = t[end-1]
+        end_time = t[end - 1]
 
         if time_label:
             # label = patches.Patch(color='none', label=f'Time: {end_time:.0f}s')
@@ -871,17 +1146,27 @@ def plot_paths(result: Result, title: str, segments=1, force=False, borders=Fals
             #     fontsize=14,
             # )
             ax.text(
-                0.98, 0.02,               # X, Y in axes fraction (bottom right)
-                f'Time: {end_time:.0f}s',
+                0.98,
+                0.02,  # X, Y in axes fraction (bottom right)
+                f"Time: {end_time:.0f}s",
                 transform=ax.transAxes,
-                ha='right', va='bottom',
+                ha="right",
+                va="bottom",
                 fontsize=14,
-                bbox=dict(boxstyle='round,pad=0.28', facecolor='#ffffff88', edgecolor='none')
+                bbox=dict(
+                    boxstyle="round,pad=0.28", facecolor="#ffffff88", edgecolor="none"
+                ),
             )
 
-
-        plot_file = plot_world(fig, ax, result.world(), f"{title} (after {end_time:.0f}s)", file, borders=borders, plot_title=plot_title)
+        plot_file = plot_world(
+            fig,
+            ax,
+            result.world(),
+            f"{title} (after {end_time:.0f}s)",
+            file,
+            borders=borders,
+            plot_title=plot_title,
+        )
         plot_files.append(plot_file)
 
     return plot_files
-
