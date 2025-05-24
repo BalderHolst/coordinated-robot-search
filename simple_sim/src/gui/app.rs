@@ -75,14 +75,18 @@ impl Theme {
         }
     }
 
+    fn sv(&self) -> (f32, f32) {
+        match self {
+            Theme::Light => (1.0, 0.35),
+            Theme::Dark => (0.8, 0.8),
+            Theme::Grayscale => (0.5, 0.5),
+        }
+    }
+
     fn pallete(&self, n: usize) -> Color32 {
         let hue = n as f32 * PI / 10.0;
-        let value = match self {
-            Self::Light => 0.5,
-            Self::Dark => 0.8,
-            Self::Grayscale => 0.5,
-        };
-        Hsva::new(hue, 0.8, value, 1.0).into()
+        let (s, v) = self.sv();
+        Hsva::new(hue, s, v, 1.0).into()
     }
 
     fn robot(&self) -> Color32 {
@@ -361,7 +365,7 @@ impl App {
             let image = utils::grid_to_image(
                 self.sim_state.diagnostics.coverage_grid.grid().grid(),
                 |c| match c {
-                    true => Color32::LIGHT_GREEN.gamma_multiply(0.2),
+                    true => Color32::GREEN.gamma_multiply(0.5),
                     false => Color32::TRANSPARENT,
                 },
             );
@@ -584,7 +588,7 @@ impl App {
                     DebugItem::RobotRays(rays) => {
                         for (angle, distance) in rays {
                             let (saturation, value) = match theme {
-                                Theme::Light => (1.0, 0.2),
+                                Theme::Light => (1.0, 0.1),
                                 Theme::Dark => (0.8, 0.8),
                                 Theme::Grayscale => (0.8, 0.8),
                             };
@@ -599,7 +603,7 @@ impl App {
                             let end = robot_pos + dir * self.cam.scaled(*distance);
                             painter.line(
                                 vec![start, end],
-                                PathStroke::new(self.cam.scaled(0.01), color),
+                                PathStroke::new(self.cam.scaled(0.015), color),
                             );
                         }
                     }
@@ -641,7 +645,7 @@ impl App {
                         const WARM_COLOR: Color32 = Color32::YELLOW;
                         const HOT_COLOR: Color32 = Color32::RED;
 
-                        const THRESHOLD: f32 = 10.0;
+                        const THRESHOLD: f32 = 5.0;
 
                         fn ease_out_quart(c: f32) -> f32 {
                             1. - f32::powi(1. - c, 4)
