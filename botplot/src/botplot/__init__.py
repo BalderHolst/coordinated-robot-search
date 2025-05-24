@@ -343,23 +343,47 @@ class Result:
 class ResultCollection:
     name: str
     results: list[Result]
-    min: pl.DataFrame
-    max: pl.DataFrame
-    avg: pl.DataFrame
-    std: pl.DataFrame
+    min: str
+    max: str
+    avg: str
+    std: str
 
     def __init__(self, name: str, results: list[Result]) -> None:
         self.name = name
         self.results = results
+        self.populate_dfs()
 
-        dfs = [r.df() for r in results]
-        self.populate_dfs(dfs)
+    def hash(self) -> str:
+        """Returns a hash of the results in this collection."""
+        hashes = [hashlib.sha256(r.dataframe_file.encode()).hexdigest() for r in self.results]
+        return hashlib.sha256("".join(hashes).encode()).hexdigest()
 
-    def populate_dfs(self, dfs: list[pl.DataFrame]):
-        cols = dfs[0].columns
+    def populate_dfs(self):
+        hash = self.hash()
+
+        self.min = data_dir(f"{self.name}-min-{hash}.ipc")
+        self.max = data_dir(f"{self.name}-max-{hash}.ipc")
+        self.avg = data_dir(f"{self.name}-avg-{hash}.ipc")
+        self.std = data_dir(f"{self.name}-std-{hash}.ipc")
+
+        cashed = True
+        if not os.path.exists(self.min): cashed = False
+        if not os.path.exists(self.max): cashed = False
+        if not os.path.exists(self.avg): cashed = False
+        if not os.path.exists(self.std): cashed = False
+        if cashed:
+            print(f"Using cached collection results for '{self.name}':")
+            print(f"    {relpath(self.min)}")
+            print(f"    {relpath(self.max)}")
+            print(f"    {relpath(self.avg)}")
+            print(f"    {relpath(self.std)}")
+            return
+
+        dfs = [r.df() for r in self.results]
 
         l = len(dfs[0])
 
+        cols = dfs[0].columns
         for df in dfs:
             if set(cols) != set(df.columns):
                 print("\nError: Result columns do not match")
@@ -371,10 +395,10 @@ class ResultCollection:
         for i, df in enumerate(dfs):
             dfs[i] = df.head(l)
 
-        self.min = pl.DataFrame()
-        self.max = pl.DataFrame()
-        self.avg = pl.DataFrame()
-        self.std = pl.DataFrame()
+        min_df = pl.DataFrame()
+        max_df = pl.DataFrame()
+        avg_df = pl.DataFrame()
+        std_df = pl.DataFrame()
 
         for col in cols:
             runs = [df[col] for df in dfs]
@@ -391,23 +415,37 @@ class ResultCollection:
                 return_dtype=pl.Float64,
             )["map"]
 
-            self.max = self.max.with_columns((max).alias(col))
-            self.min = self.min.with_columns((min).alias(col))
-            self.avg = self.avg.with_columns((avg).alias(col))
-            self.std = self.std.with_columns((std).alias(col))
+            max_df = max_df.with_columns((max).alias(col))
+            min_df = min_df.with_columns((min).alias(col))
+            avg_df = avg_df.with_columns((avg).alias(col))
+            std_df = std_df.with_columns((std).alias(col))
+
+        # Save the dataframes
+        min_df.write_ipc(self.min)
+        max_df.write_ipc(self.max)
+        avg_df.write_ipc(self.avg)
+        std_df.write_ipc(self.std)
+
+    def min_df(self) -> pl.DataFrame: return pl.read_ipc(self.min)
+    def max_df(self) -> pl.DataFrame: return pl.read_ipc(self.max)
+    def avg_df(self) -> pl.DataFrame: return pl.read_ipc(self.avg)
+    def std_df(self) -> pl.DataFrame: return pl.read_ipc(self.std)
 
     def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
-        time = self.avg["time"]
+        avg = self.avg_df()
+        std = self.std_df()
+
+        time = avg["time"]
 
         l = None
         if label:
             l = self.name
 
-        (line,) = ax.plot(time, self.avg[col], linewidth=2, label=l, color=color)
+        line, = ax.plot(time, avg[col], linewidth=2, label=l, color=color)
         if spread:
             color = line.get_color()
-            top = self.avg[col] + self.std[col]
-            bot = self.avg[col] - self.std[col]
+            top = avg[col] + std[col]
+            bot = avg[col] - std[col]
             ax.fill_between(time, bot, top, color=color, alpha=0.15)
             ax.plot(time, bot, color=color, alpha=0.5, linewidth=0.5)
             ax.plot(time, top, color=color, alpha=0.5, linewidth=0.5)

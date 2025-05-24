@@ -33,6 +33,7 @@ def any_file_newer(dir: str, exe_mtime: float) -> bool:
             if any_file_newer(entry.path, exe_mtime): return True
         elif entry.is_file(follow_symlinks=False):
             if os.path.getmtime(entry.path) > exe_mtime:
+                print(f"File {entry.path} is newer than executable.")
                 return True
 
 def kill_gazebo():

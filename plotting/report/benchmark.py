@@ -3,8 +3,8 @@ import shutil
 import os
 
 RUNS = 10
-DURATION = 800
-ROBOTS = [i for i in range(1, 6)]
+DURATION = 1200
+ROBOTS = [i for i in range(1, 9)]
 
 BEHAVIORS = [
     ("Roomba",       "avoid-obstacles"),
