@@ -204,13 +204,21 @@ pub(crate) mod common_routines {
 
         const CAM_RANGE_STEPS: usize = 20;
         let step_size = params::CAM_FOV / CAM_RANGE_STEPS as f32;
-        let points = (0..CAM_RANGE_STEPS)
+        let rays = (0..CAM_RANGE_STEPS)
             .map(|i| {
                 let angle = i as f32 * step_size - params::CAM_FOV / 2.0;
                 let dist = lidar.interpolate(angle).min(params::CAM_RANGE);
-                Vec2::angled(angle) * dist
+                (angle, dist)
             })
-            .collect();
+            .collect::<Vec<_>>();
+
+        soup.add("Sensors", "Cam Rays", DebugItem::RobotRays(rays.clone()));
+
+        let points = rays
+            .into_iter()
+            .map(|(angle, dist)| Vec2::angled(angle) * dist)
+            .collect::<Vec<_>>();
+
         soup.add("Sensors", "Cam Range", DebugItem::RobotLine(points));
     }
 }
