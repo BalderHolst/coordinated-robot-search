@@ -122,7 +122,7 @@ impl RobotKind {
             }
             #[cfg(feature = "rl")]
             RobotKind::TinyPolarRl => {
-                || Box::new(rl::robots::tiny_polar::TinyPolarRlRobot::<MyBackend>::default())
+                || Box::new(rl::robots::tiny_polar::TinyPolarRlRobot::<MyBackend>::new_trained())
             }
             #[cfg(feature = "rl")]
             RobotKind::SmallPolarRl => {
