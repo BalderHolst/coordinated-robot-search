@@ -66,6 +66,10 @@ pub enum RobotKind {
     /// A reinforcement learning robot using a small network
     #[cfg(feature = "rl")]
     SmallRl,
+
+    /// Reinforcement learning using big network.
+    #[cfg(feature = "rl")]
+    BigBoyRl,
 }
 
 impl RobotKind {
@@ -85,6 +89,8 @@ impl RobotKind {
             RobotKind::MinimalRl => &[("run", rl::robots::minimal::run::<MyBackend>)],
             #[cfg(feature = "rl")]
             RobotKind::MediumPolarRl => &[("run", rl::robots::medium_polar::run::<MyBackend>)],
+            #[cfg(feature = "rl")]
+            RobotKind::BigBoyRl => &[("run", rl::robots::bigboy::run::<MyBackend>)],
         }
     }
 
@@ -136,6 +142,10 @@ impl RobotKind {
             RobotKind::MinimalRl => {
                 || Box::new(rl::robots::minimal::MinimalRlRobot::<MyBackend>::new_trained())
             }
+            #[cfg(feature = "rl")]
+            RobotKind::BigBoyRl => {
+                || Box::new(rl::robots::bigboy::BigBoyRlRobot::<MyBackend>::default())
+            }
         }
     }
 
@@ -155,6 +165,8 @@ impl RobotKind {
             RobotKind::MediumPolarRl => "medium-polar-rl",
             #[cfg(feature = "rl")]
             RobotKind::MinimalRl => "minimal-rl",
+            #[cfg(feature = "rl")]
+            RobotKind::BigBoyRl => "big-boy-rl",
         }
     }
 }

@@ -6,6 +6,7 @@ use std::marker::PhantomData;
 use std::{fmt, fs};
 
 use botbrain::behaviors::rl;
+use botbrain::behaviors::rl::robots::bigboy::BigBoyRlRobot;
 use botbrain::behaviors::rl::robots::medium_polar::MediumPolarRlRobot;
 use botbrain::behaviors::rl::robots::small_polar::SmallPolarRlRobot;
 use botbrain::behaviors::rl::robots::tiny_polar::TinyPolarRlRobot;
@@ -86,6 +87,11 @@ pub fn run<B: Backend, DB: AutodiffBackend>(args: TrainArgs) -> Result<(), Strin
         }
         RobotKind::MediumPolarRl => {
             type R<B> = PhantomData<MediumPolarRlRobot<B>>;
+            let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
+            train(train_config, args.episodes, args, r, dr);
+        }
+        RobotKind::BigBoyRl => {
+            type R<B> = PhantomData<BigBoyRlRobot<B>>;
             let (r, dr): (R<B>, R<DB>) = (PhantomData, PhantomData);
             train(train_config, args.episodes, args, r, dr);
         }
