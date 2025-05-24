@@ -769,6 +769,19 @@ def plot_coverage(
     return save_figure(fig, file)
 
 
+def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) -> str:
+    file = os.path.join(plot_dir(), f"{title}.png")
+    fig, ax = plt.subplots()
+    for df, behavior in results:
+        ax.plot(df["time"], df["diff"], label=behavior)
+    if len(results) > 1:
+        ax.legend()
+    ax.set_xlabel(r"Time (s)")
+    ax.set_ylabel(r"Coverage Diff (\%)")
+    ax.set_title(title)
+    return save_figure(fig, file)
+
+
 def show_velocities(
     ax, df: pl.DataFrame, robot_count: int, label: str | None = None
 ) -> pl.DataFrame:

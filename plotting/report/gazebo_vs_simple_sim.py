@@ -1,6 +1,10 @@
+from math import inf
 import botplot as bp
 import shutil
 import os
+import polars as pl
+
+from polars import DataFrame
 
 SEED = 42
 DURATION = 200
@@ -21,6 +25,8 @@ FIG_DIR = bp.repo_path("report", "figures", "plots")
 
 
 def main():
+    avg_diff_ratios: list[tuple[pl.DataFrame, str]] = []
+    avg_diffs: list[tuple[pl.DataFrame, str]] = []
     for behavior, behavior_name in BEHAVIORS:
 
         def create_scenario(title):
@@ -82,6 +88,12 @@ def main():
         simple_collection = bp.ResultCollection("Simple Simulator", simple_results)
         gazebo_collection = bp.ResultCollection("Gazebo", ros_results)
 
+        avg_diff_ratio = diff_radio(gazebo_collection.avg, simple_collection.avg)
+        avg_diff_ratios.append((avg_diff_ratio, behavior_name))
+
+        avg_diff = diff(gazebo_collection.avg, simple_collection.avg)
+        avg_diffs.append((avg_diff, behavior_name))
+
         src = bp.plot_coverage(
             [simple_collection, gazebo_collection],
             f"Simulator Coverage over {RUNS} Runs ({behavior_name})",
@@ -95,6 +107,26 @@ def main():
         shutil.copy(src, dst)
 
         print(f"Copied plot to '{dst}'")
+    # print("Average coverage diff ratios:", avg_diff_ratios)
+    bp.plot_avg_coverage_diff(avg_diff_ratios, "Coverage Diff Ratios")
+    bp.plot_avg_coverage_diff(avg_diffs, "Coverage Diff")
+
+
+def diff_radio(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:
+    ratio = (base["coverage"] - compare["coverage"]) / compare["coverage"]
+    df = pl.DataFrame({"time": base["time"], "diff": ratio})
+    df = df.with_columns(
+        pl.col("diff").map_elements(
+            lambda x: 0 if x == inf or x == -inf else x, return_dtype=pl.Float64
+        )
+    )
+    return df
+
+
+def diff(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:
+    ratio = compare["coverage"] - base["coverage"]
+    df = pl.DataFrame({"time": base["time"], "diff": ratio})
+    return df
 
 
 if __name__ == "__main__":
