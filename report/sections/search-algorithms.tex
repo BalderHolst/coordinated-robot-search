@@ -35,7 +35,7 @@ To resolve this, each subsystem outputs a directional vector, or "target contrib
 % TODO: Make picture
 \begin{figure}[H]
     \begin{center}
-        \includegraphics[width=0.75\textwidth]{figures/target-contribtions.png}
+        \includegraphics[width=0.55\textwidth]{figures/target-contribtions.png}
     \end{center}
     \caption{Illustration of target vector calculation based on weighted subsystem contributions.}
     \label{fig:target-contributions}
@@ -45,7 +45,7 @@ To resolve this, each subsystem outputs a directional vector, or "target contrib
 
 Each robot maintains a "search grid," which acts as a heatmap representing the exploredness of each cell in the map. This grid is continuously updated using the robot’s own observations and messages received from other robots via the shared communication channel. Explored areas are considered "cold," while unexplored areas are "hot."\\
 
-Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:search-gradient-no-forward} and \cref{fig:search-gradient-forward}.
+Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:gradient-forward-bias}.
 
 % TODO: Maybe not have this picture. But maybe nice to see without forward bias
 %
@@ -54,17 +54,17 @@ Assuming lossless communication, the search grids across robots should remain sy
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
         \includegraphics[width=\textwidth]{./figures/screenshots/without-forward.png}
-    \caption{Without forward bias.}
+    \caption{Without forward bias (400 s).}
     \label{fig:search-gradient-no-forward}
   \end{subfigure}
   \begin{subfigure}[b]{0.45\textwidth}
     \centering
     \includegraphics[width=\textwidth]{./figures/screenshots/with-forward.jpeg}
-    \caption{With forward bias.}
+    \caption{With forward bias (400 s).}
     \label{fig:search-gradient-forward}
   \end{subfigure}
   \caption{Gradient-based search derived from the search grid with and without forward bias.}
-  % \label{fig:movement-consistency}
+  \label{fig:gradient-forward-bias}
 \end{figure}
 
 
@@ -123,7 +123,7 @@ To maintain network connectivity, robots must stay within communication range of
 
 \begin{figure}[h]
     \begin{center}
-        \includegraphics[width=0.85\textwidth]{figures/screenshots/proximity-gradient.png}
+        \includegraphics[width=0.55\textwidth]{figures/screenshots/proximity-gradient.png}
     \end{center}
     \caption{Proximity grid indicating areas connected to the main network.}
     \label{fig:proximity-grid}
