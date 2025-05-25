@@ -27,8 +27,8 @@ use botbrain::Robot;
 
 use crate::{cli::ScenarioArgs, scenario::Scenario, world::World};
 
-const SPEED_MULTIPLIER: f32 = 0.5;
-const STEER_MULTIPLIER: f32 = 1.0;
+const SPEED_MULTIPLIER: f32 = 0.43;
+const STEER_MULTIPLIER: f32 = 0.90;
 
 const LIDAR_RAYS: usize = 40;
 const CAMERA_RAYS: usize = 20;

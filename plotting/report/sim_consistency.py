@@ -9,25 +9,25 @@ def main_dumb():
         title="ROS 2",
         world=bp.repo_path("worlds/bitmap/depot/depot.yaml"),
         behavior="dumb:circle",
-        duration=100,
+        duration=20,
         gazebo_world=GZ_WORLD,
         robots=[
             bp.Robot(x=-8, y=0.2),
         ],
     )
-    res_ros2 = bp.run_ros(scenario_ros2, headless=False)
+    res_ros2 = bp.run_ros(scenario_ros2, headless=False, use_cache=False)
     bp.plot_paths(res_ros2, "ROS 2 Paths")
 
     scenario_simple = bp.Scenario(
         title="Simple Sim",
         world="worlds/bitmap/depot/depot.yaml",
         behavior="dumb:circle",
-        duration=100,
+        duration=20,
         robots=[
             bp.Robot(x=-8, y=0.2),
         ],
     )
-    res_simple = bp.run_sim(scenario_simple)
+    res_simple = bp.run_sim(scenario_simple, use_cache=False)
     bp.plot_paths(res_simple, "Simple Sim Paths")
 
 
