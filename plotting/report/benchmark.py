@@ -3,8 +3,7 @@ import shutil
 import os
 
 RUNS = 10
-DURATION = 1200
-ROBOTS = [i for i in range(1, 9)]
+ROBOTS = [2**i for i in range(6)]
 
 BEHAVIORS = [
     ("Roomba",       "avoid-obstacles"),
@@ -14,8 +13,8 @@ BEHAVIORS = [
 ]
 
 WORLDS = [
-    ("Warehouse", bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml")),
-    ("Depot",     bp.repo_path("worlds/bitmap/depot/depot.yaml")),
+    ("Depot",     bp.repo_path("worlds/bitmap/depot/depot.yaml"),          800),
+    ("Warehouse", bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml"), 1200),
 ]
 
 REPORT_DIR = bp.repo_path("report", "figures", "plots", "benchmarks")
@@ -38,7 +37,7 @@ class RunStore:
 def run():
     store = RunStore()
 
-    for world_name, world in WORLDS:
+    for world_name, world, duration in WORLDS:
         for robots in ROBOTS:
             for behavior_name, behavior in BEHAVIORS:
                 results: list[bp.Result] = []
@@ -51,7 +50,7 @@ def run():
                         title=f"{behavior_name} run {i+1}",
                         world=world,
                         behavior=behavior,
-                        duration=DURATION,
+                        duration=duration,
                         robots=robots,
                     )
 
