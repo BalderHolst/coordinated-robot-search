@@ -18,6 +18,7 @@ from botplot.rust_crate import RustCrate
 from botplot.colcon_workspace import ColconWorkspace
 import botplot.utils as utils
 
+import botplot.colors as colors
 from botplot.colors import COLORS
 
 mpl.rcParams["axes.prop_cycle"] = mpl.cycler(color=COLORS)
@@ -1222,3 +1223,72 @@ def plot_paths(
         plot_files.append(plot_file)
 
     return plot_files
+
+def plot_training(file: str, name: str) -> str:
+    print(f"Plotting '{name}' training data from '{file}'")
+
+    stem = os.path.basename(file).replace(".ipc", "").replace(" ", "-").lower()
+
+    plot_file = os.path.join(plot_dir(), f"{stem}.png")
+
+    df = pl.read_ipc(file)
+
+    # Reward Plot
+    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(8, 6))
+
+    ax1.plot(
+        df["episode"],
+        df["reward"],
+        label="Reward",
+        color=colors.get_color(0),
+    )
+    ax1.plot(
+        df["episode"],
+        df["reward"].rolling_mean(10),
+        label="Rolling Average",
+        color=colors.get_color(1),
+    )
+    ax1.set_ylabel("Reward")
+    ax1.legend()
+
+    # Loss Plot
+    ax2.plot(
+        df["episode"],
+        df["avg_loss"],
+        label="Loss",
+        color=colors.get_color(2),
+    )
+    ax2.plot(
+        df["episode"],
+        df["avg_loss"].rolling_mean(10),
+        label="Rolling Average",
+        color=colors.get_color(3),
+    )
+    ax2.set_xlabel("Episode")
+    ax2.set_ylabel("Loss")
+    ax2.legend()
+
+    # Coverage Plot
+    ax3.plot(
+        df["episode"],
+        df["coverage"] * 100,
+        label="Coverage",
+        color=colors.get_color(4),
+    )
+    ax3.plot(
+        df["episode"],
+        df["coverage"].rolling_mean(10) * 100,
+        label="Rolling Average",
+        color=colors.get_color(7),
+    )
+    ax3.set_ylabel(r"Coverage (\%)")
+    ax3.set_ylim(0, 80)
+    ax3.legend()
+
+    fig.suptitle(f'{name} Training with 10 Episode Rolling Average', fontsize=16)
+
+    fig.align_ylabels()
+
+    save_figure(fig, plot_file)
+
+    return plot_file
