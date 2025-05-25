@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use crate::{behaviors::BehaviorOutput, cast_robot, RobotRef};
 
-pub mod bigboy;
 pub mod medium_polar;
 pub mod minimal;
 pub mod small;
