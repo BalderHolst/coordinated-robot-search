@@ -36,16 +36,17 @@ pub struct GlobArgs {
     #[arg(long("sps"), default_value = "60")]
     pub target_sps: f32,
 
+    /// Start the simulation paused
+    #[arg(short, long)]
+    pub paused: bool,
+
     /// Number of threads to use for simulation
     #[cfg(not(feature = "single-thread"))]
     #[arg(short('j'), long, default_value_t = default_threads())]
     pub threads: usize,
 
-    /// Start the simulation paused
-    #[arg(short, long)]
-    pub paused: bool,
-
     /// Deactivate `DebugSoup` for all robots
+    #[cfg(not(feature = "single-thread"))]
     #[arg(long, default_value = "false")]
     pub no_debug_soup: bool,
 

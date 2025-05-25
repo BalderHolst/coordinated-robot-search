@@ -261,6 +261,7 @@ pub struct SimArgs {
     pub behavior: Behavior,
     #[cfg(not(feature = "single-thread"))]
     pub threads: usize,
+    #[cfg(not(feature = "single-thread"))]
     pub no_debug_soup: bool,
 }
 
@@ -288,6 +289,7 @@ impl Simulator {
             behavior,
             #[cfg(not(feature = "single-thread"))]
             threads,
+            #[cfg(not(feature = "single-thread"))]
             no_debug_soup,
         } = args;
 
@@ -453,7 +455,6 @@ struct StepArgs {
 #[allow(unused)]
 impl Simulator {
     pub fn with_robots(sim_args: SimArgs, robots: Vec<(RobotPose, Box<dyn Robot>)>) -> Self {
-        let no_debug_soup = sim_args.no_debug_soup;
         let mut sim = Self::new(sim_args);
         for (pose, mut robot) in robots {
             sim.state.robot_states.push(RobotState {
@@ -463,10 +464,14 @@ impl Simulator {
             });
 
             robot.set_map(crate::world::convert_to_botbrain_map(&sim.world));
-            if !no_debug_soup {
-                robot.get_debug_soup_mut().activate();
-            }
             robot.input_pose(pose);
+
+            // {
+            //     if !sim_args.no_debug_soup {
+            //         robot.get_debug_soup_mut().activate();
+            //     }
+            // }
+
             sim.robots.push(robot);
         }
         sim

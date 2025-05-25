@@ -22,6 +22,7 @@ pub fn run_interactive(args: GlobArgs, run_args: RunArgs) -> Result<(), String> 
         behavior: run_args.behavior.clone(),
         #[cfg(not(feature = "single-thread"))]
         threads: args.threads,
+        #[cfg(not(feature = "single-thread"))]
         no_debug_soup: args.no_debug_soup,
     };
     let app_args = args.into();

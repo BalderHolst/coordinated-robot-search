@@ -120,11 +120,7 @@ impl<B: Backend, S: State, A: Action, N: Network<B, S, A>> Enviornment<B, S, A, 
 
     fn create_sim(max_robots: usize, world_dir: &PathBuf, behavior: Behavior) -> Simulator {
         let world = Self::load_random_world(world_dir);
-        let sim_args = SimArgs {
-            world,
-            behavior,
-            no_debug_soup: false,
-        };
+        let sim_args = SimArgs { world, behavior };
 
         let n = rand::rng().random_range(1..=max_robots);
         let place_result = crate::place_robots::place(&sim_args.world, n, &mut rand::rng());

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     shapes::{Cone, Shape},
-    RobotId, RobotPose,
+    RobotId,
 };
 
 /// Kinds of messages that can be sent between robots
@@ -54,9 +54,9 @@ impl MessageKind {
     }
 
     /// Get the position of the robot that sent the message if it is contained in the message
-    pub fn pose(&self) -> Option<RobotPose> {
+    pub fn pose(&self) -> Option<crate::RobotPose> {
         match self {
-            MessageKind::CamDiff { cone, diff: _ } => Some(RobotPose {
+            MessageKind::CamDiff { cone, diff: _ } => Some(crate::RobotPose {
                 pos: cone.center,
                 angle: cone.angle,
             }),
