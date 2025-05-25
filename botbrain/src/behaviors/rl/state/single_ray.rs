@@ -9,14 +9,18 @@ use crate::{
 use super::State;
 
 /// Minimal state representation using only the shortest lidar ray
+/// and the robot's angle.
 ///
 /// This is used as a proof of concept for the RL agent as it can
 /// learn to avoid obstacles.
 #[derive(Debug, Clone)]
-pub struct RayState(LidarPoint);
+pub struct RayState {
+    angle: f32,
+    ray: LidarPoint,
+}
 
 impl State for RayState {
-    const SIZE: usize = 2;
+    const SIZE: usize = 3;
 
     fn from_robot<B: Backend, A: Action, N: Network<B, Self, A>>(
         robot: &RlRobot<B, Self, A, N>,
@@ -30,14 +34,15 @@ impl State for RayState {
                 angle: 0.0,
                 distance: params::LIDAR_RANGE,
             });
-        Self(ray)
+        let angle = ray.angle;
+        Self { angle, ray }
     }
 
     fn to_tensor<B: burn::prelude::Backend>(
         &self,
         device: &B::Device,
     ) -> burn::prelude::Tensor<B, 1> {
-        let Self(ray) = self;
-        Tensor::from_floats([ray.angle, ray.distance], device)
+        let Self { angle, ray } = self;
+        Tensor::from_floats([*angle, ray.angle, ray.distance], device)
     }
 }
