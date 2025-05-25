@@ -1233,57 +1233,68 @@ def plot_training(file: str, name: str) -> str:
 
     df = pl.read_ipc(file)
 
-    # Reward Plot
-    fig, (ax1, ax2, ax3) = plt.subplots(3, 1, sharex=True, figsize=(8, 6))
+    label_size = 12
 
-    ax1.plot(
+    # Reward Plot
+    fig, (epsilon_ax, reward_ax, loss_ax, coverage_ax) = plt.subplots(4, 1, sharex=True, figsize=(8, 6))
+
+    reward_ax.plot(
         df["episode"],
         df["reward"],
         label="Reward",
         color=colors.get_color(0),
     )
-    ax1.plot(
+    reward_ax.plot(
         df["episode"],
         df["reward"].rolling_mean(10),
         label="Rolling Average",
         color=colors.get_color(1),
     )
-    ax1.set_ylabel("Reward")
-    ax1.legend()
+    reward_ax.set_ylabel("Reward", fontsize=label_size)
+    reward_ax.legend()
+
+    # Epsilon Plot
+    epsilon_ax.plot(
+        df["episode"],
+        df["eps"],
+        color=colors.get_color(5),
+    )
+    epsilon_ax.set_ylabel(r"Epsilon", fontsize=label_size)
+    epsilon_ax.set_ylim(0, 1.1)
 
     # Loss Plot
-    ax2.plot(
+    loss_ax.plot(
         df["episode"],
         df["avg_loss"],
         label="Loss",
         color=colors.get_color(2),
     )
-    ax2.plot(
+    loss_ax.plot(
         df["episode"],
         df["avg_loss"].rolling_mean(10),
         label="Rolling Average",
         color=colors.get_color(3),
     )
-    ax2.set_xlabel("Episode")
-    ax2.set_ylabel("Loss")
-    ax2.legend()
+    loss_ax.set_ylabel("Loss", fontsize=label_size)
+    loss_ax.legend()
 
     # Coverage Plot
-    ax3.plot(
+    coverage_ax.plot(
         df["episode"],
         df["coverage"] * 100,
         label="Coverage",
         color=colors.get_color(4),
     )
-    ax3.plot(
+    coverage_ax.plot(
         df["episode"],
         df["coverage"].rolling_mean(10) * 100,
         label="Rolling Average",
         color=colors.get_color(7),
     )
-    ax3.set_ylabel(r"Coverage (\%)")
-    ax3.set_ylim(0, 80)
-    ax3.legend()
+    coverage_ax.set_xlabel("Episode", fontsize=label_size)
+    coverage_ax.set_ylabel(r"Coverage (\%)", fontsize=label_size)
+    coverage_ax.set_ylim(0, 80)
+    coverage_ax.legend()
 
     fig.suptitle(f'{name} Training with 10 Episode Rolling Average', fontsize=16)
 

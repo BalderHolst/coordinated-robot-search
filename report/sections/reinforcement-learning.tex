@@ -59,7 +59,9 @@ As to not over fit the network, agents are trained on different environments. A 
             \includegraphics[width=\linewidth]{figures/generated-worlds/world_2.png}
         }
     \end{subfigure}
+
     \vspace{4mm}
+
     \begin{subfigure}{\w}
         \makebox(\textwidth, \textwidth)[\textwidth]{
             \includegraphics[width=\linewidth]{figures/generated-worlds/world_3.png}
@@ -116,16 +118,28 @@ The agent was trained on 200 episodes, each consisting of 240 simulated seconds.
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.80\textwidth]{figures/rl/search-training.png}
+    \includegraphics[width=0.95\textwidth]{figures/rl/small-search-agent-training.png}
     \caption{TODO}
     \label{fig:rl-search-training}
 \end{figure}
 
 As the agent is trained, the reward and coverage increases, indicating that the agent is learning to cover the map. The loss function also settles down eventually, which signifies that the robot has is predicting the reward function well. Running the behavior results in the path shown in \cref{rl-search-path}.
 
+\def\w{0.329\textwidth}
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.80\textwidth]{figures/rl/search-training.png}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/rl/small-agent-(after-600s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/rl/small-agent-(after-1200s).png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{./figures/rl/small-agent-(after-1800s).png}
+    \end{subfigure}
     \caption{TODO}
     \label{fig:rl-search-path}
 \end{figure}
