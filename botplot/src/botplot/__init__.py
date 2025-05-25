@@ -497,18 +497,19 @@ def run_sim(
     os.makedirs(os.path.dirname(desc_file), exist_ok=True)
 
     if use_cache and os.path.exists(data_file) and os.path.exists(desc_file):
-        print(f"[INFO] Using cached result:")
+        print("[INFO] Using cached result:")
         print(f"    {stem}.ipc")
         print(f"    {stem}.json")
         return SimpleResult(data_file, desc_file)
 
     os.makedirs(os.path.dirname(data_file), exist_ok=True)
 
+    flags = []
+    if no_debug_soup:
+        flags.append("--no-debug-soup")
     flags = ["-o", data_file, "--description", desc_file]
     if headless:
         flags.append("--headless")
-    if no_debug_soup:
-        flags.append("--no-debug-soup")
 
     if isinstance(scenario, Scenario):
         s = scenario.to_ron()
@@ -1065,6 +1066,36 @@ def plot_performance(
     if len(result) > 1:
         ax.legend()
 
+    ax.set_ylim(0, max)
+
+    return save_figure(fig, file)
+
+def plot_performance_df(
+    result: list[tuple[pl.DataFrame,str]], title: str, max=None, force=False
+) -> str:
+    file = os.path.join(plot_dir(), f"{title}.png")
+
+    # if os.path.exists(file) and not force:
+    #     print(f"Plot already exists: '{relpath(file)}'.")
+    #     return
+
+
+    fig, ax = plt.subplots()
+
+    for df, name in result:
+        ax.scatter(
+            df["time"],
+            df["step-time"] * 1000,
+            marker="o",
+            alpha=0.1,
+            s=0.5,
+            label=name.title(),
+        )
+    if len(result) > 1:
+        ax.legend(markerscale=5)  # Increase markerscale as needed
+
+    ax.set_xlabel(r"Simulated Time (s)")
+    ax.set_ylabel(r"Time per Step (ms)")
     ax.set_ylim(0, max)
 
     return save_figure(fig, file)
