@@ -60,9 +60,6 @@ cargo run --release -- --help
 ![Another simple sim enviornment](./report/figures/screenshots/simple_sim_depot.png)
 
 ## ROS 2 Integration
-
-A behavior from [`botbrain`](#botbrain) can be run in a ROS 2 environment with the following commands:
-
 The [`multi_robot_control`](./ros_ws/src/multi_robot_control) ROS 2 package, contains the nodes needed to run the robot behaviors in ROS 2. [`ros_agent`](./ros_ws/src/multi_robot_control/src/ros_agent) is the main behavior node which manages the [`botbrain`](#botbrain) robot state.
 
 
@@ -99,7 +96,7 @@ Install the package
 ```bash
 python3 -m venv venv      # Create virtual enviornment
 source venv/bin/activate  # Activate the enviornment
-pip install -e            # Install the `botplot` package
+pip install -e ./botplot  # Install the `botplot` package
 ```
 
 Run a plotting script

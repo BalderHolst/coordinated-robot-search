@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Simple package for running and plotting simulator data"
 dependencies = [
     "polars",
-    "matplotlib"
+    "matplotlib",
+    "numpy",
 ]
 
 [tool.setuptools]
