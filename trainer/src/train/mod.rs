@@ -57,6 +57,9 @@ pub struct TrainingConfig {
     #[config(default = 0.010)]
     pub tau: f64,
 
+    #[config(default = 0.05)]
+    pub min_eps: f64,
+
     pub clip_grad: Option<GradientClippingConfig>,
 }
 
@@ -231,7 +234,8 @@ fn train<
         eps = 0.0;
 
         while !episode_done {
-            eps = (1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end;
+            eps = ((1.0 - args.eps_end) * f64::powf(eps_base, -(step as f64)) + args.eps_end)
+                .max(config.min_eps);
 
             action = state
                 .iter()
