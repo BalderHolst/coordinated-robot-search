@@ -33,7 +33,9 @@ if __name__ == "__main__":
 
         bp.seed(SEED)
         for i in range(RUNS):
-            scenario = create_scenario(f"Performance ({behavior_name}, ({i} of {RUNS}))")
+            scenario = create_scenario(
+                f"Performance ({behavior_name}, ({i} of {RUNS}))"
+            )
             res = bp.run_sim(scenario, no_debug_soup=True)
             results.append(res)
 
@@ -46,21 +48,21 @@ if __name__ == "__main__":
 
     print("Average Performance:")
     for df, behavior in avg_performance:
-        print(f"    {behavior}: {df['step-time'].mean()} ms (mean)")
-        print(f"    {behavior}: {df['step-time'].min()} ms (min)")
-        print(f"    {behavior}: {df['step-time'].max()} ms (max)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).mean()} ms (mean)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).min()} ms (min)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).max()} ms (max)")
 
     print("Best Performance:")
     for df, behavior in best_performance:
-        print(f"    {behavior}: {df['step-time'].mean()} ms (mean)")
-        print(f"    {behavior}: {df['step-time'].min()} ms (min)")
-        print(f"    {behavior}: {df['step-time'].max()} ms (max)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).mean()} ms (mean)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).min()} ms (min)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).max()} ms (max)")
 
     print("Worst Performance:")
     for df, behavior in worst_performance:
-        print(f"    {behavior}: {df['step-time'].mean()} ms (mean)")
-        print(f"    {behavior}: {df['step-time'].min()} ms (min)")
-        print(f"    {behavior}: {df['step-time'].max()} ms (max)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).mean()} ms (mean)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).min()} ms (min)")
+        print(f"    {behavior}: {(df['step-time'] * 1000).max()} ms (max)")
 
     bp.plot_performance_df(avg_performance, "Mean Performance")
     bp.plot_performance_df(best_performance, "Best Performance")
