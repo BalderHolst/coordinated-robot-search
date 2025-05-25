@@ -48,21 +48,25 @@ Each robot maintains a "search grid," which acts as a heatmap representing the e
 Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:search-gradient-no-forward} and \cref{fig:search-gradient-forward}.
 
 % TODO: Maybe not have this picture. But maybe nice to see without forward bias
+%
 \begin{figure}[H]
-    \begin{center}
-        \includegraphics[width=0.85\textwidth]{./figures/screenshots/no-forward.png}
-    \end{center}
-    \caption{Gradient-based direction derived from the search grid without forward bias.}
+  \centering
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+        \includegraphics[width=\textwidth]{./figures/screenshots/without-forward.png}
+    \caption{Without forward bias.}
     \label{fig:search-gradient-no-forward}
+  \end{subfigure}
+  \begin{subfigure}[b]{0.45\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/screenshots/with-forward.jpeg}
+    \caption{With forward bias.}
+    \label{fig:search-gradient-forward}
+  \end{subfigure}
+  \caption{Gradient-based search derived from the search grid with and without forward bias.}
+  % \label{fig:movement-consistency}
 \end{figure}
 
-\begin{figure}[H]
-    \begin{center}
-        \includegraphics[width=0.85\textwidth]{./figures/screenshots/with-forward.png}
-    \end{center}
-    \caption{Gradient-based direction derived from the search grid with forward bias.}
-    \label{fig:search-gradient-forward}
-\end{figure}
 
 In practice, computing the gradient involves several steps. First, the average heat under the robot ($H$) must be calculated. This is accomplished with the cells underneath the robot ($C_\mathrm{robot}$), as in \cref{eq:robot-heat}. $N$ is the number of cells in $C_\mathrm{robot}$.
 

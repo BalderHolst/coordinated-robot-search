@@ -1,0 +1,12 @@
+Scenario(
+  title: "Forward Bias",
+  world: "../objectmap/pathing_example.ron",
+  behavior: "search:no-proximity",
+  duration: 400.0,
+  robots: [
+    RobotPose(pos: (x: -8, y: 8), angle: 0),
+    RobotPose(pos: (x: -8, y: 9), angle: 0),
+    RobotPose(pos: (x: -9, y: 8), angle: 3.14),
+    RobotPose(pos: (x: -9, y: 9), angle: 3.14),
+  ]
+)
