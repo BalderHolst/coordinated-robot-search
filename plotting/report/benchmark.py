@@ -3,7 +3,6 @@ import shutil
 import os
 
 RUNS = 10
-ROBOTS = [2**i for i in range(6)]
 
 BEHAVIORS = [
     ("Roomba",       "avoid-obstacles"),
@@ -12,10 +11,18 @@ BEHAVIORS = [
     ("Pure Pathing", "search:pathing"),
 ]
 
-WORLDS = [
-    ("Depot",     bp.repo_path("worlds/bitmap/depot/depot.yaml"),          800),
-    ("Warehouse", bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml"), 1200),
-]
+WORLDS = {
+    "Depot": {
+        "world": bp.repo_path("worlds/bitmap/depot/depot.yaml"),
+        "duration": 800,
+        "robots": [2**i for i in range(4)],
+    },
+    "Warehouse": {
+        "world": bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml"),
+        "duration": 1200,
+        "robots": [2**i for i in range(6)],
+    },
+}
 
 REPORT_DIR = bp.repo_path("report", "figures", "plots", "benchmarks")
 
@@ -37,8 +44,8 @@ class RunStore:
 def run():
     store = RunStore()
 
-    for world_name, world, duration in WORLDS:
-        for robots in ROBOTS:
+    for world_name, opts in WORLDS.items():
+        for robots in opts["robots"]:
             for behavior_name, behavior in BEHAVIORS:
                 results: list[bp.Result] = []
 
@@ -48,9 +55,9 @@ def run():
 
                     scenario = bp.Scenario(
                         title=f"{behavior_name} run {i+1}",
-                        world=world,
+                        world=opts["world"],
                         behavior=behavior,
-                        duration=duration,
+                        duration=opts["duration"],
                         robots=robots,
                     )
 
@@ -66,8 +73,8 @@ def plot(store: RunStore) -> list[str]:
 
     plot_files = []
 
-    for world_name, _ in WORLDS:
-        for robots in ROBOTS:
+    for world_name, opts in WORLDS.items():
+        for robots in opts["robots"]:
             collections = []
             for _, behavior in BEHAVIORS:
                 collections.append(store.get(world_name, robots, behavior))
@@ -79,7 +86,7 @@ def plot(store: RunStore) -> list[str]:
     for world_name, _ in WORLDS:
         for behavior_name, behavior in BEHAVIORS:
             collections = []
-            for robots in ROBOTS:
+            for robots in opts["robots"]:
                 collections.append(store.get(world_name, robots, behavior).with_name(f"{robots} robots"))
 
             plot_files.append(
