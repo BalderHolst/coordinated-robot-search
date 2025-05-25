@@ -30,7 +30,6 @@ class RustCrate:
 
     def needs_recompile(self, exe_path = None) -> bool:
         """Check if any source files are newer than the build artifact."""
-        return True
 
         if exe_path is None:
             exe_path = self.executable()
