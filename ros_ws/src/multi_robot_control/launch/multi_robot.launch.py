@@ -178,7 +178,7 @@ class RobotPose:
         _ = height
         return {
             "x": str(self.x),
-            "y": str(-self.y),
+            "y": str(self.y),
             "z": str(self.z),
             "R": "0.00",
             "P": "0.00",
@@ -188,7 +188,7 @@ class RobotPose:
     def to_amcl_pose(self, width: float, height: float, origin_x: float, origin_y: float) -> dict:
         return {
             "x": str(self.x + width / 2 + origin_x),
-            "y": str(-self.y - height / 2 - origin_y),
+            "y": str(self.y + height / 2 + origin_y),
             "z": str(self.z),
             "yaw": str(self.angle),
         }
