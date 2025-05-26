@@ -3,8 +3,7 @@ import botplot as bp
 import shutil
 import os
 import polars as pl
-
-from polars import DataFrame
+import matplotlib.pyplot as plt
 
 SEED = 42
 DURATION = 200
@@ -16,7 +15,7 @@ BEHAVIORS = [
     ("search:hybrid", "hybrid"),
 ]
 
-RUNS = 6
+RUNS = 2
 
 WORLD = bp.repo_path("worlds/bitmap/depot/depot.yaml")
 GZ_WORLD = "depot"
@@ -25,9 +24,16 @@ FIG_DIR = bp.repo_path("report", "figures", "plots")
 
 
 def main():
+
+    fig, axes = plt.subplots(
+        nrows=RUNS,
+        ncols=len(BEHAVIORS) * 2,
+        figsize=(32, 16),
+    )
+
     # avg_diff_ratios: list[tuple[pl.DataFrame, str]] = []
     avg_diffs: list[tuple[pl.DataFrame, str]] = []
-    for behavior, behavior_name in BEHAVIORS:
+    for i, (behavior, behavior_name) in enumerate(BEHAVIORS):
 
         def create_scenario(title):
             return bp.Scenario(
@@ -42,19 +48,22 @@ def main():
         simple_results = []
 
         bp.seed(SEED)
-        for i in range(RUNS):
+        for j in range(RUNS):
             print(
-                f"========== Running Simple Sim ({behavior_name}) [{i + 1}/{RUNS}] =========="
+                f"========== Running Simple Sim ({behavior_name}) [{j + 1}/{RUNS}] =========="
             )
 
             scenario = create_scenario(
-                f"Simple Sim ({behavior_name}) ({i + 1} of {RUNS})"
+                f"Simple Sim ({behavior_name}) ({j + 1} of {RUNS})"
             )
 
             res = bp.run_sim(scenario)
 
+            title = f"Simple Sim Paths ({behavior_name.title()}) ({j + 1} of {RUNS})"
+            ax = axes[j, 2 * i]
+            ax.set_title(title)
             bp.plot_paths(
-                res, f"Simple Sim Paths ({behavior_name.title()}) ({i + 1} of {RUNS})"
+                res, title, time_label=False, ax=ax
             )
 
             simple_results.append(res)
@@ -62,17 +71,20 @@ def main():
         ros_results = []
 
         bp.seed(SEED)
-        for i in range(RUNS):
+        for j in range(RUNS):
             print(
-                f"========== Running Gazebo ({behavior_name}) [{i + 1}/{RUNS}] =========="
+                f"========== Running Gazebo ({behavior_name}) [{j + 1}/{RUNS}] =========="
             )
 
-            scenario = create_scenario(f"Gazebo ({behavior_name}) ({i + 1} of {RUNS})")
+            scenario = create_scenario(f"Gazebo ({behavior_name}) ({j + 1} of {RUNS})")
 
-            res = bp.run_ros(scenario, headless=True)
+            res = bp.run_ros(scenario, headless=False)
 
+            title = f"ROS 2 Paths ({behavior_name.title()}) ({j + 1} of {RUNS})"
+            ax = axes[j, 2 * i + 1]
+            ax.set_title(title)
             bp.plot_paths(
-                res, f"ROS 2 Paths ({behavior_name.title()}) ({i + 1} of {RUNS})"
+                res, title, time_label=False, ax=ax
             )
 
             ros_results.append(res)
@@ -114,6 +126,8 @@ def main():
     # print("Average coverage diff ratios:", avg_diff_ratios)
     # bp.plot_avg_coverage_diff(avg_diff_ratios, "Coverage Diff Ratios")
     bp.plot_avg_coverage_diff(avg_diffs, f"Coverage Diffs of Averages ({RUNS} Runs)")
+
+    bp.save_figure(fig, bp.plot_dir("gazebo_vs_simple_sim_paths.png"))
 
 
 def diff_radio(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:

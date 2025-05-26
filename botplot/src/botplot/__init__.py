@@ -690,7 +690,7 @@ def run_ros(
     proc.kill()
     utils.kill_gazebo()
 
-    time.sleep(2)  # Wait a bit for gazebo to shut down
+    time.sleep(5)  # Wait a bit for gazebo to shut down
 
     print(
         f"Simulation output saved to './{os.path.relpath(data_file, os.path.curdir)}'"
@@ -739,8 +739,8 @@ def place_robots(world: str | World, n: int) -> list[Robot]:
 
 
 def plot_world(
-    fig, ax, world: World, title: str, out_file: str, borders: bool, plot_title: bool
-) -> str:
+    ax, world: World, title: str, borders: bool, plot_title: bool
+) -> None:
     if title and plot_title:
         ax.set_title(title, fontsize=16)
 
@@ -766,20 +766,12 @@ def plot_world(
     world_img = world.img()
     ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin="lower", zorder=0)
 
-    plt.tight_layout()
-
-    out_file = os.path.join(plot_dir(), f"{title.replace(' ', '-').lower()}.png")
-
-    save_figure(fig, out_file)
-
-    return out_file
-
-
 def save_figure(fig, output_file: str):
     name = os.path.basename(output_file).replace(" ", "-").lower()
     dir = os.path.dirname(output_file)
     os.makedirs(dir, exist_ok=True)
     output_file = os.path.join(dir, name)
+    plt.tight_layout()
     fig.savefig(output_file, dpi=300, bbox_inches="tight", pad_inches=0.2)
     plt.close(fig)
     print(f"Plot saved to '{relpath(output_file)}'")
@@ -1190,6 +1182,7 @@ def plot_paths(
     borders=False,
     plot_title: bool = False,
     time_label: bool = True,
+    ax = None,
 ) -> list[str]:
     df = result.df()
     desc = result.desc()
@@ -1197,15 +1190,17 @@ def plot_paths(
     plot_files = []
 
     for seg in range(segments):
-        file = os.path.join(
+        out_file = os.path.join(
             plot_dir(), f"{title.replace(' ', '-').lower()}-{seg + 1}-of-{segments}.png"
         )
 
-        if os.path.exists(file) and not force:
-            print(f"Plot already exists: '{relpath(file)}'.")
+        if os.path.exists(out_file) and not force:
+            print(f"Plot already exists: '{relpath(out_file)}'.")
             continue
 
-        fig, ax = plt.subplots()
+        fig = None
+        if not ax:
+            fig, ax = plt.subplots()
 
         t = df["time"]
         end = (len(t) // segments) * (seg + 1)
@@ -1323,16 +1318,19 @@ def plot_paths(
                 ),
             )
 
-        plot_file = plot_world(
-            fig,
+        plot_world(
             ax,
             result.world(),
             f"{title} (after {end_time:.0f}s)",
-            file,
             borders=borders,
             plot_title=plot_title,
         )
-        plot_files.append(plot_file)
+
+        out_file = os.path.join(plot_dir(), f"{title.replace(' ', '-').lower()}.png")
+
+        if fig:
+            plot_file = save_figure(fig, out_file)
+            plot_files.append(plot_file)
 
     return plot_files
 
