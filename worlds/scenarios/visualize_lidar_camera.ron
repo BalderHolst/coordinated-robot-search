@@ -1,0 +1,9 @@
+Scenario(
+  title: "Visualize Lidar & Camera",
+  world: "../objectmap/pathing_example.ron",
+  behavior: "search:gradient",
+  duration: 0.0,
+  robots: [
+    RobotPose(pos: (x: 0, y: 0), angle: 3.1415),
+  ]
+)

@@ -30,16 +30,7 @@ In this implementation, the robot uses LiDAR data to locate the nearest obstacle
 \subsection{Target Contributions}
 Each robot maintains an internal state, which—combined with sensor input—drives its movement and exploration behavior. Conflicting objectives may arise; for instance, the robot may detect an unexplored area ahead but find its path blocked by an obstacle. One subsystem may suggest moving forward, while another recommends avoiding the obstacle. \\
 
-To resolve this, each subsystem outputs a directional vector, or "target contribution," indicating its preferred movement. These vectors are then summed to produce a single target vector, which dictates the robot’s final motion. Subsystems can be weighted according to their importance—obstacle avoidance, for instance, is typically given higher priority. \Cref{fig:target-contributions} illustrates this principle.
-
-% TODO: Make picture
-\begin{figure}[H]
-    \begin{center}
-        \includegraphics[width=0.55\textwidth]{figures/target-contribtions.png}
-    \end{center}
-    \caption{Illustration of target vector calculation based on weighted subsystem contributions.}
-    \label{fig:target-contributions}
-\end{figure}
+To resolve this, each subsystem outputs a directional vector, or "target contribution," indicating its preferred movement. These vectors are then summed to produce a single target vector, which dictates the robot’s final motion. Subsystems can be weighted according to their importance—obstacle avoidance, for instance, is typically given higher priority.
 
 \subsection{Search Gradient}
 \label{sec:search-gradient}
