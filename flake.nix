@@ -92,9 +92,9 @@
                     polars
                     matplotlib
                 ]))
-                cargo-hack       # Check feature combinations
-                cargo-machete    # Find unused dependencies
-                cargo-flamegraph # Profiling tool
+                cargo-hack    # Check feature combinations
+                cargo-machete # Find unused dependencies
+                samply        # Profiling tool
                 (all-crates pkgs 
                     "cargo-fmt-all"
                     "cargo fmt --all --manifest-path $MANIFEST"
