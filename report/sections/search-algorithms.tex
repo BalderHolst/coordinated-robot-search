@@ -178,6 +178,8 @@ The costmap is a grid-based representation of the environment with a resolution 
   \item \textbf{Obstacle:} Cells corresponding to known obstacles or other robots, inferred from recent LiDAR readings.
 \end{itemize}
 
+The costmap will be used for both frontier exploration and path planning. See \cref{fig:path_planning} for an example of the costmap.
+
 % TODO: Show cost map and example of a planned route
 \subsubsection{Frontier Exploration}
 \label{sec:frontier_exploration}
@@ -219,6 +221,15 @@ As shown in \cref{fig:frontier-eval-params}, configurations that prioritized dis
 Once a goal is selected, the planner first attempts to use a direct straight-line path. If this path violates the clearance requirement, the A* algorithm is used instead. \\
 
 A* explores cells using a heuristic that combines cumulative path cost and estimated distance to the goal. A min-heap is used to prioritize cells with the lowest estimated total cost. Only collision-free cells that meet clearance requirements are considered.
+
+\begin{figure}[H]
+  \begin{center}
+    \includegraphics[width=0.95\textwidth]{./figures/screenshots/path-planning.png}
+  \end{center}
+  \caption{\texttt{simple\_sim} showing goal, goal path, frontiers, and costmap.}
+  \label{fig:path_planning}
+\end{figure}
+
 
 \subsubsection{Path Following}
 \label{sec:path_following}
