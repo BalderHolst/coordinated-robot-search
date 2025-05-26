@@ -25,15 +25,16 @@ def ensure_installed(programs: str | list[str]) -> bool:
 
 
 IGNORE = ["target", ".git" ]
-def any_file_newer(dir: str, exe_mtime: float) -> bool:
+def any_file_newer(dir: str, exe_mtime: float, root=None) -> bool:
     """Test if any file in the directory is newer than the given mtime."""
+    if root is None: root = dir
     for entry in os.scandir(dir):
         if entry.name in IGNORE: continue
         if entry.is_dir(follow_symlinks=False):
-            if any_file_newer(entry.path, exe_mtime): return True
+            if any_file_newer(entry.path, exe_mtime, root): return True
         elif entry.is_file(follow_symlinks=False):
             if os.path.getmtime(entry.path) > exe_mtime:
-                print(f"File {entry.path} is newer than executable.")
+                print(f"File {os.path.relpath(entry.path, root)} is newer than executable.")
                 return True
 
 def kill_gazebo():

@@ -13,6 +13,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
+from polars.io import read_ipc
 
 from botplot.rust_crate import RustCrate
 from botplot.colcon_workspace import ColconWorkspace
@@ -348,28 +349,29 @@ class ResultCollection:
     max: str
     avg: str
     std: str
+    style: dict = {}
 
     def __init__(
-        self, name: str, results: list[Result], use_cache: bool = True
+            self, name: str, results: list[Result], use_cache: bool = True, style: dict = {}
     ) -> None:
         self.name = name
         self.results = results
+        self.style = style
         self.populate_dfs(use_cache)
 
     def hash(self) -> str:
         """Returns a hash of the results in this collection."""
-        hashes = [
-            hashlib.sha256(r.dataframe_file.encode()).hexdigest() for r in self.results
-        ]
-        return hashlib.sha256("".join(hashes).encode()).hexdigest()
+        s = ":".join([f"{r.dataframe_file}+{os.path.getmtime(r.dataframe_file)}" for r in self.results])
+        return hashlib.sha256(s.encode()).hexdigest()
 
     def populate_dfs(self, use_cache: bool):
         hash = self.hash()
 
-        self.min = data_dir(f"{self.name}-min-{hash}.ipc")
-        self.max = data_dir(f"{self.name}-max-{hash}.ipc")
-        self.avg = data_dir(f"{self.name}-avg-{hash}.ipc")
-        self.std = data_dir(f"{self.name}-std-{hash}.ipc")
+        stem = self.name.replace(" ", "-").lower()
+        self.min = data_dir(f"{stem}-min-{hash}.ipc")
+        self.max = data_dir(f"{stem}-max-{hash}.ipc")
+        self.avg = data_dir(f"{stem}-avg-{hash}.ipc")
+        self.std = data_dir(f"{stem}-std-{hash}.ipc")
 
         cashed = True
         if not os.path.exists(self.min):
@@ -447,6 +449,14 @@ class ResultCollection:
     def std_df(self) -> pl.DataFrame:
         return pl.read_ipc(self.std)
 
+    def get_style(self, **defaults) -> dict:
+        style = self.style.copy()
+        for k, v in defaults.items():
+            if k not in style:
+                style[k] = v
+        return style
+
+
     def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
         avg = self.avg_df()
         std = self.std_df()
@@ -457,7 +467,7 @@ class ResultCollection:
         if label:
             l = self.name
 
-        (line,) = ax.plot(time, avg[col], linewidth=2, label=l, color=color)
+        (line,) = ax.plot(time, avg[col], **self.get_style(linewidth=2, label=l, color=color))
         if spread:
             color = line.get_color()
             top = avg[col] + std[col]
@@ -785,7 +795,7 @@ def plot_coverage(
 ) -> str:
     fig, ax = plt.subplots(figsize=(9, 5))
 
-    file = os.path.join(plot_dir(), f"{name}.png")
+    file = plot_dir(f"{name}.png")
 
     if not isinstance(results, list):
         results = [results]

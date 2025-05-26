@@ -31,7 +31,42 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
     ("hybrid", behaviors::hybrid),
     ("naive-proximity", behaviors::naive_proximity),
     ("no-proximity", behaviors::no_proximity),
-    ("gradient", behaviors::gradient),
+    ("gradient", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, FORWARD_BIAS)
+    }),
+    ("gradient-f0.0", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.0)
+    }),
+    ("gradient-f0.1", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.1)
+    }),
+    ("gradient-f0.2", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.2)
+    }),
+    ("gradient-f0.3", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.3)
+    }),
+    ("gradient-f0.4", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.4)
+    }),
+    ("gradient-f0.5", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.5)
+    }),
+    ("gradient-f0.6", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.6)
+    }),
+    ("gradient-f0.7", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.7)
+    }),
+    ("gradient-f0.8", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.8)
+    }),
+    ("gradient-f0.9", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 0.9)
+    }),
+    ("gradient-f1.0", |robot: &mut RobotRef, time: Duration| {
+        behaviors::gradient(robot, time, 1.0)
+    }),
     ("no-forward", behaviors::no_forward),
     ("pathing", behaviors::pathing),
     // Experimental to test frontier exploration params
@@ -55,9 +90,8 @@ pub const MENU: &[(&str, BehaviorFn)] = &[
 /// The range of the lidar sensor at which the robot moves away from an object
 const LIDAR_OBSTACLE_RANGE: f32 = 1.0;
 
-const GRADIENT_WEIGHT: f32 = 2.0;
-const LIDAR_WEIGHT: f32 = 0.3;
-const FORWARD_BIAS: f32 = 0.20;
+const LIDAR_WEIGHT: f32 = 1.0;
+const FORWARD_BIAS: f32 = 0.80;
 
 const ANGLE_THRESHOLD: f32 = PI / 60.0;
 
@@ -402,8 +436,6 @@ impl SearchRobot {
             self.lidar.clone(),
             &self.search_grid,
         );
-        let g = g * GRADIENT_WEIGHT;
-
         self.debug("Gradient", "Search Cells", DebugItem::NumberPoints(cells));
         self.debug("Gradient", "Search Gradient", DebugItem::Vector(g));
 
@@ -428,7 +460,6 @@ impl SearchRobot {
             self.lidar.clone(),
             &self.proximity_grid,
         );
-        let g = g * GRADIENT_WEIGHT;
 
         self.debug("Gradient", "Proximity Gradient", DebugItem::Vector(g));
         self.debug(
@@ -888,8 +919,8 @@ impl SearchRobot {
 fn search(
     robot: &mut RobotRef,
     time: Duration,
-    update: fn(&mut SearchRobot, time: Duration),
-    target: fn(&mut SearchRobot, time: Duration) -> Vec2,
+    update: impl Fn(&mut SearchRobot, Duration),
+    target: impl Fn(&mut SearchRobot, Duration) -> Vec2,
 ) -> BehaviorOutput {
     let robot = cast_robot::<SearchRobot>(robot);
 
@@ -977,7 +1008,7 @@ mod behaviors {
         )
     }
 
-    pub fn gradient(robot: &mut RobotRef, time: Duration) -> BehaviorOutput {
+    pub fn gradient(robot: &mut RobotRef, time: Duration, forward_bias: f32) -> BehaviorOutput {
         search(
             robot,
             time,
@@ -986,10 +1017,10 @@ mod behaviors {
                 robot.update_proximity_grid(time);
             },
             |robot, _time| {
-                let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
-                target += robot.lidar();
-                target += robot.search_gradient();
+                let mut target = Vec2::angled(robot.angle) * forward_bias;
+                target += robot.search_gradient().normalized() * (1.0 - forward_bias);
                 target += robot.proximity_gradient();
+                target += robot.lidar();
                 target
             },
         )
