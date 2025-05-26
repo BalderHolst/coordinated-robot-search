@@ -80,21 +80,14 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOut
     let mut speed = 1.0;
 
     // Find the closest point in front of the robot
-    let mut min_point = LidarPoint {
-        angle: 0.0,
-        distance: f32::INFINITY,
-    };
-
-    for point in robot.lidar.points() {
-        let angle = point.angle;
-        let mut distance = point.distance;
-        if distance < 0.0 {
-            distance = 0.0;
-        }
-        if (angle.abs() < FOV || angle.abs() > 2.0 * PI - FOV) && distance < min_point.distance {
-            min_point = LidarPoint { angle, distance };
-        }
-    }
+    let shortest_ray = robot
+        .lidar
+        .within_fov(FOV)
+        .shortest_ray()
+        .unwrap_or(LidarPoint {
+            angle: 0.0,
+            distance: f32::INFINITY,
+        });
 
     if robot.debug_enabled() {
         robot.debug(
@@ -111,16 +104,14 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOut
     }
 
     // If the closest point is too close, steer away from it
-    if min_point.distance < MIN_DISTANCE {
-        let how_close = (MIN_DISTANCE - min_point.distance) / MIN_DISTANCE;
-        let how_close = how_close.powi(2);
-        steer = how_close * (-min_point.angle.signum());
+    if shortest_ray.distance < MIN_DISTANCE {
+        let how_close = (MIN_DISTANCE - shortest_ray.distance) / MIN_DISTANCE;
+        steer = how_close * (-shortest_ray.angle.signum());
 
         // robot.post(MessageKind::Debug(format!(
         //     "Close obstacle at {:.2}",
         //     min_point.angle
         // )));
-
         speed *= 1.0 - how_close;
     }
 
