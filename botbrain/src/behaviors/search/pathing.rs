@@ -36,7 +36,7 @@ pub fn find_path(robot_pos: Pos2, goal: Pos2, costmap_grid: &Costmap) -> Option<
             costmap_grid,
         )
         .or_else(|| {
-            println!("Trying with smaller a-star clearance");
+            // println!("Trying with smaller a-star clearance");
             find_a_star_path(robot_pos, goal, ROBOT_OBSTACLE_CLEARANCE, costmap_grid)
         })
     })

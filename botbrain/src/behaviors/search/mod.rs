@@ -582,11 +582,11 @@ impl SearchRobot {
             PATHING_FAIL_TIMEOUT_RANGE.start,
             PATHING_FAIL_TIMEOUT_RANGE.end,
         );
-        println!(
-            "[{}] Pathing failed. Waiting for {} seconds",
-            self.id.as_u32(),
-            self.path_fail_timeout
-        );
+        // println!(
+        //     "[{}] Pathing failed. Waiting for {} seconds",
+        //     self.id.as_u32(),
+        //     self.path_fail_timeout
+        // );
     }
 
     fn set_path_success(&mut self) {
@@ -607,7 +607,7 @@ impl SearchRobot {
             self.path_fails = 0;
             self.set_path_timeout(time);
             self.path_planner_path.clear();
-            println!("[{}] Pathing failed too many times", self.id.as_u32());
+            // println!("[{}] Pathing failed too many times", self.id.as_u32());
             return None;
         }
 
@@ -649,7 +649,7 @@ impl SearchRobot {
                 &self.costmap_grid,
             )
             .or_else(|| {
-                println!("Smaller goal clearance");
+                // println!("Smaller goal clearance");
                 frontiers::evaluate_frontiers(
                     self.pos,
                     self.angle,
@@ -728,7 +728,7 @@ impl SearchRobot {
                         &masked_costmap,
                     )
                     .or_else(|| {
-                        println!("Smaller goal clearance");
+                        // println!("Smaller goal clearance");
                         frontiers::evaluate_frontiers(
                             self.pos,
                             self.angle,
@@ -814,7 +814,7 @@ impl SearchRobot {
                 }
             }
         } else {
-            println!("[{}] Path is empty", self.id.0);
+            // println!("[{}] Path is empty", self.id.0);
             Err(())
         }
     }
