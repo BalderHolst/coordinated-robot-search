@@ -98,7 +98,8 @@ const ANGLE_THRESHOLD: f32 = PI / 60.0;
 const SEARCH_GRID_SCALE: f32 = 0.40;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 /// The threshold at which the robot will switch from exploring to pathing
-const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.1;
+const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.10;
+const LIDAR_EXPLORING_THRESHOLD: f32 = 0.2;
 
 /// How often to update the search grid (multiplied on all changes to the cells)
 const SEARCH_GRID_UPDATE_INTERVAL: f32 = 0.1;
@@ -955,14 +956,29 @@ mod behaviors {
             },
             |robot, time| match robot.robot_mode {
                 RobotMode::Exploring => {
-                    let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
                     let search_gradient = robot.search_gradient();
+                    let lidar = robot.lidar();
 
-                    target += search_gradient;
+                    let mut target = Vec2::angled(robot.angle) * FORWARD_BIAS;
+                    target += search_gradient.normalized() * (1.0 - FORWARD_BIAS);
                     target += robot.proximity_gradient();
-                    target += robot.lidar();
+                    target += lidar;
 
-                    if search_gradient.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD {
+                    robot.debug(
+                        "Gradient",
+                        "Search Gradient Length",
+                        DebugItem::Number(search_gradient.length()),
+                    );
+
+                    robot.debug(
+                        "Gradient",
+                        "Lidar Contribution Length",
+                        DebugItem::Number(lidar.length()),
+                    );
+
+                    if search_gradient.length() < SEARCH_GRADIENT_EXPLORING_THRESHOLD
+                        || lidar.length() > LIDAR_EXPLORING_THRESHOLD
+                    {
                         robot.robot_mode = RobotMode::Pathing;
                     }
 
