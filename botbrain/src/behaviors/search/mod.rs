@@ -61,7 +61,7 @@ const FORWARD_BIAS: f32 = 0.20;
 
 const ANGLE_THRESHOLD: f32 = PI / 60.0;
 
-const SEARCH_GRID_SCALE: f32 = 0.10;
+const SEARCH_GRID_SCALE: f32 = 0.40;
 const SEARCH_GRADIENT_RANGE: f32 = 5.0;
 /// The threshold at which the robot will switch from exploring to pathing
 const SEARCH_GRADIENT_EXPLORING_THRESHOLD: f32 = 0.1;

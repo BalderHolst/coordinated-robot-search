@@ -1054,15 +1054,11 @@ def plot_spread(
 
 
 def plot_performance(
-    result: Result | list[Result], title: str, max=None, force=False
+    result: ResultCollection | list[ResultCollection], title: str, max=None
 ) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
-    # if os.path.exists(file) and not force:
-    #     print(f"Plot already exists: '{relpath(file)}'.")
-    #     return
-
-    if isinstance(result, Result):
+    if isinstance(result, ResultCollection):
         result = [result]
 
     fig, ax = plt.subplots()
@@ -1086,14 +1082,84 @@ def plot_performance(
     return save_figure(fig, file)
 
 
+def plot_boxplot(
+    results: ResultCollection | list[ResultCollection],
+    column: str,
+    title: str,
+    figsize: tuple = (10, 6),
+) -> str:
+    """
+    Create a boxplot comparing a specific column across ResultCollections.
+    Shows distribution of individual Results within each ResultCollection.
+
+    Args:
+        results: A ResultCollection or list of ResultCollections to compare
+        column: The column name to plot (must exist in all Results)
+        title: The title for the plot and output file
+        ylabel: Label for y-axis (defaults to column name if None)
+        figsize: Size of the figure (width, height) in inches
+
+    Returns:
+        Path to the saved figure
+    """
+    file = os.path.join(plot_dir(), f"{title.replace(' ', '-').lower()}.png")
+
+    if isinstance(results, ResultCollection):
+        results = [results]
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    data = []
+    labels = []
+
+    for res_collection in results:
+        collection_data: list[pl.pl.DataFrame] = []
+        for result in res_collection.results:
+            df = result.df()
+            if column in df.columns:
+                # Add all values from this column for this individual result
+                collection_data.extend(df[column])
+            else:
+                print(
+                    f"Warning: Column '{column}' not found in result from {res_collection.name}"
+                )
+
+        if collection_data:
+            data.append(collection_data)
+            labels.append(res_collection.name.split("-")[0])
+
+    if data:
+        # Create boxplot with colors from the color scheme
+        bp = ax.boxplot(data, patch_artist=True, meanline=True)
+
+        # Apply colors to each box
+        for i, patch in enumerate(bp["boxes"]):
+            patch.set_facecolor(COLORS[i % len(COLORS)])
+            patch.set_alpha(0.7)
+
+        # Style the other elements
+        for element in bp["whiskers"] + bp["caps"] + bp["medians"]:
+            element.set_color("#333333")
+            element.set_linewidth(1.5)
+
+        for flier in bp["fliers"]:
+            flier.set_marker("o")
+            flier.set_markersize(4)
+            flier.set_alpha(0.6)
+
+        ax.set_ylabel("Time per Step (ms)")
+        ax.set_xlabel("Behavior")
+        ax.set_title(title)
+        ax.set_xticklabels(labels)
+        ax.set_yscale("log")
+
+    return save_figure(fig, file)
+
+
 def plot_performance_df(
-    result: list[tuple[pl.DataFrame, str]], title: str, max=None, force=False
+    result: list[tuple[pl.DataFrame, str]], title: str, max=None
 ) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
-
-    # if os.path.exists(file) and not force:
-    #     print(f"Plot already exists: '{relpath(file)}'.")
-    #     return
 
     fig, ax = plt.subplots()
 
