@@ -349,17 +349,21 @@ class ResultCollection:
     avg: str
     std: str
 
-    def __init__(self, name: str, results: list[Result]) -> None:
+    def __init__(
+        self, name: str, results: list[Result], use_cache: bool = True
+    ) -> None:
         self.name = name
         self.results = results
-        self.populate_dfs()
+        self.populate_dfs(use_cache)
 
     def hash(self) -> str:
         """Returns a hash of the results in this collection."""
-        hashes = [hashlib.sha256(r.dataframe_file.encode()).hexdigest() for r in self.results]
+        hashes = [
+            hashlib.sha256(r.dataframe_file.encode()).hexdigest() for r in self.results
+        ]
         return hashlib.sha256("".join(hashes).encode()).hexdigest()
 
-    def populate_dfs(self):
+    def populate_dfs(self, use_cache: bool):
         hash = self.hash()
 
         self.min = data_dir(f"{self.name}-min-{hash}.ipc")
@@ -368,11 +372,15 @@ class ResultCollection:
         self.std = data_dir(f"{self.name}-std-{hash}.ipc")
 
         cashed = True
-        if not os.path.exists(self.min): cashed = False
-        if not os.path.exists(self.max): cashed = False
-        if not os.path.exists(self.avg): cashed = False
-        if not os.path.exists(self.std): cashed = False
-        if cashed:
+        if not os.path.exists(self.min):
+            cashed = False
+        if not os.path.exists(self.max):
+            cashed = False
+        if not os.path.exists(self.avg):
+            cashed = False
+        if not os.path.exists(self.std):
+            cashed = False
+        if cashed and use_cache:
             print(f"Using cached collection results for '{self.name}':")
             print(f"    {relpath(self.min)}")
             print(f"    {relpath(self.max)}")
@@ -427,10 +435,17 @@ class ResultCollection:
         avg_df.write_ipc(self.avg)
         std_df.write_ipc(self.std)
 
-    def min_df(self) -> pl.DataFrame: return pl.read_ipc(self.min)
-    def max_df(self) -> pl.DataFrame: return pl.read_ipc(self.max)
-    def avg_df(self) -> pl.DataFrame: return pl.read_ipc(self.avg)
-    def std_df(self) -> pl.DataFrame: return pl.read_ipc(self.std)
+    def min_df(self) -> pl.DataFrame:
+        return pl.read_ipc(self.min)
+
+    def max_df(self) -> pl.DataFrame:
+        return pl.read_ipc(self.max)
+
+    def avg_df(self) -> pl.DataFrame:
+        return pl.read_ipc(self.avg)
+
+    def std_df(self) -> pl.DataFrame:
+        return pl.read_ipc(self.std)
 
     def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
         avg = self.avg_df()
@@ -442,7 +457,7 @@ class ResultCollection:
         if label:
             l = self.name
 
-        line, = ax.plot(time, avg[col], linewidth=2, label=l, color=color)
+        (line,) = ax.plot(time, avg[col], linewidth=2, label=l, color=color)
         if spread:
             color = line.get_color()
             top = avg[col] + std[col]
@@ -1070,15 +1085,15 @@ def plot_performance(
 
     return save_figure(fig, file)
 
+
 def plot_performance_df(
-    result: list[tuple[pl.DataFrame,str]], title: str, max=None, force=False
+    result: list[tuple[pl.DataFrame, str]], title: str, max=None, force=False
 ) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
 
     # if os.path.exists(file) and not force:
     #     print(f"Plot already exists: '{relpath(file)}'.")
     #     return
-
 
     fig, ax = plt.subplots()
 
@@ -1087,7 +1102,7 @@ def plot_performance_df(
             df["time"],
             df["step-time"] * 1000,
             marker="o",
-            alpha=0.1,
+            alpha=0.9,
             s=0.5,
             label=name.title(),
         )
@@ -1255,6 +1270,7 @@ def plot_paths(
 
     return plot_files
 
+
 def plot_training(file: str, name: str) -> str:
     print(f"Plotting '{name}' training data from '{file}'")
 
@@ -1267,7 +1283,9 @@ def plot_training(file: str, name: str) -> str:
     label_size = 12
 
     # Reward Plot
-    fig, (epsilon_ax, reward_ax, loss_ax, coverage_ax) = plt.subplots(4, 1, sharex=True, figsize=(8, 6))
+    fig, (epsilon_ax, reward_ax, loss_ax, coverage_ax) = plt.subplots(
+        4, 1, sharex=True, figsize=(8, 6)
+    )
 
     reward_ax.plot(
         df["episode"],
@@ -1327,7 +1345,7 @@ def plot_training(file: str, name: str) -> str:
     coverage_ax.set_ylim(0, 80)
     coverage_ax.legend()
 
-    fig.suptitle(f'{name} Training with 10 Episode Rolling Average', fontsize=16)
+    fig.suptitle(f"{name} Training with 10 Episode Rolling Average", fontsize=16)
 
     fig.align_ylabels()
 

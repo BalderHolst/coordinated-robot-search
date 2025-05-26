@@ -14,6 +14,7 @@ BEHAVIORS = [
 RUNS = 6
 
 WORLD = bp.repo_path("worlds/bitmap/depot/depot.yaml")
+USE_CACHE = False
 
 if __name__ == "__main__":
     avg_performance: list[tuple[pl.DataFrame, str]] = []
@@ -36,11 +37,11 @@ if __name__ == "__main__":
             scenario = create_scenario(
                 f"Performance ({behavior_name}, ({i} of {RUNS}))"
             )
-            res = bp.run_sim(scenario, no_debug_soup=True)
+            res = bp.run_sim(scenario, no_debug_soup=True, use_cache=USE_CACHE)
             results.append(res)
 
         collection = bp.ResultCollection(
-            f"Performance ({behavior_name}, {RUNS} Runs)", results
+            f"Performance ({behavior_name}, {RUNS} Runs)", results, use_cache=USE_CACHE
         )
         avg_performance.append((collection.avg_df(), behavior_name))
         best_performance.append((collection.min_df(), behavior_name))

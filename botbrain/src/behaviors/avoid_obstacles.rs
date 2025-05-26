@@ -6,7 +6,7 @@ use crate::{
     cast_robot,
     debug_soup::DebugSoup,
     lidar::{LidarData, LidarPoint},
-    messaging::{MessageKind, Postbox},
+    messaging::Postbox,
     Control, Map, Robot, RobotId, RobotPose,
 };
 
@@ -116,16 +116,16 @@ pub fn avoid_closest(robot: &mut Box<dyn Robot>, _time: Duration) -> BehaviorOut
         let how_close = how_close.powi(2);
         steer = how_close * (-min_point.angle.signum());
 
-        robot.post(MessageKind::Debug(format!(
-            "Close obstacle at {:.2}",
-            min_point.angle
-        )));
+        // robot.post(MessageKind::Debug(format!(
+        //     "Close obstacle at {:.2}",
+        //     min_point.angle
+        // )));
 
         speed *= 1.0 - how_close;
     }
 
-    robot.postbox.clean();
-    let msgs = robot.postbox.empty();
+    // robot.postbox.clean();
+    // let msgs = robot.postbox.empty();
 
-    (Control { speed, steer }, msgs)
+    (Control { speed, steer }, vec![])
 }

@@ -36,7 +36,7 @@ impl<B: Backend, S: State, A: Action, const SIZE: usize> Network<B, S, A>
         let mut x = input;
         x = activation::sigmoid(self.linear1.forward(x));
         x = activation::sigmoid(self.linear2.forward(x));
-        return x;
+        x
     }
 
     fn soft_update(this: Self, that: &Self, tau: f64) -> Self {
