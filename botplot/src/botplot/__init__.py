@@ -792,6 +792,7 @@ def plot_coverage(
     results: Result | list[Result] | ResultCollection | list[ResultCollection],
     name: str,
     title=None,
+    spread=True,
 ) -> str:
     fig, ax = plt.subplots(figsize=(9, 5))
 
@@ -803,7 +804,7 @@ def plot_coverage(
     if isinstance(results, list) and all(
         isinstance(item, ResultCollection) for item in results
     ):
-        lines = [(c, c.plot("coverage", ax, label=False)) for c in results]
+        lines = [(c, c.plot("coverage", ax, label=False,spread=spread)) for c in results]
         for c, line in lines:
             c.plot("coverage", ax, color=line.get_color(), spread=False)
 

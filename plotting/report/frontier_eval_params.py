@@ -53,7 +53,8 @@ def main():
         bp.plot_coverage(
             result_collection,
             f"frontier_eval_params_{world_name}",
-            f'Coverage of {ROBOTS} robots in "{world_name}"',
+            f'Coverage of {ROBOTS} robots in "{world_name}" ({RUNS} Runs)',
+            spread=False,
         )
 
 
