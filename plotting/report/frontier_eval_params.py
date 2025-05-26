@@ -26,6 +26,8 @@ ROBOTS = 5
 SEED = 42
 RUNS = 5
 
+USE_CACHE = True
+
 
 def main():
     for world in WORLDS:
@@ -42,9 +44,11 @@ def main():
                     duration=200,
                     robots=ROBOTS,
                 )
-                res = bp.run_sim(scenario)
+                res = bp.run_sim(scenario, use_cache=USE_CACHE)
                 results.append(res)
-            result_collection.append(bp.ResultCollection(behavior, results))
+            result_collection.append(
+                bp.ResultCollection(behavior, results, use_cache=USE_CACHE)
+            )
 
         bp.plot_coverage(
             result_collection,
