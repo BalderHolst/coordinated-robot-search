@@ -30,7 +30,7 @@ Although TurtleBot 4 is used in simulation, the software can be adapted to other
 Deployment is primarily managed through a dedicated ROS 2 node that subscribes to standard input topics:
 \begin{itemize}
   \item \texttt{/scan}: LiDAR data for localization and obstacle detection.
-  \item \texttt{/camera/image}: RGB image stream for object detection.
+  \item \texttt{/rgbd\_camera/image}: RGB image stream for object detection.
   \item \texttt{/amcl\_pose}: Global pose estimated via AMCL.
 \end{itemize}
 
@@ -51,7 +51,8 @@ In simulation, communication is assumed to be instantaneous and lossless. In rea
 The system assumes a broadcast model where each robot shares observations over a shared channel. Messages are already serialized in a compact binary format. If communication becomes a bottleneck, strategies such as message prioritization, differential updates, or lossy compression may be necessary.
 
 \subsection{Advancing Deep Reinforcement Learning}
-The deep reinforcement learning component can be extended in multiple directions to improve both learning performance and real-world applicability:
+A basic model has been developed as a proof of concept. {\color{red}It is limited by the hardware but with better GPU\'s more advanced models can be trained.}
+The deep reinforcement learning can be extended in multiple directions to improve both learning performance and real-world applicability:
 
 % TODO: Add something about global knowledge, e.g. from frontiers or entire costmap
 \begin{itemize}
@@ -59,7 +60,7 @@ The deep reinforcement learning component can be extended in multiple directions
   \item \textbf{Hyperparameter optimization}: Fine-tuning learning rate, discount factor, batch size, and exploration parameters for better convergence.
   \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.
   \item \textbf{Reward shaping}: Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
-  \item \textbf{Domain randomization}: Introducing variability in sensor noise, dynamics, and environment layouts during training to improve generalization.
+  \item \textbf{Domain randomization}: Introducing variability in sensor noise and dynamics during training to improve generalization.
   \item \textbf{Curriculum learning}: Training on progressively more complex environments to facilitate gradual policy improvement.
   \item \textbf{Transfer learning}: Adapting a pretrained simulation policy to real-world conditions via fine-tuning on physical robots.
 \end{itemize}
@@ -71,12 +72,12 @@ Designing an optimal neural network architecture for a DQN agent remains a non-t
 
 Neuroevolution of Augmenting Topologies (NEAT) \cite{neat} is a genetic algorithm designed to evolve both the topology and weights of neural networks. Each candidate solution, or genome, is represented as a graph of neurons and connections. Networks are evaluated based on a fitness function, and mutation/crossover operations allow the population to explore a diverse architecture space.\\
 
-NEAT offers the advantage of automatic architecture discovery, potentially outperforming manually designed networks. However, it is computationally intensive and typically requires many training cycles.
+NEAT offers the advantage of automatic architecture discovery, potentially outperforming manually designed networks. However, it is computationally intensive and typically requires more training cycles than DQN.
 
 A hybrid approach could involve using NEAT to discover promising network architectures, which are then fine-tuned using standard DQN training. This could accelerate learning and yield more effective policies.
 
 \subsubsection{Proximal Policy Optimization (PPO)}
-Another promising direction for advancing the reinforcement learning component is the use of Proximal Policy Optimization (PPO) \cite{ppo}. PPO is a widely used on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
+Another promising direction for advancing the reinforcement learning is the use of Proximal Policy Optimization (PPO) \cite{ppo}. PPO is unlike DQN an on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
 
 Unlike DQN, which is value-based and limited to discrete action spaces, PPO belongs to the family of policy gradient methods and naturally supports continuous action spaces. This makes it particularly well-suited for real-world robotics applications, where actions such as velocity commands are typically continuous.
 
@@ -86,9 +87,6 @@ Integrating PPO into the current framework would enable:
 \begin{itemize}
   \item Learning of smoother, continuous control policies.
   \item Better handling of stochastic environments and sensor noise.
-  \item More natural extension to multi-agent reinforcement learning setups.
 \end{itemize}
-
-To support PPO, the environment interface must provide not only scalar rewards but also policy gradients and advantage estimates, which can be implemented through Generalized Advantage Estimation (GAE). Furthermore, parallelized simulation environments would significantly accelerate data collection and improve sample efficiency.
 
 Overall, PPO offers a robust and scalable alternative to DQN for learning complex behaviors in dynamic environments. Exploring this method could enhance policy quality and ease the transition to real-world deployment, especially in continuous control domains.
