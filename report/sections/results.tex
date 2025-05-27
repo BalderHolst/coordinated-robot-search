@@ -5,7 +5,7 @@
 \label{sec:results}
 This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot {\color{red} [CITE]} and Warehouse {\color{red} [CITE]}. \Cref{fig:bench-maps} shows the two maps, with differing denseness of obstacles, used during testing. \\
 
-Search algorithms are evaluated in terms of two key metrics: map coverage over time and computational expense. Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup—is evaluated to confirm the robustness and portability of the behavior implementations.
+Search algorithms are evaluated in terms of two key metrics: map coverage over time and computational expense. It is assumed that a higher coverage over time metric would lead to a shorter time to find a search item. Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup is evaluated to confirm the robustness and portability of the behavior implementations.
 
 \begin{figure}[H]
   \centering
@@ -170,20 +170,14 @@ A critical aspect of the performance of the search algorithms is computational a
     \label{fig:computation-performance}
 \end{figure}
 
-\subsubsection{Communication {\color{red}Load}}
-The only messages transmitted during operation are updates to the search grid, which are sent whenever a robot’s internal search grid is modified. From these updates, other robots can synchronize their local search grids and also infer the position of the robot that originated the message.
+\subsubsection{Communication Load}
+The only messages transmitted during operation are updates to the search grid, which are sent whenever a robot’s internal search grid is modified. From these updates, other robots can synchronize their local search grids and also infer the position of the robot that originated the message. Each message has a fixed size of 26 bytes. The \texttt{botbrain} library includes a configurable parameter that controls the broadcast frequency, which is set to \SI{10}{Hz} by default. This corresponds to one message every \SI{100}{ms}, resulting in approximately \SI{260}{bytes/sec} of outbound communication per robot. \\
 
-Each message has a fixed size of 26 bytes. The \texttt{botbrain} library includes a configurable parameter that controls the broadcast frequency, which is set to \SI{10}{Hz} by default. This corresponds to one message every \SI{100}{ms}, resulting in approximately \SI{260}{bytes/sec} of outbound communication per robot.
-
-When compared to the communication technologies considered for real-world deployment (see \cref{sub:communication-methods}), this bandwidth requirement is negligible for most methods, including Wi-Fi, Zigbee, and cellular. However, it may exceed practical limits for LoRa, particularly in multi-robot systems or in scenarios requiring higher message frequencies.
-
-If LoRa is to be considered for deployment, further message compression, reduced transmission frequency, or more aggressive filtering strategies would be necessary to meet the bandwidth constraints.
+When compared to the communication technologies considered for real-world deployment (see \cref{sub:communication-methods}), this bandwidth requirement is negligible for most methods, including Wi-Fi, Zigbee, and cellular. However, it may exceed practical limits for LoRa, particularly in multi-robot systems or in scenarios requiring higher message frequencies. If LoRa is to be considered for deployment, further message compression, reduced transmission frequency, or more aggressive filtering strategies would be necessary to meet the bandwidth constraints.
 
 \subsection{Simulator Performance}
 \label{sec:simulator-performance}
-The performace and faster delevopment cycle of the \texttt{simple\_sim} simulator is key component as to why it is used in this project.
-
-Performance is measured by running the 500 seconds with 5 simulated robots in the same map for 5 runs and calculating the average time it takes to complete the simulation. The results are shown in \cref{fig:simulator-performance}.
+The performace and faster iteration cycle of the \texttt{simple\_sim} simulator is key component as to why was developed during this project. Performance is measured by running the 500 seconds with 5 simulated robots in the same map for 5 runs and calculating the average time it takes to complete the simulation. The results are shown in \cref{fig:simulator-performance}.
 
 \begin{figure}[H]
     \begin{center}
