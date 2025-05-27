@@ -103,7 +103,7 @@ To address this, only positive heat differences are considered in the gradient c
 This modification prevents attraction toward map boundaries and ensures the robot continues to seek out unexplored areas. Cells occluded by obstacles are excluded from this computation.
 % \Cref{fig:search-no-proximity} shows robot paths using this approach with a small forward bias added.
 
-% \begin{figure}[h]
+% \begin{figure}[H]
 %     \begin{center}
 %         \includegraphics[width=0.85\textwidth]{./figures/screenshots/gradient.png}
 %     \end{center}
@@ -114,7 +114,7 @@ This modification prevents attraction toward map boundaries and ensures the robo
 \subsection{Proximity Grid}
 To maintain network connectivity, robots must stay within communication range of each other. Each robot uses a "proximity grid" to estimate which areas of the map are within range of the main robot network (see \cref{fig:proximity-grid}).
 
-\begin{figure}[h]
+\begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.55\textwidth]{figures/screenshots/proximity-gradient.png}
     \end{center}
