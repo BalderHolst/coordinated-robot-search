@@ -457,7 +457,7 @@ class ResultCollection:
         return style
 
 
-    def plot(self, col: str, ax, spread=True, color=None, label: bool = True):
+    def plot(self, col: str, ax, spread=True, color=None, label: bool = True, multiply = 1):
         avg = self.avg_df()
         std = self.std_df()
 
@@ -467,11 +467,11 @@ class ResultCollection:
         if label:
             l = self.name
 
-        (line,) = ax.plot(time, avg[col], **self.get_style(linewidth=2, label=l, color=color))
+        (line,) = ax.plot(time, avg[col] * multiply, **self.get_style(linewidth=2, label=l, color=color))
         if spread:
             color = line.get_color()
-            top = avg[col] + std[col]
-            bot = avg[col] - std[col]
+            top = (avg[col] + std[col]) * multiply
+            bot = (avg[col] - std[col]) * multiply
             ax.fill_between(time, bot, top, color=color, alpha=0.15)
             ax.plot(time, bot, color=color, alpha=0.5, linewidth=0.5)
             ax.plot(time, top, color=color, alpha=0.5, linewidth=0.5)
@@ -793,8 +793,13 @@ def plot_coverage(
     name: str,
     title=None,
     spread=True,
+    ax=None,
+    figsize: tuple[int, int] = (9, 5),
 ) -> str:
-    fig, ax = plt.subplots(figsize=(9, 5))
+
+    fig = None
+    if not ax:
+        fig, ax = plt.subplots(figsize=figsize)
 
     file = plot_dir(f"{name}.png")
 
@@ -804,15 +809,15 @@ def plot_coverage(
     if isinstance(results, list) and all(
         isinstance(item, ResultCollection) for item in results
     ):
-        lines = [(c, c.plot("coverage", ax, label=False,spread=spread)) for c in results]
+        lines = [(c, c.plot("coverage", ax, label=False, multiply=100, spread=spread)) for c in results]
         for c, line in lines:
-            c.plot("coverage", ax, color=line.get_color(), spread=False)
+            c.plot("coverage", ax, color=line.get_color(), spread=False, multiply=100)
 
     else:
         for result in results:
             df = result.df()
             desc = result.desc()
-            ax.plot(df["time"], df["coverage"], label=desc["title"])
+            ax.plot(df["time"], df["coverage"] * 100, label=desc["title"])
 
     if len(results) > 1:
         ax.legend()
@@ -822,14 +827,16 @@ def plot_coverage(
 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Coverage (\%)")
+    ax.set_ylim([0, 100])
     ax.set_title(title)
 
-    return save_figure(fig, file)
+    if fig:
+        return save_figure(fig, file)
 
 
 def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
-    fig, ax = plt.subplots()
+    fig, ax = plt.subplots(figsize=(6,4))
     ax.axhline(0, color="gray", linestyle="--", linewidth=1)
     for df, behavior in results:
         ax.plot(df["time"], df["diff"], label=behavior)
@@ -838,6 +845,7 @@ def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Coverage Diff (\% points)")
     ax.set_title(title)
+    ax.set_ylim([-15, 15])
     return save_figure(fig, file)
 
 

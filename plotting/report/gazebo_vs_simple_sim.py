@@ -15,12 +15,12 @@ BEHAVIORS = [
     ("search:hybrid", "hybrid"),
 ]
 
-RUNS = 2
+RUNS = 8
 
 WORLD = bp.repo_path("worlds/bitmap/depot/depot.yaml")
 GZ_WORLD = "depot"
 
-FIG_DIR = bp.repo_path("report", "figures", "plots")
+FIG_DIR = bp.repo_path("report", "figures", "plots", "consistency")
 
 
 def main():
@@ -29,6 +29,14 @@ def main():
         nrows=RUNS,
         ncols=len(BEHAVIORS) * 2,
         figsize=(32, 16),
+    )
+
+    cov_fig, cov_axes = plt.subplots(
+        nrows=2,
+        ncols=2,
+        figsize=(7, 6),
+        sharex=True,
+        sharey=True,
     )
 
     # avg_diff_ratios: list[tuple[pl.DataFrame, str]] = []
@@ -54,7 +62,7 @@ def main():
             )
 
             scenario = create_scenario(
-                f"Simple Sim ({behavior_name}) ({j + 1} of {RUNS})"
+                f"Simple Sim ({behavior_name}) [{j + 1}]"
             )
 
             res = bp.run_sim(scenario)
@@ -110,22 +118,32 @@ def main():
         avg_diff = diff(gazebo_collection.avg_df(), simple_collection.avg_df())
         avg_diffs.append((avg_diff, behavior_name))
 
-        src = bp.plot_coverage(
+        bp.plot_coverage(
             [simple_collection, gazebo_collection],
-            f"Simulator Coverage over {RUNS} Runs ({behavior_name.title()})",
-        )
-        dst = os.path.join(
-            FIG_DIR,
-            f"gazebo_vs_simple_sim_{behavior_name.replace(' ', '_').lower()}.png",
+            behavior_name.title(),
+            ax=cov_axes[i // 2, i % 2],
         )
 
-        os.makedirs(FIG_DIR, exist_ok=True)
-        shutil.copy(src, dst)
+    cov_axes[0, 0].set_xlabel("")
+    cov_axes[0, 1].set_xlabel("")
+    cov_axes[0, 1].set_ylabel("")
+    cov_axes[1, 1].set_ylabel("")
 
-        print(f"Copied plot to '{dst}'")
-    # print("Average coverage diff ratios:", avg_diff_ratios)
-    # bp.plot_avg_coverage_diff(avg_diff_ratios, "Coverage Diff Ratios")
-    bp.plot_avg_coverage_diff(avg_diffs, f"Coverage Diffs of Averages ({RUNS} Runs)")
+    cov_fig.suptitle(f"Simulator Coverage Comparison over {RUNS} Runs", fontsize=16)
+    src = bp.save_figure(cov_fig, bp.plot_dir("gazebo_vs_simple_sim_coverage.png"))
+    dst = os.path.join(FIG_DIR, "gazebo_vs_simple_sim_coverage.png")
+    os.makedirs(FIG_DIR, exist_ok=True)
+    shutil.copy(src, dst)
+
+    print(f"Copied plot to '{dst}'")
+
+    src = bp.plot_avg_coverage_diff(avg_diffs, f"Diference in Coverage between Simulators ({RUNS} Runs)")
+    os.makedirs(FIG_DIR, exist_ok=True)
+    dst = os.path.join(
+        FIG_DIR,
+        f"sim_coverage_diff.png",
+    )
+    shutil.copy(src, dst)
 
     bp.save_figure(fig, bp.plot_dir("gazebo_vs_simple_sim_paths.png"))
 
@@ -142,7 +160,7 @@ def diff_radio(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:
 
 
 def diff(base: pl.DataFrame, compare: pl.DataFrame) -> pl.DataFrame:
-    ratio = compare["coverage"] - base["coverage"]
+    ratio = (compare["coverage"] - base["coverage"]) * 100
     df = pl.DataFrame({"time": base["time"], "diff": ratio})
     return df
 
