@@ -20,7 +20,7 @@ WORLDS = {
     "Warehouse": {
         "world": bp.repo_path("worlds/bitmap/warehouse/warehouse.yaml"),
         "duration": 1200,
-        "robots": [2**i for i in range(6)],
+        "robots": [2**i for i in range(5)],
     },
 }
 
