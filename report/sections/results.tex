@@ -178,4 +178,6 @@ When compared to the communication technologies considered for real-world deploy
 
 \subsection{Simulator Performance}
 \label{sec:simulator-performance}
-The performace and faster iteration cycle of the \texttt{simple\_sim} simulator is key component as to why was developed during this project. A simple test was conducted by running both simulators without GUI for 600 simulated seconds using the Roomba algorithm. Gazebo took an averave of 628 seconds while \texttt{simple\_sim} completed within an average of 18 seconds. This highlights how much the simple simulator outperforms Gazebo. The option to run the simulation at such a high speed makes it easy to investigate bugs and benchmark algorithms.
+The performance and rapid iteration cycle offered by the \texttt{simple\_sim} simulator were key motivations for its development in this project. To quantify its efficiency, a simple benchmark was conducted by running both simulators headless (without a GUI) for 600 simulated seconds using the Roomba algorithm. On average, Gazebo required approximately 628 real-time seconds to complete the simulation, whereas \texttt{simple\_sim} completed the same task in just 18 seconds. This substantial difference highlights the lightweight simulator’s superior performance.
+
+The ability to run simulations significantly faster than real time is highly beneficial for development. It enables rapid experimentation, easier debugging, and efficient benchmarking of algorithmic changes—making \texttt{simple\_sim} an essential tool during the design and testing phases.
