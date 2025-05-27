@@ -352,7 +352,7 @@ class ResultCollection:
     style: dict = {}
 
     def __init__(
-            self, name: str, results: list[Result], use_cache: bool = True, style: dict = {}
+        self, name: str, results: list[Result], use_cache: bool = True, style: dict = {}
     ) -> None:
         self.name = name
         self.results = results
@@ -361,7 +361,12 @@ class ResultCollection:
 
     def hash(self) -> str:
         """Returns a hash of the results in this collection."""
-        s = ":".join([f"{r.dataframe_file}+{os.path.getmtime(r.dataframe_file)}" for r in self.results])
+        s = ":".join(
+            [
+                f"{r.dataframe_file}+{os.path.getmtime(r.dataframe_file)}"
+                for r in self.results
+            ]
+        )
         return hashlib.sha256(s.encode()).hexdigest()
 
     def populate_dfs(self, use_cache: bool):
@@ -456,8 +461,9 @@ class ResultCollection:
                 style[k] = v
         return style
 
-
-    def plot(self, col: str, ax, spread=True, color=None, label: bool = True, multiply = 1):
+    def plot(
+        self, col: str, ax, spread=True, color=None, label: bool = True, multiply=1
+    ):
         avg = self.avg_df()
         std = self.std_df()
 
@@ -467,7 +473,11 @@ class ResultCollection:
         if label:
             l = self.name
 
-        (line,) = ax.plot(time, avg[col] * multiply, **self.get_style(linewidth=2, label=l, color=color))
+        (line,) = ax.plot(
+            time,
+            avg[col] * multiply,
+            **self.get_style(linewidth=2, label=l, color=color),
+        )
         if spread:
             color = line.get_color()
             top = (avg[col] + std[col]) * multiply
@@ -748,9 +758,7 @@ def place_robots(world: str | World, n: int) -> list[Robot]:
     return data["robots"]
 
 
-def plot_world(
-    ax, world: World, title: str, borders: bool, plot_title: bool
-) -> None:
+def plot_world(ax, world: World, title: str, borders: bool, plot_title: bool) -> None:
     if title and plot_title:
         ax.set_title(title, fontsize=16)
 
@@ -776,6 +784,7 @@ def plot_world(
     world_img = world.img()
     ax.imshow(world_img, extent=[xmin, xmax, ymin, ymax], origin="lower", zorder=0)
 
+
 def save_figure(fig, output_file: str):
     name = os.path.basename(output_file).replace(" ", "-").lower()
     dir = os.path.dirname(output_file)
@@ -796,7 +805,6 @@ def plot_coverage(
     ax=None,
     figsize: tuple[int, int] = (9, 5),
 ) -> str:
-
     fig = None
     if not ax:
         fig, ax = plt.subplots(figsize=figsize)
@@ -809,7 +817,10 @@ def plot_coverage(
     if isinstance(results, list) and all(
         isinstance(item, ResultCollection) for item in results
     ):
-        lines = [(c, c.plot("coverage", ax, label=False, multiply=100, spread=spread)) for c in results]
+        lines = [
+            (c, c.plot("coverage", ax, label=False, multiply=100, spread=spread))
+            for c in results
+        ]
         for c, line in lines:
             c.plot("coverage", ax, color=line.get_color(), spread=False, multiply=100)
 
@@ -836,7 +847,7 @@ def plot_coverage(
 
 def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) -> str:
     file = os.path.join(plot_dir(), f"{title}.png")
-    fig, ax = plt.subplots(figsize=(7,4))
+    fig, ax = plt.subplots(figsize=(7, 4))
     ax.axhline(0, color="gray", linestyle="--", linewidth=1)
     for df, behavior in results:
         ax.plot(df["time"], df["diff"], label=behavior)
@@ -1097,7 +1108,7 @@ def plot_boxplot(
     results: ResultCollection | list[ResultCollection],
     column: str,
     title: str,
-    figsize: tuple = (10, 6),
+    figsize: tuple = (8, 5),
 ) -> str:
     """
     Create a boxplot comparing a specific column across ResultCollections.
@@ -1122,9 +1133,10 @@ def plot_boxplot(
 
     data = []
     labels = []
+    means = []
 
     for res_collection in results:
-        collection_data: list[pl.pl.DataFrame] = []
+        collection_data = []
         for result in res_collection.results:
             df = result.df()
             if column in df.columns:
@@ -1138,10 +1150,17 @@ def plot_boxplot(
         if collection_data:
             data.append(collection_data)
             labels.append(res_collection.name.split("-")[0])
+            means.append(np.mean(collection_data))
+
+    # Normalize data relative to the mean of the first collection
+    # if means:
+    #     baseline = means[0]
+    #     data = [[v / baseline for v in d] for d in data]
+    #     means = [m / baseline for m in means]
 
     if data:
         # Create boxplot with colors from the color scheme
-        bp = ax.boxplot(data, patch_artist=True, meanline=True)
+        bp = ax.boxplot(data, patch_artist=True, meanline=True, showmeans=True)
 
         # Apply colors to each box
         for i, patch in enumerate(bp["boxes"]):
@@ -1149,20 +1168,32 @@ def plot_boxplot(
             patch.set_alpha(0.7)
 
         # Style the other elements
-        for element in bp["whiskers"] + bp["caps"] + bp["medians"]:
+        for element in bp["whiskers"] + bp["caps"] + bp["medians"] + bp["means"]:
             element.set_color("#333333")
             element.set_linewidth(1.5)
 
         for flier in bp["fliers"]:
             flier.set_marker("o")
-            flier.set_markersize(4)
+            flier.set_markersize(2)
             flier.set_alpha(0.6)
+
+        for i, mean in enumerate(means):
+            ax.text(
+                i + 1,
+                max(data[i]) * 1.05,
+                f"Mean: {mean * 1000:.2f} ms",
+                ha="center",
+                va="bottom",
+                fontsize=10,
+                color="black",
+            )
 
         ax.set_ylabel("Time per Step (ms)")
         ax.set_xlabel("Behavior")
         ax.set_title(title)
         ax.set_xticklabels(labels)
         ax.set_yscale("log")
+        ax.margins(0.1)
 
     return save_figure(fig, file)
 
@@ -1201,7 +1232,7 @@ def plot_paths(
     borders=False,
     plot_title: bool = False,
     time_label: bool = True,
-    ax = None,
+    ax=None,
 ) -> list[str]:
     df = result.df()
     desc = result.desc()

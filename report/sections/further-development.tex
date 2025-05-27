@@ -39,16 +39,29 @@ Output is published to \texttt{/cmd\_vel}, which controls linear and angular vel
 \subsubsection{Using the Rust Library}
 For systems that do not support ROS 2, the behavior algorithms can be used via the standalone \texttt{botbrain} Rust library. This interface allows for integration in embedded or custom platforms by directly feeding sensor data to \texttt{botbrain}, receiving control outputs and handling communication between robots. This modular design is critical in swarm systems, where individual robots should be cheep and replalable.
 
-\subsubsection{Communication Considerations}\label{sub:communication}
-In simulation, communication is assumed to be instantaneous and lossless. In real-world settings, this is not the case. Communication technologies under consideration include:
+\subsubsection{Communication Considerations}
+\label{sub:communication-methods}
 
+In simulation, communication is assumed to be instantaneous and lossless. However, in real-world deployments, communication introduces latency, potential packet loss, and limited bandwidth. Selecting an appropriate communication technology is critical for maintaining coordinated behavior among robots. The following technologies are considered:
+
+% TODO: Find cites for this
 \begin{itemize}
-  \item \textbf{Wi-Fi}: High bandwidth but susceptible to interference and limited range.
-  \item \textbf{Zigbee}: Suitable for low-bandwidth mesh networks but limited in data rate.
-  \item \textbf{LoRa}: Extremely long range but low throughput; suitable for infrequent updates.
+  \item \textbf{Wi-Fi (802.11n/ac)}: Offers high bandwidth, typically between \SI{50}{Mbps} and \SI{600}{Mbps} under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to \SI{100}{m} indoors, \SI{300}{m} outdoors).
+  \item \textbf{Cellular (4G/5G)}: Provides broad coverage and high bandwidth. 4G networks offer download speeds up to \SI{100}{Mbps}, while 5G can exceed \SI{1}{Gbps} in ideal conditions. Cellular networks are suitable for large-scale outdoor deployments but may introduce variable latency and incur data costs.
+  \item \textbf{Zigbee}: Designed for low-power, low-data-rate mesh networking. Typical throughput is around \SI{250}{kbps}, with an effective range of up to \SI{100}{m} line-of-sight. Zigbee is well-suited for structured indoor environments with modest communication demands.
+  \item \textbf{LoRa (Long Range)}: Offers long-range communication (up to \SI{10}{km} in rural settings) with extremely low data rates, typically between \SI{0.3}{kbps} and \SI{50}{kbps}. It is appropriate for sparse, low-frequency messaging where continuous data exchange is not required.
 \end{itemize}
 
-The system assumes a broadcast model where each robot shares observations over a shared channel. Messages are already serialized in a compact binary format. If communication becomes a bottleneck, strategies such as message prioritization, differential updates, or lossy compression may be necessary.
+The system currently employs a broadcast communication model, where each robot periodically shares its observations over a shared channel. Messages are serialized into a compact binary format to reduce transmission overhead.
+
+If communication bandwidth becomes a limiting factor, several strategies can be employed:
+\begin{itemize}
+  \item \textbf{Message prioritization}: Transmitting only high-value or time-critical data.
+  \item \textbf{Differential updates}: Sending only changes since the last transmission instead of full state data.
+  \item \textbf{Lossy compression}: Reducing data precision or selectively discarding less important information.
+\end{itemize}
+
+Future work may include implementing adaptive communication policies, allowing robots to dynamically adjust their broadcast frequency and data payload based on network conditions and mission priorities.
 
 \subsection{Advancing Deep Reinforcement Learning}
 A basic model has been developed as a proof of concept. {\color{red}It is limited by the hardware but with better GPU\'s more advanced models can be trained.}
@@ -70,14 +83,14 @@ Incorporating these techniques could help develop policies that are not only mor
 \subsubsection{Neuroevolution of Augmenting Topologies (NEAT)}
 Designing an optimal neural network architecture for a DQN agent remains a non-trivial task. The architecture can greatly affect both convergence speed and final performance.\\
 
-Neuroevolution of Augmenting Topologies (NEAT) \cite{neat} is a genetic algorithm designed to evolve both the topology and weights of neural networks. Each candidate solution, or genome, is represented as a graph of neurons and connections. Networks are evaluated based on a fitness function, and mutation/crossover operations allow the population to explore a diverse architecture space.\\
+Neuroevolution of Augmenting Topologies \cite{neat} is a genetic algorithm designed to evolve both the topology and weights of neural networks. Each candidate solution, or genome, is represented as a graph of neurons and connections. Networks are evaluated based on a fitness function, and mutation/crossover operations allow the population to explore a diverse architecture space.\\
 
 NEAT offers the advantage of automatic architecture discovery, potentially outperforming manually designed networks. However, it is computationally intensive and typically requires more training cycles than DQN.
 
 A hybrid approach could involve using NEAT to discover promising network architectures, which are then fine-tuned using standard DQN training. This could accelerate learning and yield more effective policies.
 
 \subsubsection{Proximal Policy Optimization (PPO)}
-Another promising direction for advancing the reinforcement learning is the use of Proximal Policy Optimization (PPO) \cite{ppo}. PPO is unlike DQN an on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
+Another promising direction for advancing the reinforcement learning is the use of Proximal Policy Optimization \cite{ppo}. PPO is unlike DQN an on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
 
 Unlike DQN, which is value-based and limited to discrete action spaces, PPO belongs to the family of policy gradient methods and naturally supports continuous action spaces. This makes it particularly well-suited for real-world robotics applications, where actions such as velocity commands are typically continuous.
 
