@@ -73,30 +73,30 @@ def plot(store: RunStore) -> list[str]:
 
     plot_files = []
 
-    world = "Depot"
-    data = {(robots, behavior_name): store.get(world, robots, behavior)
-            for robots in WORLDS[world]["robots"]
-            for behavior_name, behavior in BEHAVIORS}
+    for world in WORLDS.keys():
+        data = {(robots, behavior_name): store.get(world, robots, behavior)
+                for robots in WORLDS[world]["robots"]
+                for behavior_name, behavior in BEHAVIORS}
 
-    bp.plot_big_coverage(data)
+        plot_files += bp.plot_big_coverage(data, world)
 
-    # for world_name, opts in WORLDS.items():
-    #     for behavior_name, behavior in BEHAVIORS:
-    #         collections = []
-    #         for robots in opts["robots"]:
-    #             collections.append(store.get(world_name, robots, behavior).with_name(f"{robots} robots"))
-    #         plot_files.append(
-    #             bp.plot_coverage(collections, f"Coverage over {RUNS} runs using {behavior_name} behavior in {world_name}", figsize=(5, 4))
-    #         )
+    for world_name, opts in WORLDS.items():
+        for behavior_name, behavior in BEHAVIORS:
+            collections = []
+            for robots in opts["robots"]:
+                collections.append(store.get(world_name, robots, behavior).with_name(f"{robots} robots"))
+            plot_files.append(
+                bp.plot_coverage(collections, f"Coverage over {RUNS} runs using {behavior_name} behavior in {world_name}", figsize=(5, 4))
+            )
 
-    # for world_name, opts in WORLDS.items():
-    #     for robots in opts["robots"]:
-    #         collections = []
-    #         for _, behavior in BEHAVIORS:
-    #             collections.append(store.get(world_name, robots, behavior))
-    #         plot_files.append(
-    #             bp.plot_coverage(collections, f"Coverage over {RUNS} runs with {robots} robots in {world_name}", figsize=(5, 3.5))
-    #         )
+    for world_name, opts in WORLDS.items():
+        for robots in opts["robots"]:
+            collections = []
+            for _, behavior in BEHAVIORS:
+                collections.append(store.get(world_name, robots, behavior))
+            plot_files.append(
+                bp.plot_coverage(collections, f"Coverage over {RUNS} runs with {robots} robots in {world_name}", figsize=(5, 3.5))
+            )
 
     return plot_files
 

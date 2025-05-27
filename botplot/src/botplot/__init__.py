@@ -1468,45 +1468,69 @@ def plot_training(file: str, name: str) -> str:
 
     return plot_file
 
-def plot_big_coverage(results: dict[int, ResultCollection]):
+def plot_big_coverage(results: dict[int, ResultCollection], name: str) -> list[str]:
 
-    threshold = 0.5
+    plots = []
 
-    points = {b: [] for _, b in results.keys()}
+    LEGEND = [b for _, b in results.keys()]
+    THRESHOLDS = [0.33, 0.66, 1.0]
+    MARKERS = ["o", "s", "D", "x", "v", "^", "<", ">"]
 
-    for (_, behavior), collection in results.items():
-        df = collection.avg_df()
+    for threshold in THRESHOLDS:
+        fig, ax = plt.subplots(figsize=(4, 4))
 
-        crossings = df.with_columns(
-            (
-                (pl.col("coverage") < threshold).shift(1) &  # was below
-                (pl.col("coverage") >= threshold)            # now at or above
-            ).alias("cross_up")
-        )
+        points = {b: [] for _, b in results.keys()}
 
-        cross_times = crossings.filter(pl.col("cross_up")).select("time")["time"].to_list()
+        for (_, behavior), collection in results.items():
+            df = collection.avg_df()
 
-        if len(cross_times) > 0:
-            points[behavior].append(cross_times[0])
-        else:
-            points[behavior].append(None)
+            crossings = df.with_columns(
+                (
+                    (pl.col("coverage") < threshold).shift(1) &  # was below
+                    (pl.col("coverage") >= threshold)            # now at or above
+                ).alias("cross_up")
+            )
 
-    robots = list(set(robots for robots, _ in results.keys()))
-    robots.sort()
-    cols = dict(points, robots=robots)
-    df = pl.DataFrame(cols)
+            cross_times = crossings.filter(pl.col("cross_up")).select("time")["time"].to_list()
 
-    fig, ax = plt.subplots(figsize=(6, 4))
+            if len(cross_times) > 0:
+                points[behavior].append(cross_times[0])
+            else:
+                points[behavior].append(None)
 
-    ax.plot(
-        df["robots"],
-        df.drop("robots"),
-        marker="o",
-        linestyle="--",
-        markersize=8,
-    )
+        robots = list(set(robots for robots, _ in results.keys()))
+        robots.sort()
+        cols = dict(points, robots=robots)
+        df = pl.DataFrame(cols)
 
-    ax.set_xticks(df["robots"])
-    # ax.set_xscale("log")
+        for i, col in enumerate(cols.keys()):
+            if col == "robots": continue
+            marker = MARKERS[i % len(MARKERS)]
+            ax.plot(
+                df["robots"],
+                df[col],
+                marker=marker,
+                linestyle="--",
+                markersize=8,
+                label=col,
+            )
 
-    save_figure(fig, plot_dir("big-coverage.png"))
+        # ax.plot(
+        #     df["robots"],
+        #     df.drop("robots"),
+        #     marker="o",
+        #     linestyle="--",
+        #     markersize=8,
+        # )
+
+        ax.set_xticks(df["robots"])
+        ax.set_xlabel("Number of Robots")
+        ax.set_ylabel("Time to Reach Threshold (s)")
+        # ax.set_yscale("log")
+        ax.legend(LEGEND)
+
+        ax.set_title(f"Average Time to Reach {threshold * 100:.0f}\\% Coverage")
+
+        plots.append(save_figure(fig, plot_dir(f"big-coverage-{threshold}-{name}.png")))
+
+    return plots

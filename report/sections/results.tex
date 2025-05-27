@@ -12,7 +12,6 @@ Additionally, the consistency between the two simulation environments—\texttt{
 \subsection{Simulator Consistency}
 A central goal of the dual-simulator framework is to ensure that algorithms implemented using the \texttt{botbrain} interface yield consistent behavior across both simulators. While Gazebo includes more realistic physics and non-deterministic behavior due to its time step and sensor noise, consistency in qualitative behavior (e.g., coverage trend) is still expected.
 
-
 \subsubsection{Basic Movement}
 To verify basic motion consistency, a simple circular movement behavior was executed in both simulators. As shown in \cref{fig:movement-consistency}, the resulting paths are visually similar, indicating that the velocity commands are interpreted similarly in both environments.
 
@@ -74,30 +73,70 @@ The coverage performance seems to match well between the two simulators, with co
 % TODO: Write that gazebo is stupid!
 
 \subsection{Search Algorithm Benchmarks}
-Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots. The warehouse map was also run with 16 robots. All results can be found in {\color{red} Appendix ???}. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots.
+Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. All results can be found in {\color{red} Appendix ???}. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots.
 
 \begin{figure}[H]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-depot.png}
-    \caption{TODO}
+      \caption{Results from running 4 robots in the Depot environment with \texttt{simple\_sim}.}
   \end{subfigure}
   \begin{subfigure}[b]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-warehouse.png}
-    \caption{TODO}
+      \caption{Results from running 4 robots in the Warehouse environment with \texttt{simple\_sim}.}
   \end{subfigure}
     \caption{Coverage performance of search algorithms over 10 runs starting in random positions in the same environment.}
     \label{fig:coverage-benchmark}
 \end{figure}
 
-The results clearly show that the pure pathin outperforms the other algorithms followed by the hybrid algorithm. The Gradient algorithm is significantly worse than both the Pure Pathing and Hybrid algorithms. The Roomba algorithm is generally better performing in the beginning of the run, but has a hard time getting full coverage of the map, and is overtaken by the Gradient algorithm which has the search gradient to guide it towards unexplored areas of the map.
+The results clearly show that the Pure Pathing outperforms the other algorithms followed by the Hybrid algorithm. The Gradient algorithm is significantly worse than both the Pure Pathing and Hybrid algorithms. The Roomba algorithm is generally better performing in the beginning of the run, but has a hard time getting full coverage of the map, and is overtaken by the Gradient algorithm which has the search gradient to guide it towards unexplored areas of the map.
 
 % All algorithms eventually achieve full coverage, though their exploration efficiency varies significantly. 
 % Gradient-based methods tend to cover local areas quickly but slow down due to diminishing gradients near fully explored zones. 
 % Frontier-based methods achieve higher global efficiency by directing robots toward unknown regions, but at a higher computational cost. The hybrid method strikes a balance by switching strategies based on local exploration progress. 
 % Deep reinforcement learning shows promise but requires further tuning for consistent early-stage performance.
+
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-0.33-depot.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-0.66-depot.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-1.0-depot.png}
+    \end{subfigure}
+    \caption{Average time it takes the swarm to cover 33\%, 66\% and 100\% of the map in the Depot environment over 10 runs. Points are left out if the swarm did not reach the thresholds on average.}
+    \label{fig:depot-threshold}
+\end{figure}
+
+\def\w{0.329\textwidth}
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-0.33-warehouse.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-0.66-warehouse.png}
+    \end{subfigure}
+    \begin{subfigure}[b]{\w}
+        \centering
+        \includegraphics[width=\textwidth]{figures/plots/benchmarks/big-coverage-1.0-warehouse.png}
+    \end{subfigure}
+    \caption{Average time it takes the swarm to cover 33\%, 66\% and 100\% of the map in the Warehouse environment over 10 runs. Points are left out if the swarm did not reach the thresholds on average.}
+    \label{fig:warehouse-threshold}
+\end{figure}
+
+\Cref{fig:depot-threshold} and \cref{fig:warehouse-threshold} show the average time it takes the swarm to cover different thresholds of the map in the Depot and Warehouse environments, respectively with a varying number of robots. Here, it is clear that the Pure Pathing and Hybrid behaviors are able to use their global view of the map to find remaining unexplored regions. It is also evident that the Roomba algorithm performance is drastically reduced in the mode complex Warehouse environment as it never reaches above 33\% with any number of robots within the time span of the trial.
 
 \subsection{Computational Performance}
 A critical aspect of the performance of the search algorithms is computational and communication requirement for running the behaviors.
