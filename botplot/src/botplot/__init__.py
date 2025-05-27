@@ -139,6 +139,9 @@ class Scenario:
         )
         """
 
+    def hash(self) -> str:
+        return hashlib.sha256(self.to_ron().encode()).hexdigest()
+
     def __str__(self) -> str:
         return self.to_ron()
 
