@@ -116,7 +116,7 @@ def main():
         # avg_diff_ratios.append((avg_diff_ratio, behavior_name))
 
         avg_diff = diff(gazebo_collection.avg_df(), simple_collection.avg_df())
-        avg_diffs.append((avg_diff, behavior_name))
+        avg_diffs.append((avg_diff, behavior_name.title()))
 
         bp.plot_coverage(
             [simple_collection, gazebo_collection],
