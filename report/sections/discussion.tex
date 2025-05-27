@@ -1,32 +1,31 @@
 \section{Discussion}
-\subsection{Hypothesis 1}
+\paragraph{Hypothesis 1}
 As shown in \cref{sec:search-algorithms-benchmark}, the gradient-based algorithm does not initially outperform the baseline obstacle-avoidance algorithm. This is due to the baseline algorithm covering a large area quickly at the start of the simulation. However, it is limited by its lack of map awareness and decision-making in later stages. In contrast, the gradient-based method, although slower initially, is guided by local coverage information and ultimately surpasses the baseline in terms of total area covered.\\
 
-This improvement comes at the cost of increased computational expense. As illustrated in \cref{fig:computation-performance}, the average computation time of the gradient-based algorithm is approximately 66\% higher than that of the baseline algorithm.\
+This improvement comes at the cost of increased computational expense. As illustrated in \cref{fig:computation-performance}, the average computation time of the gradient-based algorithm is approximately 66\% higher than that of the baseline algorithm, which confirms hypothesis 1. The gradient-based algorithm outperforms the obstacle-avoidance algorithm in terms of coverage efficiency, albeit with a higher computational cost.
 
-\textbf{Conclusion:} Hypothesis 1 is confirmed. The gradient-based algorithm outperforms the obstacle-avoidance algorithm in terms of coverage efficiency, albeit with a higher computational cost.
+\paragraph{Hypothesis 2}
+According to \cref{sec:search-algorithms-benchmark}, the hybrid algorithm outperforms the purely gradient-based method in terms of coverage efficiency. Surprisingly, it does so with a lower average computational cost, as shown in \cref{fig:computation-performance}. This contradicts the initial expectation that the hybrid approach, combining gradient-based navigation and high-level path planning, would be more computationally demanding. \\
 
-\subsection{Hypothesis 2}
-According to \cref{sec:search-algorithms-benchmark}, the hybrid algorithm outperforms the purely gradient-based method in terms of coverage efficiency. Surprisingly, it does so with a lower average computational cost, as shown in \cref{fig:computation-performance}. This contradicts the initial expectation that the hybrid approach—combining gradient-based navigation and high-level path planning—would be more computationally demanding.\\
+This counterintuitive result may arise because the path planning component only incurs significant computational cost during frontier exploration and path generation. For most time steps, the robot is simply following a previously computed path, which is computationally cheap. \\
 
-This counterintuitive result arises because the path planning component only incurs significant computational cost during frontier exploration and path generation. For most time steps, the robot is simply following a previously computed path, which is computationally cheap.\\
+To explore this further, a pure path-planning algorithm was implemented. This algorithm outperforms all others in coverage efficiency and is only slightly more computationally demanding than the baseline, demonstrating the effectiveness of high-level planning for search tasks. \\
 
-To explore this further, a pure path-planning algorithm was implemented. This algorithm outperforms all others in coverage efficiency and is only slightly more computationally demanding than the baseline, demonstrating the effectiveness of high-level planning for search tasks.\\
+Hypothesis 2 is partially confirmed. While the hybrid algorithm provides better coverage than the baseline and gradient-only methods, it does not incur a higher average computational cost, contrary to the original assumption.
 
-\textbf{Conclusion:} Hypothesis 2 is partially confirmed. While the hybrid algorithm provides better coverage than the baseline and gradient-only methods, it does not incur a higher average computational cost, contrary to the original assumption.
+\paragraph{Hypothesis 3}
+In \cref{sec:simulator-consistency}, search algorithms were evaluated across the two simulators to assess whether trends in \texttt{simple\_sim} could be reproduced in Gazebo. \\
 
-\subsection{Hypothesis 3}
-In \cref{sec:simulator-consistency}, both basic movement and full search algorithms were evaluated across the two simulators to assess whether trends in Gazebo could be reproduced in \texttt{simple\_sim}.\\
-
-The coverage progression curves for all algorithms in both simulators differ by less than 15\%, as shown in \cref{fig:coverage-benchmark-all}. Basic movement experiments (\cref{fig:movement-consistency}) revealed that Gazebo introduces slight deviations due to realistic physical effects such as wheel slippage, friction, and uneven terrain. In contrast, \texttt{simple\_sim} assumes ideal motion without loss, resulting in more precise trajectories.\\
+The coverage progression curves for all algorithms in both simulators differ by less than 15\% points coverage, as shown in \cref{fig:coverage-benchmark-all}. Basic movement experiments (\cref{fig:movement-consistency}) revealed that Gazebo introduces slight deviations due to realistic physical effects such as wheel slippage, friction, and uneven terrain. In contrast, \texttt{simple\_sim} assumes ideal motion without loss, resulting in more precise trajectories. \\
 
 An outlier in the comparison was the Roomba algorithm, which performed better in Gazebo. This may be due to Gazebo’s higher fidelity LiDAR simulation providing more accurate proximity information, leading to smoother obstacle avoidance.\\
 
-Overall, the performance of the Gradient, Pure Pathing, and Hybrid algorithms is consistent between simulators. However, some behaviors exhibit non-trivial differences, and \texttt{simple\_sim} should not be relied upon as the sole performance benchmark for all algorithms.\\
+Overall, the performance of the Gradient, Pure Pathing, and Hybrid algorithms is consistent between simulators. However, some behaviors exhibit non-trivial differences, and \texttt{simple\_sim} should not be relied upon as the sole performance benchmark for all algorithms. \\
 
-Despite these limitations, \texttt{simple\_sim} runs significantly faster than Gazebo—up to \textbf{XX} times faster, as shown in \cref{fig:simulator-performance}—making it a valuable tool for rapid development and testing.\\
+Despite these limitations, \texttt{simple\_sim} runs significantly faster than Gazebo, up to \textbf{XX} times faster, as shown in \cref{fig:simulator-performance}, making it a valuable tool for rapid development and testing. \\
 
-\textbf{Conclusion:} Hypothesis 3 is confirmed. The lightweight simulator approximates the key performance characteristics observed in Gazebo while offering dramatically reduced computational requirements.
+Hypothesis 3 is confirmed. The lightweight simulator approximates the key performance characteristics observed in Gazebo while offering dramatically reduced computational requirements.
 
-\subsection{Hypothesis 4}
+% TODO: Remove?
+\paragraph{Hypothesis 4}
 Not relevant A.T.M.
