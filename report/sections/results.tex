@@ -3,7 +3,7 @@
 
 \section{Results}
 \label{sec:results}
-This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot {\color{red} [CITE]} and Warehouse {\color{red} [CITE]}. \Cref{fig:bench-maps} shows the three maps, with differing denseness of obstacles, used during testing. \\
+This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot {\color{red} [CITE]} and Warehouse {\color{red} [CITE]}. \Cref{fig:bench-maps} shows the two maps, with differing denseness of obstacles, used during testing. \\
 
 Search algorithms are evaluated in terms of two key metrics: map coverage over time and computational expense. Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup—is evaluated to confirm the robustness and portability of the behavior implementations.
 
@@ -77,8 +77,8 @@ The coverage performance seems to match well between the two simulators, with co
     \label{fig:coverage-benchmark-diff}
 \end{figure}
 
-\subsubsectin{A Note on Gazebo Stability}
-% TODO: Write that gazebo is stupid!
+\subsubsection{A Note on Gazebo Stability}
+Benchmark data was collected with Python scripts which run both \texttt{simple\_sim} and Gazebo on the same environments automatically for a set of runs. Gazebo was, however, quite unreliable in its initialization which meant that Gazebo had to be supervised during benchmarking. This made it infeasible to run long trials multiple times with multiple behaviors. The following sections contain plots with data gathered using \texttt{simple\_sim} and would have taken days of supervised benchmarking to record using Gazebo.
 
 \subsection{Search Algorithm Benchmarks}
 \label{sec:search-algorithms-benchmark}
