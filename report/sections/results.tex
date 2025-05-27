@@ -155,11 +155,13 @@ A critical aspect of the performance of the search algorithms is computational a
 \subsubsection{Computation Time}
 \Cref{fig:computation-performance} presents the computation time distributions for each algorithm running in the same environment.
 
+General observations are:
+
 \begin{itemize}
   \item The \textbf{Roomba} algorithm, being the simplest, exhibits the lowest and most consistent computation time.
-\item The \textbf{Pure Pathing} algorithm also performs efficiently on average, though it shows more outliers due to the occasional expensive operations—namely, costmap generation, frontier exploration/evaluation, and path planning—which are not triggered at every time step.
-\item The \textbf{Gradient} method is more consistent but slower overall, as gradient recalculation occurs at each step.
-\item The \textbf{Hybrid} method was expected to fall between Pure Pathing and Gradient in terms of complexity, and this assumption holds based on the observed data.
+  \item The \textbf{Pure Pathing} algorithm also performs efficiently on average, though it shows more outliers due to the occasional expensive operations—namely, costmap generation, frontier exploration/evaluation, and path planning—which are not triggered at every time step.
+  \item The \textbf{Gradient} method is more consistent but slower overall, as gradient recalculation occurs at each step.
+  \item The \textbf{Hybrid} method was expected to fall between Pure Pathing and Gradient in terms of complexity, and this assumption holds based on the observed data.
 \end{itemize}
 
 \begin{figure}[H]

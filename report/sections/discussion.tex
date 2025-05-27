@@ -1,27 +1,32 @@
 \section{Discussion}
 \subsection{Hypothesis 1}
-As seen in \cref{sec:search-algorithms-benchmark} the gradient-based algorithm outperforms the baseline obstacle-avoidance algorithm but at a higher cost, see \cref{fig:computation-performance}.
-This hypothesis can be confirmed.
+As shown in \cref{sec:search-algorithms-benchmark}, the gradient-based algorithm does not initially outperform the baseline obstacle-avoidance algorithm. This is due to the baseline algorithm covering a large area quickly at the start of the simulation. However, it is limited by its lack of map awareness and decision-making in later stages. In contrast, the gradient-based method, although slower initially, is guided by local coverage information and ultimately surpasses the baseline in terms of total area covered.\\
 
+This improvement comes at the cost of increased computational expense. As illustrated in \cref{fig:computation-performance}, the average computation time of the gradient-based algorithm is approximately 66\% higher than that of the baseline algorithm.\
+
+\textbf{Conclusion:} Hypothesis 1 is confirmed. The gradient-based algorithm outperforms the obstacle-avoidance algorithm in terms of coverage efficiency, albeit with a higher computational cost.
 
 \subsection{Hypothesis 2}
-As seen in \cref{sec:search-algorithms-benchmark} the hybrid algorithm outperforms the gradient-based algorithm but at a lower average cost, see \cref{}. It was not expected to have a lower avegarge cost than the purely gradient-based approach, as the hybrid algorithm combines both gradient-based navigation and high-level path planning.
-This hypothesis can not be confirmed.
+According to \cref{sec:search-algorithms-benchmark}, the hybrid algorithm outperforms the purely gradient-based method in terms of coverage efficiency. Surprisingly, it does so with a lower average computational cost, as shown in \cref{fig:computation-performance}. This contradicts the initial expectation that the hybrid approach—combining gradient-based navigation and high-level path planning—would be more computationally demanding.\\
+
+This counterintuitive result arises because the path planning component only incurs significant computational cost during frontier exploration and path generation. For most time steps, the robot is simply following a previously computed path, which is computationally cheap.\\
+
+To explore this further, a pure path-planning algorithm was implemented. This algorithm outperforms all others in coverage efficiency and is only slightly more computationally demanding than the baseline, demonstrating the effectiveness of high-level planning for search tasks.\\
+
+\textbf{Conclusion:} Hypothesis 2 is partially confirmed. While the hybrid algorithm provides better coverage than the baseline and gradient-only methods, it does not incur a higher average computational cost, contrary to the original assumption.
 
 \subsection{Hypothesis 3}
-In \cref{sec:simulator-consistency} the basic movement and the search-algorithms was compared to evaluate the if trends in the Gazebo simulator can be reproduced in \texttt{simple\_sim}. 
+In \cref{sec:simulator-consistency}, both basic movement and full search algorithms were evaluated across the two simulators to assess whether trends in Gazebo could be reproduced in \texttt{simple\_sim}.\\
 
-The coverage progression for all search algorithms fall within 15 \% of each other when running in Gazebo vs \texttt{simple\_sim}, see \cref{fig:coverage-benchmark-all}. 
+The coverage progression curves for all algorithms in both simulators differ by less than 15\%, as shown in \cref{fig:coverage-benchmark-all}. Basic movement experiments (\cref{fig:movement-consistency}) revealed that Gazebo introduces slight deviations due to realistic physical effects such as wheel slippage, friction, and uneven terrain. In contrast, \texttt{simple\_sim} assumes ideal motion without loss, resulting in more precise trajectories.\\
 
-From the basic movement calibration, see \cref{fig:movement-consistency}, the Gazebo path deviates slightly from a perfect circle. This deviation is attributed to realistic physical effects such as wheel slippage and friction between the wheels and the ground. In contrast, the \texttt{simple\_sim} simulator assumes ideal motion without any loss due to slippage or friction, resulting in a more precise circular trajectory. The same goes for the straight line movement, where the floor might not be perfectly flat, resulting in a slightly curved path.
+An outlier in the comparison was the Roomba algorithm, which performed better in Gazebo. This may be due to Gazebo’s higher fidelity LiDAR simulation providing more accurate proximity information, leading to smoother obstacle avoidance.\\
 
-The Roomba algorithm is however faster in Gazebo. This could be due to a larger number of lidar rays in the Gazebo simulation giving the robot more stable information about the closest obstacle to the robot. 
+Overall, the performance of the Gradient, Pure Pathing, and Hybrid algorithms is consistent between simulators. However, some behaviors exhibit non-trivial differences, and \texttt{simple\_sim} should not be relied upon as the sole performance benchmark for all algorithms.\\
 
-It shows that the simple simulator performance is generally similar to Gazebo, but can not be relied upon as a single source of performance benchmarks, as some behaviors perform dispropportionally better or worse in Gazebo as compared to \texttt{simple\_sim}. Especially the performance of the Gradient, Pure Pathing, and Hybrid algorithm seem to be be comparable across the simulators. 
+Despite these limitations, \texttt{simple\_sim} runs significantly faster than Gazebo—up to \textbf{XX} times faster, as shown in \cref{fig:simulator-performance}—making it a valuable tool for rapid development and testing.\\
 
-With this in mind, the \texttt{simple\_sim} simulator run upwards of XX times faster than Gazebo, see \cref{fig:simulator-performance}, making the slight differences worth it.
-
-It can be concluded that the lightweight simulator can approximate the key performance characteristics of Gazebo, while offering significantly reduced computational requirements. 
+\textbf{Conclusion:} Hypothesis 3 is confirmed. The lightweight simulator approximates the key performance characteristics observed in Gazebo while offering dramatically reduced computational requirements.
 
 \subsection{Hypothesis 4}
 Not relevant A.T.M.
