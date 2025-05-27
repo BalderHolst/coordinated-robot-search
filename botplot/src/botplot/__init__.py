@@ -6,6 +6,7 @@ import time
 from math import sqrt
 from dataclasses import dataclass
 from typing import Self
+import copy
 
 import polars as pl
 import numpy as np
@@ -13,7 +14,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import matplotlib.patches as patches
-from polars.io import read_ipc
 
 from botplot.rust_crate import RustCrate
 from botplot.colcon_workspace import ColconWorkspace
@@ -493,8 +493,9 @@ class ResultCollection:
         return self
 
     def with_name(self, name: str) -> Self:
-        self.name = name
-        return self
+        new = copy.copy(self)
+        new.name = name
+        return new
 
 
 class SimpleResult(Result):
@@ -838,7 +839,7 @@ def plot_coverage(
 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Coverage (\%)")
-    ax.set_ylim([0, 100])
+    ax.set_ylim([0, 105])
     ax.set_title(title)
 
     if fig:
@@ -1466,3 +1467,46 @@ def plot_training(file: str, name: str) -> str:
     save_figure(fig, plot_file)
 
     return plot_file
+
+def plot_big_coverage(results: dict[int, ResultCollection]):
+
+    threshold = 0.5
+
+    points = {b: [] for _, b in results.keys()}
+
+    for (_, behavior), collection in results.items():
+        df = collection.avg_df()
+
+        crossings = df.with_columns(
+            (
+                (pl.col("coverage") < threshold).shift(1) &  # was below
+                (pl.col("coverage") >= threshold)            # now at or above
+            ).alias("cross_up")
+        )
+
+        cross_times = crossings.filter(pl.col("cross_up")).select("time")["time"].to_list()
+
+        if len(cross_times) > 0:
+            points[behavior].append(cross_times[0])
+        else:
+            points[behavior].append(None)
+
+    robots = list(set(robots for robots, _ in results.keys()))
+    robots.sort()
+    cols = dict(points, robots=robots)
+    df = pl.DataFrame(cols)
+
+    fig, ax = plt.subplots(figsize=(6, 4))
+
+    ax.plot(
+        df["robots"],
+        df.drop("robots"),
+        marker="o",
+        linestyle="--",
+        markersize=8,
+    )
+
+    ax.set_xticks(df["robots"])
+    # ax.set_xscale("log")
+
+    save_figure(fig, plot_dir("big-coverage.png"))
