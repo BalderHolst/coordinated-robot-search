@@ -10,6 +10,7 @@ Additionally, the consistency between the two simulation environments—\texttt{
 
 
 \subsection{Simulator Consistency}
+\label{sec:simulator-consistency}
 A central goal of the dual-simulator framework is to ensure that algorithms implemented using the \texttt{botbrain} interface yield consistent behavior across both simulators. While Gazebo includes more realistic physics and non-deterministic behavior due to its time step and sensor noise, consistency in qualitative behavior (e.g., coverage trend) is still expected.
 
 \subsubsection{Basic Movement}
@@ -73,6 +74,7 @@ The coverage performance seems to match well between the two simulators, with co
 % TODO: Write that gazebo is stupid!
 
 \subsection{Search Algorithm Benchmarks}
+\label{sec:search-algorithms-benchmark}
 Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. All results can be found in {\color{red} Appendix ???}. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots.
 
 \begin{figure}[H]
@@ -170,5 +172,16 @@ If LoRa is to be considered for deployment, further message compression, reduced
 
 % TODO: Talk about security. This could make the messages bigger or is this assumed to be handled by the communication protocol?
 
-% \subsection{Object Search Performance}
-% TODO: How does coverage correlate with the coverage?
+\subsection{Simulator Performance}
+\label{sec:simulator-performance}
+The performace and faster delevopment cycle of the \texttt{simple\_sim} simulator is key component as to why it is used in this project.
+
+Performance is measured by running the 500 seconds with 5 simulated robots in the same map for 5 runs and calculating the average time it takes to complete the simulation. The results are shown in \cref{fig:simulator-performance}.
+
+\begin{figure}[H]
+    \begin{center}
+        \includegraphics[width=0.95\textwidth]{./figures/plots/performance-simulators.png}
+    \end{center}
+    \caption{Real-world time to complete a 500 seconds simulation with 5 robots in the same map.}
+    \label{fig:simulator-performance}
+\end{figure}
