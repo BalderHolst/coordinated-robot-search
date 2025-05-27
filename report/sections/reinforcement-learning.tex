@@ -16,9 +16,6 @@ The framework for defining robots controlled by neural networks is implemented a
 
 % TODO: Maybe create a figure
 
-% TODO: Write how our network and activation function works (maybe in each of the models or only one?)
-% For this project, a feedforward fully connected neural network was used. The input to the network is a tensor representation part of the robot’s state, including sensor readings, and proximity to other robots. 
-
 \subsection{Reward}
 The reward function is a central component of reinforcement learning, as it defines the value of agent actions. A well designed reward function encourages desirable behavior and penalizes undesirable outcomes. \\
 
@@ -89,7 +86,7 @@ As to not over fit the network, agents are trained on different environments. A 
 % \Cref{fig:rl-minimal-training} shows the training progress of the agent. The agent is able to learn to avoid walls at it is punished for running into walls.
 
 \subsection{Training a Minimal Agent}
-To ensure that the training framework works, a simple agent was trained. The agent is provided the same state as used in the Gradient behavior: Robot angle, the angle and distance to the closest obstacle, and the angle and length of the search gradient. The action space consists of 7 discrete actions, spanning from full left to forward to full right control commands. A single hidden layer of 64 nodes connects the input and output layers. \\
+To ensure that the training framework works, a simple agent was trained. The agent is provided the same state as used in the Gradient behavior: Robot angle, the angle and distance to the closest obstacle, and the angle and length of the search gradient. The action space consists of 7 discrete actions, spanning from full left to forward to full right control commands. A single hidden layer of 64 nodes connects the input and output layers. The sigmoid activation function is used for all layers. \\
 
 The agent was trained on 200 episodes, each consisting of 240 simulated seconds. The training progress is shown in \cref{fig:rl-minimal-training}.
 

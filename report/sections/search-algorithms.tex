@@ -34,7 +34,6 @@ Each robot maintains an internal state, which—combined with sensor input—dri
 
 To resolve this, each subsystem outputs a directional vector, or "target contribution," indicating its preferred movement. These vectors are then summed to produce a single target vector, which dictates the robot’s final motion. Subsystems can be weighted according to their importance—obstacle avoidance, for instance, is typically given higher priority.
 
-% TODO: Add forward bias plot
 \subsection{Search Gradient}
 \label{sec:search-gradient}
 
@@ -43,7 +42,6 @@ Each robot maintains a "search grid," which acts as a heatmap representing the e
 Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from this heatmap at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:gradient-forward-bias}.
 
 % TODO: Maybe not have this picture. But maybe nice to see without forward bias
-%
 \begin{figure}[H]
   \centering
   \begin{subfigure}[b]{0.45\textwidth}
@@ -157,9 +155,6 @@ The robots explore the environment effectively but tend to linger in already exp
 \subsection{Global Planner}
 
 When the search gradient fails to provide a clear direction—i.e., when the robot lacks a local preference—a global planner is used to move the robot to a more promising unexplored region.
-
-% TODO: Mention something about performance later
-% In cases, where computational resources are ample, the robot can rely entirely on path planning for navigation.
 
 The global planner operates according to the following procedure:
 
