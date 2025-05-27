@@ -18,8 +18,8 @@ The project also includes the development of a simple simulation environment, wh
 Four concrete hypotheses are formulated to guide development and evaluation of the project:
 
 \begin{itemize}
-    \item \textbf{Hypothesis 1:} A search algorithm with global knowledge of the map will outperform a search algorithm with only local knowledge of the map.
-    \item \textbf{Hypothesis 2:} A hybrid algorithm, which combines local and global knowledge, can achieve similar performance to an algorithm with only global knowledge, while using less computational resources.
-    \item \textbf{Hypothesis 3:} An increase in coverage over time will result in a similar decrease in the time it takes to find an object.
-    \item \textbf{Hypothesis 4:} A simple simulator can approximate the more complex Gazebo simulation environment, at a lower computational cost, while still providing valid performance measurements.
+    \item \textbf{Hypothesis 1:} A gradient-based search algorithm will outperform a obstacle avoiding (baseline) algorithm in terms of overall coverage efficiency in a known map.
+    \item \textbf{Hypothesis 2:} A hybrid algorithm that combines gradient-based movement with higher-level path planning will outperform both the baseline algorithm and the purely gradient-based approach in terms of overall coverage efficiency in a known map.
+    \item \textbf{Hypothesis 3:} A lightweight, custom-built simulator can approximate the key performance characteristics (e.g., coverage progression) observed in a high-fidelity simulator like Gazebo, while significantly reducing computational requirements.
+    \item {\color{red}\textbf{Hypothesis 4:} A reinforcement learning-based search algorithm can achieve comparable performance to gradient-based or hybrid algorithms in terms of overall coverage efficiency in a known map. }
 \end{itemize}
