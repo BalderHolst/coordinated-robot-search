@@ -178,12 +178,4 @@ When compared to the communication technologies considered for real-world deploy
 
 \subsection{Simulator Performance}
 \label{sec:simulator-performance}
-The performace and faster iteration cycle of the \texttt{simple\_sim} simulator is key component as to why was developed during this project. Performance is measured by running the 500 seconds with 5 simulated robots in the same map for 5 runs and calculating the average time it takes to complete the simulation. The results are shown in \cref{fig:simulator-performance}.
-
-\begin{figure}[H]
-    \begin{center}
-        \includegraphics[width=0.95\textwidth]{./figures/plots/performance-simulators.png}
-    \end{center}
-    \caption{Real-world time to complete a 500 seconds simulation with 5 robots in the same map.}
-    \label{fig:simulator-performance}
-\end{figure}
+The performace and faster iteration cycle of the \texttt{simple\_sim} simulator is key component as to why was developed during this project. A simple test was conducted by running both simulators without GUI for 600 simulated seconds using the Roomba algorithm. Gazebo took an averave of 628 seconds while \texttt{simple\_sim} completed within an average of 18 seconds. This highlights how much the simple simulator outperforms Gazebo. The option to run the simulation at such a high speed makes it easy to investigate bugs and benchmark algorithms.
