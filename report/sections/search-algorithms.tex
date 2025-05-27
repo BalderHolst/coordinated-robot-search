@@ -238,11 +238,7 @@ The path is continuously validated to account for dynamic changes in the environ
 To maintain communication, if a robot becomes disconnected from the swarm, it selects a new goal that helps it reconnect with the main network, using the proximity grid.
 
 \subsection{Hybrid Algorithm}
-The global planner enables a hybrid algorithm that combines both local and global strategies. As long as the local search gradient provides a sufficiently strong direction, the robot continues using the gradient-based method. When the gradient magnitude falls below a predefined threshold, the global planner is triggered to relocate the robot to an unexplored area.
-
-\textcolor{red}{[Threshold definition or derivation to be inserted here.]}
-
-The hybrid algorithm produces better spatial distribution and exploration efficiency. \Cref{fig:hybrid-paths} shows the resulting behavior, where solid lines represent gradient-based movement and dashed lines indicate global path-following.
+The global planner enables a hybrid algorithm that combines both local and global strategies. As long as the local search gradient provides a sufficiently strong direction, the robot continues using the gradient-based method. When the gradient magnitude falls below a predefined threshold, the global planner is triggered to relocate the robot to an unexplored area. \Cref{fig:hybrid-paths} shows the resulting behavior, where solid lines represent gradient-based movement and dashed lines indicate global path-following. This behavior produces better spacial distribution as compared with the pure gradient based algorithm which may lead to better search efficiency.
 
 \def\w{0.329\textwidth}
 \begin{figure}[H]
