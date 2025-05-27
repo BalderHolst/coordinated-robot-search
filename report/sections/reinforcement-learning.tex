@@ -83,47 +83,24 @@ As to not over fit the network, agents are trained on different environments. A 
     \label{fig:generated-enviornments}
 \end{figure}
 
+% \subsection{Training a Minimal Agent}
+% To ensure that the training framework works, a simple agent was trained. The agent is provided the minimal state required to avoid walls: Robot angle and the angle and distance to the closest obstacle. The action space consists of three actions: \texttt{Forward}, \texttt{Left} and \texttt{Right}. A single hidden layer of {\color{red}5} nodes connects the inputs and outputs as seen on \cref{fig:rl-minimal-net}.
+
+% \Cref{fig:rl-minimal-training} shows the training progress of the agent. The agent is able to learn to avoid walls at it is punished for running into walls.
+
 \subsection{Training a Minimal Agent}
-To ensure that the training framework works, a simple agent was trained. The agent is provided the minimal state required to avoid walls: Robot angle and the angle and distance to the closest obstacle. The action space consists of three actions: \texttt{Forward}, \texttt{Left} and \texttt{Right}. A single hidden layer of {\color{red}5} nodes connects the inputs and outputs as seen on \cref{fig:rl-minimal-net}.
+To ensure that the training framework works, a simple agent was trained. The agent is provided the same state as used in the Gradient behavior: Robot angle, the angle and distance to the closest obstacle, and the angle and length of the search gradient. The action space consists of 7 discrete actions, spanning from full left to forward to full right control commands. A single hidden layer of 64 nodes connects the input and output layers. \\
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{figures/rl/minimal-network.png}
-    \caption{TODO}
-    \label{fig:rl-minimal-net}
-\end{figure}
-
-\Cref{fig:rl-minimal-training} shows the training progress of the agent. The agent is able to learn to avoid walls at it is punished for running into walls.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{figures/rl/minimal-training.png}
-    \caption{TODO}
-    \label{fig:rl-minimal-training}
-\end{figure}
-
-% TODO: Write more about the graphs when they are made
-
-\subsection{Training a Search Agent}
-The minimal agent is only aware of the closest obstacle, and has no information to guide it towards unexplored areas. The search gradient vector (as discussed in \cref{sec:search-gradient}) is added to the robot state. The action space is also expanded to 7 discrete actions, spanning from left to forward to right control commands. The hidden layer was expanded to 64 nodes, to store a more complex behavior. The network is shown in \cref{fig:rl-search-net}.
-
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.80\textwidth]{figures/rl/search-network.png}
-    \caption{TODO}
-    \label{fig:rl-search-net}
-\end{figure}
-
-The agent was trained on 200 episodes, each consisting of 240 simulated seconds. The training progress is shown in \cref{fig:rl-search-training}.
+The agent was trained on 200 episodes, each consisting of 240 simulated seconds. The training progress is shown in \cref{fig:rl-minimal-training}.
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{figures/rl/small-search-agent-training.png}
     \caption{TODO}
-    \label{fig:rl-search-training}
+    \label{fig:rl-minimal-training}
 \end{figure}
 
-As the agent is trained, the reward and coverage increases, indicating that the agent is learning to cover the map. The loss function also settles down eventually, which signifies that the robot has is predicting the reward function well. Running the behavior results in the path shown in \cref{rl-search-path}.
+As the agent is trained, the reward and coverage increases, indicating that the agent is learning to cover the map. The loss function also settles down eventually, which signifies that the robot has is predicting the reward function well. Running the behavior results in the path shown in \cref{rl-minimal-path}.
 
 \def\w{0.329\textwidth}
 \begin{figure}[H]
@@ -141,12 +118,12 @@ As the agent is trained, the reward and coverage increases, indicating that the 
         \includegraphics[width=\textwidth]{./figures/rl/small-agent-(after-1800s).png}
     \end{subfigure}
     \caption{TODO}
-    \label{fig:rl-search-path}
+    \label{fig:rl-minimal-path}
 \end{figure}
 
 % TODO: Add flamegraph to appendix
 \subsection{Training more Complex Agents}
-While the successfully trained agents show that the framework works, their training is computationally expensive. The small search agent took approximately 12 hours to train. This could be an issue with the trainer or simulator implementation, especially as the simulation steps take longer as training progresses. The trainer was run with a profiler to investigate this, which showed that approximately 75\% of the run time is spent within the \texttt{burn} framework. This leads to the conclusion that updating the model weights is most major factor in the training performance, and that a faster GPU is needed to speed up training. \\
+While the successfully trained agent show that the framework works, training is very computationally expensive. The minimal agent took approximately 12 hours to train. This could be an issue with the trainer or simulator implementation, especially as the simulation steps take longer as training progresses. The trainer was run with a profiler to investigate this, which showed that approximately 75\% of the run time is spent within the \texttt{burn} framework. This leads to the conclusion that updating the model weights is most major factor in the training performance, and that faster hardware is needed to speed up training. \\
 
 More complex agents are implemented in \texttt{botbrain} and training was attempted but never finished. An agent called \texttt{big-boy} was implemented to theoretically be aware of the robot swarm as a whole, and could therefore be trained to keep the swarm within communication range. The state input for the \texttt{big-boy} agent consists of the following fields:
 
@@ -161,6 +138,6 @@ More complex agents are implemented in \texttt{botbrain} and training was attemp
     \item Spread of the swarm in $x$ and $y$ direction
 \end{itemize}
 
-This results in 25 input nodes. The action space consists of 9 actions in the same manner as the small search agent. This model contains three hidden layers of 96, 64 and 32 nodes respectively. The larger network should make the agent capable of learning a more intricate behavior and make better sense of the increased input nodes. \\
+This results in 25 input nodes. The action space consists of 9 actions in the same manner as the minimal agent. This model contains three hidden layers of 96, 64 and 32 nodes respectively. The larger network should make the agent capable of learning a more intricate behavior and make better sense of the increased input nodes. \\
 
-In theory, the network inputs could be expanded even more to also include global knowledge of the map to increase performance. Could be implemented in the current framework, but were not, as training was deemed unfeasible.
+In theory, the network inputs could be expanded even more to also include global knowledge of the map to increase performance. This could be implemented in the current framework, but were not, as training was deemed infeasible.
