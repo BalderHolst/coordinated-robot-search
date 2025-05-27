@@ -1,13 +1,28 @@
 % TODO: Cite maps
+% TODO: Mention the hypothesis in Results section
 
 \section{Results}
 \label{sec:results}
-% TODO: Mention the hypothesis in Results section
-This section presents the results of simulations meant to determine the performance of the search algorithms. All benchmarks were run on three maps, an empty map, a simple map, and a complex map. \Cref{fig:bench-maps} shows the three maps, with differing denseness of obstacles, used during testing.
+This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot {\color{red} [CITE]} and Warehouse {\color{red} [CITE]}. \Cref{fig:bench-maps} shows the three maps, with differing denseness of obstacles, used during testing. \\
 
-This section presents a comparative evaluation of the developed search algorithms in terms of two key metrics: map coverage over time and computational expense. These metrics are analyzed across environments of varying difficulty. 
-Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup—is evaluated to confirm the robustness and portability of the behavior implementations.
+Search algorithms are evaluated in terms of two key metrics: map coverage over time and computational expense. Additionally, the consistency between the two simulation environments—\texttt{simple\_sim} and the Gazebo ROS 2 setup—is evaluated to confirm the robustness and portability of the behavior implementations.
 
+\begin{figure}[H]
+  \centering
+  \begin{subfigure}[b]{0.46\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{./figures/depot.png}
+    \caption{Depot. Dimensions: 30.2 m by 15.3 m.}
+  \end{subfigure}
+  \hfill
+  \begin{subfigure}[b]{0.46\textwidth}
+    \centering
+    \includegraphics[height=\textwidth, angle=90]{./figures/warehouse.png}
+    \caption{Warehouse. Dimmensions: 50.2 m by 30.2 m.}
+  \end{subfigure}
+  \caption{Maps used for benchmarking search algorithms. The Depot map is smaller and more open compared to the Warehouse map, which is larger and has more hard to reach areas.}
+  \label{fig:bench-maps}
+\end{figure}
 
 \subsection{Simulator Consistency}
 \label{sec:simulator-consistency}
@@ -93,7 +108,7 @@ Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 
     \label{fig:coverage-benchmark}
 \end{figure}
 
-The results clearly show that the Pure Pathing outperforms the other algorithms followed by the Hybrid algorithm. The Gradient algorithm is significantly worse than both the Pure Pathing and Hybrid algorithms. The Roomba algorithm is generally better performing in the beginning of the run, but has a hard time getting full coverage of the map, and is overtaken by the Gradient algorithm which has the search gradient to guide it towards unexplored areas of the map.
+The results clearly show that the Pure Pathing outperforms the other algorithms followed by the Hybrid algorithm. The Gradient algorithm is significantly worse than both the Pure Pathing and Hybrid algorithms. The Roomba algorithm is generally better performing in the beginning of the run, but has a hard time getting full coverage of the map, and is overtaken by the Gradient algorithm which has the search gradient to guide it towards unexplored areas.
 
 % All algorithms eventually achieve full coverage, though their exploration efficiency varies significantly. 
 % Gradient-based methods tend to cover local areas quickly but slow down due to diminishing gradients near fully explored zones. 
