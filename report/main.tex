@@ -27,6 +27,10 @@
 
 \usepackage[absolute,overlay]{textpos}
 
+\usepackage{titletoc}
+\usepackage{movie15}
+\usepackage[toc,page]{appendix}
+
 \setstretch{1.25}
 \setlength{\parindent}{0pt} % No indent on new paragraphs
 
@@ -68,7 +72,9 @@
 \subfile{sections/discussion.tex}         \newpage
 \subfile{sections/further-development}    \newpage
 \subfile{sections/conclusion}             \newpage
-\subfile{sections/appendix}               \newpage
+\printbibliography[heading=bibnumbered]
+\newpage
+\subfile{appendix}
 
 % ============ Contents ============
 % Problem statement / Intro
@@ -94,6 +100,5 @@
 % Further Development
 % Conclusion
 
-\printbibliography[heading=bibnumbered]
 
 \end{document}
