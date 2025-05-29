@@ -1,16 +1,15 @@
 \section{Conclusion}
 \label{sec:Conclusion}
-This project presents a modular and extensible framework for coordinated robotic search, evaluated using both a lightweight 2D simulator and a high-fidelity 3D Gazebo environment. Several search strategies were implemented, including a simple obstacle-avoiding baseline, a gradient-based method, a hybrid gradient-pathing algorithm, and a Deep Q-Network (DQN)-based learning approach. The goal was to assess their performance in terms of coverage efficiency, computational cost, and cross-simulator consistency.
-
-The experimental results provide support for several of the initial hypotheses:
+This project presents a modular and extensible framework for coordinated robotic search, evaluated using both a custom lightweight 2D simulator and a high-fidelity 3D Gazebo environment. Several search strategies were implemented and tested, including a simple obstacle-avoiding baseline, a gradient-based method, a pure pathing method, and a hybrid algorithm algorithm combining gradient and pathing behaviors. A Deep Q-Network based learning approach was also explored. The goal was to assess their performance in terms of coverage efficiency, computational cost, and cross-simulator consistency. The experimental results support several of the initial hypotheses:
 
 \begin{itemize}
-    \item The gradient-based algorithm significantly outperformed the baseline in terms of coverage efficiency, owing to its use of local map knowledge, confirming \textbf{Hypothesis 1}. However, as expected it introduced increased computational cost due to continuous gradient field computation.
-    \item The hybrid approach achieved higher coverage efficiency than the gradient-based method, as expected, partially confirming \textbf{Hypothesis 2}. Interestingly, its average computational cost was lower than anticipated. This result challenges the original assumption but led to the insight that pure path planning may serve as a viable alternative to gradient-driven navigation in some scenarios.
-    \item The comparison between \texttt{simple\_sim} and Gazebo showed strong consistency in coverage trends, even accounting for differences in physical modeling and sensor noise. This was achieved withThis supports \textbf{Hypothesis 3} and validates the use of the lightweight simulator for rapid development and evaluation.
-    % \item The RL-based search showed promising results and demonstrated the potential to match the performance of manually engineered algorithms, partially supporting \textbf{Hypothesis 4}. However, it exhibited greater variability and required further tuning to achieve consistent performance.
+    \item The gradient-based algorithm significantly outperformed the baseline in terms of coverage efficiency, due to its local map knowledge, confirming \textbf{hypothesis 1}. However, as expected it introduced increased computational cost due to continuous gradient computation.
+
+    \item The hybrid approach achieved higher coverage efficiency than the gradient-based method, as expected, partially confirming \textbf{hypothesis 2}. Interestingly, the algorithm's average computational cost was lower than the gradient algorithm. This result challenges the original assumption but led to the insight that pure path planning is a more performant alternative to gradient-based navigation in all tested scenarios.
+
+    \item The comparison between \texttt{simple\_sim} and Gazebo showed strong consistency in coverage trends, even accounting for differences in physical modeling and sensor noise. This was achieved with up to 35 times faster simulation speeds. This supports \textbf{hypothesis 3} and validates the use of the lightweight simulator for rapid development and evaluation.
+
 \end{itemize}
 
-Overall, the results highlight that distributed, modular behavior can be developed and tested efficiently in simulation, and later deployed to real-world systems with minimal modification. The framework’s hardware abstraction and ROS 2 integration further support its portability and extensibility.\\
-
-\textbf{Future work} will focus on deploying the system on physical robot platforms, addressing real-world challenges such as communication constraints, sensor calibration, and robust localization. Enhancing the reinforcement learning component, particularly the DQN implementation, will also be a priority. Promising directions include exploring Proximal Policy Optimization (PPO), Neuroevolution of Augmenting Topologies (NEAT), and sim-to-real transfer methods to enable scalable and adaptive multi-robot behaviors.
+% TODO: Ponder...
+Overall, the results highlight that distributed, modular behavior can be developed and tested efficiently in simulation. The groundwork for real-world deployment has been made as the behaviors can be used in ROS 2 using the developed node.
