@@ -1,7 +1,7 @@
 \section{Problem Statement}
 \label{sec:problem-statement}
 
-This project focuses on developing distributed algorithms that enable collaborative robot search for a predefined object within a predefined and mapped environment. Both manually developed and deep reinforcement learning approaches are explores. During a search mission, the environment is progressively explored until the target object is located. The effectiveness of each search algorithm is evaluated using three parameters:
+This project focuses on developing distributed algorithms that enable collaborative robot search for a predefined object within a mapped environment. Both manually developed and deep reinforcement learning approaches are explored. During a search mission, the environment is progressively explored. It is assumed that map coverage over time is a measure of search efficiency. The effectiveness of each search algorithm is evaluated using two parameters:
 
 \begin{itemize}
     \item Map coverage over time
@@ -10,15 +10,14 @@ This project focuses on developing distributed algorithms that enable collaborat
 
 All software developed in this project is tested exclusively in simulation; therefore, the specific communication technology is not defined. Robots are, however, constrained by a limited communication range, and the behavior algorithms should ensure that robots remain within this range to emulate real-world communication constraints. Each robot is equipped with a camera for detecting the search object and a LiDAR sensor for measuring distances to objects. \\
 
-To evaluate the algorithms and demonstrate their feasibility and support easy integration for ROS 2 based systems, they are implemented as ROS 2 nodes for simulation in Gazebo. \\
+To evaluate the algorithms, demonstrate their feasibility, and support easy integration for ROS 2 based systems, they are implemented as ROS 2 nodes for simulation in Gazebo. \\
 
-The project also includes the development of a simple simulation environment, which facilitates the development of search algorithms by providing visual debugging capabilities without depending on ROS 2 stack, enabling a faster iteration cycle. This environment also facilitates training agents using reinforcement learning. \\
+The project also includes the development of a simple simulation environment, which facilitates the development of search algorithms by providing visual debugging capabilities without depending on the ROS 2 stack, enabling a faster iteration cycle. This environment also facilitates training agents using reinforcement learning. \\
 
-Four concrete hypotheses are formulated to guide development and evaluation of the project:
+Three concrete hypotheses are presented to guide development and evaluation of the project:
 
 \begin{itemize}
     \item \textbf{Hypothesis 1:} A gradient-based search algorithm will outperform a basic obstacle-avoidance (baseline) algorithm in terms of coverage efficiency in a known map, but will incur higher computational cost.
-    \item \textbf{Hypothesis 2:} A hybrid algorithm that combines gradient-based navigation with high-level path planning will achieve better coverage efficiency than both the baseline and purely gradient-based methods in a known map, but will incur higher computational cost.
+    \item \textbf{Hypothesis 2:} A hybrid algorithm that combines gradient-based navigation with high-level path planning will achieve better coverage efficiency than a purely gradient-based method in a known map, but will incur higher computational cost.
     \item \textbf{Hypothesis 3:} A lightweight, custom-built simulator can approximate the key performance characteristics (e.g. coverage progression) observed in a high-fidelity simulator like Gazebo, while significantly reducing computational requirements.
-    \item {\color{red}\textbf{Hypothesis 4:} A reinforcement learning-based search algorithm can achieve coverage efficiency comparable to that of gradient-based and hybrid approaches in a known map.}
 \end{itemize}

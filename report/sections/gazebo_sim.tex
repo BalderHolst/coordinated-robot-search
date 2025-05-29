@@ -3,9 +3,9 @@ To validate that the robot behavior models function under realistic conditions, 
 
 \subsection{ROS 2}
 \label{sub:ros_2}
-Deploying robot systems in real-world scenarios requires more infrastructure than simulation alone, including networked communication and physical hardware interfacing. ROS 2 (Robot Operating System version 2) is widely used for these purposes. It provides a rich ecosystem of tools, communication primitives, hardware drivers, and standard packages for robotic applications. ROS 2 is built on a publisher/subscriber communication model. Individual tasks are encapsulated as nodes, which communicate through topics, services, or actions. This modularity enables complex systems to be built from loosely coupled components. \\
+Deploying robot systems in real-world scenarios requires more infrastructure than simulation alone, including networked communication and physical hardware interfacing. ROS 2 (Robot Operating System version 2) is widely used for these purposes. It provides a rich ecosystem of tools, communication primitives, hardware drivers, and standard packages for robotic applications. ROS 2 is built on a publisher/subscriber communication model. Individual tasks are encapsulated as nodes, which communicate through topics, services, and actions. This modularity enables complex systems to be built from loosely coupled components. \\
 
-In this project, each robot runs in its own ROS 2 namespace, allowing for the separation of topics and nodes. This approach supports scalable multi-robot simulation, where sensor data and localization outputs—such as those from AMCL, LiDAR, cameras, and transform frames—remain isolated per robot instance.\\
+In this project, each robot runs in its own ROS 2 namespace, allowing for the separation of topics and nodes. This approach supports scalable multi-robot simulation, where sensor data and localization outputs --- such as those from AMCL, LiDAR, cameras, and transform frames --- remain isolated per robot instance.\\
 
 Gazebo also uses a publish/subscribe model internally. Through the \texttt{ros-gz-bridge}, Gazebo topics are bridged to ROS 2 topics, allowing control commands to flow into Gazebo and simulated sensor data to be published back into ROS 2.\\
 
@@ -17,27 +17,25 @@ The Turtlebot 4 is modeled using a URDF (Unified Robot Description Format) file 
 \label{sub:localization} 
 To enable functional behavior, robots require an estimate of their pose within the environment. This project assumes access to a pre-existing map for localization. \\
 
-Localization is handled by the AMCL (Adaptive Monte Carlo Localization) algorithm \cite{amcl} \cite{amcl-docs} from the ROS 2 \texttt{nav2} stack \cite{nav2} \cite{nav2-docs}. AMCL uses LiDAR and odometry data to estimate the robot’s pose through a particle filter, yielding a position and orientation with an associated uncertainty.\\
+Localization is handled by the AMCL (Adaptive Monte Carlo Localization) algorithm \cite{amcl, amcl-docs} from the ROS 2 \texttt{nav2} stack \cite{nav2, nav2-docs}. AMCL uses LiDAR and odometry data to estimate the robot’s pose through a particle filter, yielding a position and orientation with an associated uncertainty.\\
 
 For environments without an available map, SLAM (Simultaneous Localization And Mapping) is employed to build the map while localizing the robot in real time. The \texttt{nav2} SLAM package is used for this purpose, particularly during map generation phases in 3D simulations.
 
 \subsection{Object detection}
 \label{sub:object_detection}
-The core objective of this project is to locate a predefined target object in the environment. For this, a simple rule-based object detection system is used instead of a machine learning-based detector, as object detection is not a focus of the project.
+To locate a predefined target object in an environment, a simple rule-based object detection system is used in place of a machine learning-based detector, as object detection is not a focus of the project. \\
 
 The camera feed is accessed through a ROS 2 topic. The object of interest is defined as a yellow ball, and the detection pipeline proceeds as follows:
 
 \begin{enumerate}
     \item Convert the input image from BGR to HSV color space (Hue, Saturation, Value), as HSV is more robust for color detection.
-    \item Apply a mask to isolate yellow hues (typically around 60° in hue).
+    \item Apply a mask to isolate yellow hues (around 60° in hue).
     \item Extract contours from the masked image.
     \item Create minimum enclosing circles around the contours.
     \item Calculate the average color of the circles to verify hue alignment with yellow.
 \end{enumerate}
 
-If no circles are found, the frame is considered to contain no search object. If one or more circles are detected, their probability of being the target object is computed based on their average color proximity to yellow.
-
-This method is computationally inexpensive and sufficient for simulation, though it lacks robustness in poor lighting or cluttered environments.
+If no circles are found, the frame is considered to contain no search object. If one or more circles are detected, their probability of being the target object is computed based on their average color proximity to yellow. This method is computationally inexpensive and sufficient for simulation, though it lacks robustness in poor lighting or cluttered environments.
 
 \subsection{\texttt{botbrain} Integration}
 \label{sub:Botbrain_integration}
@@ -49,14 +47,12 @@ uint32 sender_id
 byte[] data
 \end{minted}
 
-This message contains only a sender ID and a serialized, variable length, byte array of data which contains the message. This design choice avoids the need for multiple ROS 2 message types. Each robot serializes its outgoing messages and deserializes incoming data to process it via the shared \texttt{botbrain} interface.
+This message contains only a sender ID and a serialized, variable length, byte array of data which contains the message. This design choice avoids the need for multiple ROS 2 message types. Each robot serializes its outgoing messages and deserializes incoming data for processing via the shared \texttt{botbrain} interface.
 
 After receiving the latest sensor data, each robot's behavior is called. The resulting control command, consisting of linear and angular velocity, is published to Gazebo. The simulation then applies this input using its differential drive model.
 
+
+% TODO: Move to "Two Simulators" section
 \subsubsection{Debugging and Visualization}
 \label{sec:debugging_rviz}
-
-% I think we said this already...
-% > The \texttt{botbrain} library exposes a debugging interface called \texttt{Debug Soup}, which aggregates internal state and diagnostic data for visualization. In \texttt{simple\_sim}, this is rendered directly within the GUI. In the Gazebo/ROS 2 environment, visualization is performed using RViz2.
-
 RViz2 supports visualization of sensor data, robot poses, and user-defined topics. \texttt{Debug Soup} elements such as occupancy grids, goal paths, and goal markers can be converted into ROS 2 message formats (e.g., \texttt{OccupancyGrid}) for real-time display. This enables introspection of robot behavior during simulations and is invaluable for development and debugging.
