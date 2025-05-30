@@ -1245,6 +1245,8 @@ def plot_paths(
 
     plot_files = []
 
+    ext_ax = ax
+
     for seg in range(segments):
         out_file = os.path.join(
             plot_dir(), f"{title.replace(' ', '-').lower()}-{seg + 1}-of-{segments}.png"
@@ -1255,7 +1257,7 @@ def plot_paths(
             continue
 
         fig = None
-        if not ax:
+        if not ext_ax:
             fig, ax = plt.subplots()
 
         t = df["time"]
@@ -1295,7 +1297,7 @@ def plot_paths(
                                 color=color,
                                 alpha=1.0,
                             )
-                        case 1:
+                        case _:
                             ax.plot(
                                 x_col[start:cursor],
                                 y_col[start:cursor],
@@ -1374,15 +1376,17 @@ def plot_paths(
                 ),
             )
 
+        plot_title = f"{title} (after {end_time:.0f}s)"
+
         plot_world(
             ax,
             result.world(),
-            f"{title} (after {end_time:.0f}s)",
+            plot_title,
             borders=borders,
             plot_title=plot_title,
         )
 
-        out_file = os.path.join(plot_dir(), f"{title.replace(' ', '-').lower()}.png")
+        out_file = os.path.join(plot_dir(), f"{plot_title.replace(' ', '-').lower()}.png")
 
         if fig:
             plot_file = save_figure(fig, out_file)

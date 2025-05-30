@@ -17,17 +17,13 @@ if __name__ == "__main__":
 
     for (behavior, name) in BEHAVIORS:
 
+        bp.seed(2)
         scenario = bp.Scenario(
             title=name,
             world=bp.repo_path("worlds/objectmap/pathing_example.ron"),
             behavior=behavior,
             duration=DURATION,
-            robots=[
-                bp.Robot(x=0, y=-7),
-                bp.Robot(x=2, y=-7),
-                bp.Robot(x=0, y=-9),
-                bp.Robot(x=2, y=-9),
-            ],
+            robots=4,
         )
 
         res = bp.run_sim(scenario)
@@ -36,11 +32,13 @@ if __name__ == "__main__":
 
         bp.plot_velocity(res, f"{behavior}-velocity", f"{behavior} Velocity")
 
+        print(f"Copying plot to report:")
+
         for src in plot_files:
             dst = os.path.join(PLOT_DIR, "paths", os.path.basename(src))
 
             os.makedirs(os.path.dirname(dst), exist_ok=True)
             shutil.copy(src, dst)
 
-            print(f"Plot copied to '{bp.relpath(dst)}'")
+            print(f"    '{bp.relpath(src)}' copied to '{bp.relpath(dst)}'")
 
