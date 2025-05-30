@@ -70,7 +70,6 @@ The paths are visually similar, indicating that the velocity commands generated 
 \subsubsection{Performance Consistency}
 To validate performance characteristics across simulators, the coverage of 4 robots was recorded over 6 runs for the behaviors developed in \cref{sec:search-algorithms} in both simulators. \Cref{fig:coverage-benchmark-all} shows the results of this test.
 
-% TODO: Fix "Diff." and "Diference"
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{./figures/plots/consistency/gazebo_vs_simple_sim_coverage.png}
@@ -90,8 +89,7 @@ The coverage performance seems to match well between the two simulators, with co
 
 \subsection{Search Algorithm Benchmarks}
 \label{sec:search-algorithms-benchmark}
-% TODO: Write duration of the trials (in text and figures)
-Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots. All results can be found in Appendix \ref{appendix:more-plots}. 
+Each algorithm was run 10 times on the Depot (for 800 s) and Warehouse (for 1200 s) maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots. All results can be found in Appendix \ref{appendix:more-plots}. 
 
 \begin{figure}[H]
   \centering
