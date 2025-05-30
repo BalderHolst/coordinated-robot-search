@@ -1,10 +1,8 @@
-% TODO: MANY Cites
-
 \section{Further Development}
 While this project demonstrates a complete simulation-based framework for coordinated robotic search, several opportunities exist for real-world deployment and further algorithmic enhancements. This section outlines key considerations for transitioning to physical systems and explores future directions in algorithmic development.
 
 \subsection{Real World Implementation}
-Although this project has not been tested on physical hardware, the entire software stack has been developed with real-world deployment in mind. Both the simulation architecture and behavior algorithms are modular, portable, and compatible with widely available robotics platforms and middleware.
+Although this project has not been tested on physical hardware, the entire software stack has been developed with real-world deployment in mind. Both the simulation architecture and behavior algorithms are modular, portable, and compatible with widely available robotics platforms and middleware, due to only requirements being: LiDAR, camera, odometry, and communication.
 
 To ensure reliable performance in real-world conditions, the following aspects should be evaluated and potentially refined:
 
@@ -13,33 +11,10 @@ To ensure reliable performance in real-world conditions, the following aspects s
   \item \textbf{Robust object detection}: The current color-based detection may perform poorly under varying lighting conditions. More advanced detection techniques (e.g., learned models or depth-based filtering) could improve reliability.
   \item \textbf{Communication robustness}: Real-world wireless communication introduces latency, packet loss, and range limitations. Fault-tolerant strategies such as message queuing, compression, or redundancy may be necessary.
   \item \textbf{Real-time performance}: The behavior logic and path planning algorithms should be profiled on embedded hardware to ensure real-time feasibility.
-  \item \textbf{ROS 2 control integration}: Currently, differential drive is simulated via Gazebo plugins. Transitioning to \texttt{ros2\_control} would enable consistent controller behavior on both simulated and physical robots.
+  \item \textbf{ROS 2 control integration}: Currently, differential drive is simulated via a Gazebo plugin. Transitioning to \texttt{ros2\_control} \cite{ros2-control} would enable consistent controller behavior, as it offers modular hardware interfaces and is compatible with both real and simulated environments via a Gazebo plugin.
 \end{itemize}
 
 A practical next step would be to implement a small-scale multi-robot testbed using TurtleBot 4 platforms. This would facilitate hardware-in-the-loop testing and help uncover system-level challenges not observable in simulation.
-
-\subsubsection{Hardware Requirements}
-The project targets differential drive robots equipped with:
-\begin{itemize}
-  \item A 2D LiDAR scanner.
-  \item An RGB camera with a known field of view.
-  \item Wheel odometry or an IMU for dead reckoning.
-  \item A communication module (e.g., Wi-Fi, Zigbee, or LoRa).
-\end{itemize}
-Although TurtleBot 4 is used in simulation, the software can be adapted to other platforms by adjusting sensor interfaces and configuration parameters.
-
-\subsubsection{Using ROS 2}
-Deployment is primarily managed through a dedicated ROS 2 node that subscribes to standard input topics:
-\begin{itemize}
-  \item \texttt{/scan}: LiDAR data for localization and obstacle detection.
-  \item \texttt{/rgbd\_camera/image}: RGB image stream for object detection.
-  \item \texttt{/amcl\_pose}: Global pose estimated via AMCL.
-\end{itemize}
-
-Output is published to \texttt{/cmd\_vel}, which controls linear and angular velocities. In simulation, Gazebo handles differential drive via plugins. For physical robots, \texttt{ros2\_control} \cite{ros2-control} is recommended. It offers modular hardware interfaces and is compatible with both real and simulated environments via a Gazebo plugin.
-
-\subsubsection{Using the Rust Library}
-For systems that do not support ROS 2, the behavior algorithms can be used via the standalone \texttt{botbrain} Rust library. This interface allows for integration in embedded or custom platforms by directly feeding sensor data to \texttt{botbrain}, receiving control outputs and handling communication between robots. This modular design is critical in swarm systems, where individual robots should be cheep and replalable.
 
 \subsubsection{Communication Considerations}
 \label{sub:communication-methods}
@@ -48,34 +23,23 @@ In simulation, communication is assumed to be instantaneous and lossless. Howeve
 
 % TODO: Find cites for this
 \begin{itemize}
-  \item \textbf{Wi-Fi (802.11n/ac)}: Offers high bandwidth, typically between \SI{50}{Mbps} and \SI{600}{Mbps} under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to \SI{100}{m} indoors, \SI{300}{m} outdoors).
+  \item \textbf{Wi-Fi}: Offers high bandwidth, typically between \SI{50}{Mbps} and \SI{600}{Mbps} under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to \SI{100}{m} indoors, \SI{300}{m} outdoors).
   \item \textbf{Cellular (4G/5G)}: Provides broad coverage and high bandwidth. 4G networks offer download speeds up to \SI{100}{Mbps}, while 5G can exceed \SI{1}{Gbps} in ideal conditions. Cellular networks are suitable for large-scale outdoor deployments but may introduce variable latency and incur data costs.
   \item \textbf{Zigbee}: Designed for low-power, low-data-rate mesh networking. Typical throughput is around \SI{250}{kbps}, with an effective range of up to \SI{100}{m} line-of-sight. Zigbee is well-suited for structured indoor environments with modest communication demands.
   \item \textbf{LoRa (Long Range)}: Offers long-range communication (up to \SI{10}{km} in rural settings) with extremely low data rates, typically between \SI{0.3}{kbps} and \SI{50}{kbps}. It is appropriate for sparse, low-frequency messaging where continuous data exchange is not required.
 \end{itemize}
 
-The system currently employs a broadcast communication model, where each robot periodically shares its observations over a shared channel. Messages are serialized into a compact binary format to reduce transmission overhead.
-
-If communication bandwidth becomes a limiting factor, several strategies can be employed:
-\begin{itemize}
-  \item \textbf{Message prioritization}: Transmitting only high-value or time-critical data.
-  \item \textbf{Lossy compression}: Reducing data precision or selectively discarding less important information.
-\end{itemize}
-
 Future work may include implementing adaptive communication policies, allowing robots to dynamically adjust their broadcast frequency and data payload based on network conditions and mission priorities.
 
 \subsection{Advancing Deep Reinforcement Learning}
-A basic model has been developed as a proof of concept. {\color{red}It is limited by the hardware but with better GPU\'s more advanced models can be trained.}
-The deep reinforcement learning can be extended in multiple directions to improve both learning performance and real-world applicability:
+A basic model has been developed as a proof of concept. {\color{red}More conplex models is currently limited by the hardware available but with better GPU's more advanced models can be trained.}
+The deep reinforcement learning can be extended and tuned in multiple directions to improve both learning performance and real-world applicability:
 
-% TODO: Add something about global knowledge, e.g. from frontiers or entire costmap
 \begin{itemize}
   \item \textbf{Network architecture tuning}: Adjusting the number of layers, neurons, and activation functions to improve learning stability and performance.
+  \item \textbf{Network input layers}: Add input which allows for global knowledge, e.g. from frontiers or entire costmap.
   \item \textbf{Hyperparameter optimization}: Fine-tuning learning rate, discount factor, batch size, and exploration parameters for better convergence.
-  \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.
-  \item \textbf{Reward shaping}: Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
-  \item \textbf{Domain randomization}: Introducing variability in sensor noise and dynamics during training to improve generalization.
-  \item \textbf{Curriculum learning}: Training on progressively more complex environments to facilitate gradual policy improvement.
+  \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
   \item \textbf{Transfer learning}: Adapting a pretrained simulation policy to real-world conditions via fine-tuning on physical robots.
 \end{itemize}
 
