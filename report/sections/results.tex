@@ -1,9 +1,6 @@
-% TODO: Cite maps
-% TODO: Add section about `botplot`
-
 \section{Results}
 \label{sec:results}
-This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot {\color{red} [CITE]} and Warehouse {\color{red} [CITE]}. \Cref{fig:bench-maps} shows the maps, with differing denseness of obstacles, used during testing. \\
+This section presents the results of simulations meant to determine the performance of the developed search algorithms. Algorithms were run on two maps: Depot and Warehouse \cite{gz-worlds}. \Cref{fig:bench-maps} shows the maps, with differing denseness of obstacles, used during testing. \\
 
 Search algorithms are evaluated in terms of two key metrics: map coverage over time and computational expense. It is assumed that a higher coverage over time metric would lead to a shorter time to find a search item. Additionally, the consistency between the two simulation environments, \texttt{simple\_sim} and the Gazebo ROS 2 setup is evaluated to confirm the robustness and portability of the behavior implementations.
 
@@ -23,6 +20,17 @@ Search algorithms are evaluated in terms of two key metrics: map coverage over t
   \caption{Maps used for benchmarking search algorithms. The Depot map is smaller and more open compared to the Warehouse map, which is larger and has more hard to reach areas.}
   \label{fig:bench-maps}
 \end{figure}
+
+\subsection{Botplot}
+To enable efficient and reproducible experimentation, a custom Python package named \texttt{botplot} was developed. This tool provides utility functions for running and analyzing scenarios in both \texttt{simple\_sim} and the Gazebo/ROS 2 simulation environments.
+
+During each simulation run, data is collected in real time. In \texttt{simple\_sim}, the data is recorded directly and stored in a \texttt{.ipc} (Apache Arrow) file. Similarly, in the ROS 2 setup, a dedicated logger node captures relevant simulation data, which is likewise serialized for later analysis.\\
+
+Once recorded, the data is processed using \texttt{botplot}, which offers a suite of customizable plotting functions to visualize various performance metrics. These include map coverage, robot paths, communication patterns, and computational performance, among others.
+
+To streamline the workflow, results are cached based on the simulation scenario. This allows for rapid re-plotting without the need to rerun the simulation, significantly improving the iteration speed when tuning parameters or updating visualizations.
+
+All figures presented in this report were generated using \texttt{botplot}.
 
 \subsection{Simulator Consistency}
 \label{sec:simulator-consistency}
@@ -83,33 +91,25 @@ The coverage performance seems to match well between the two simulators, with co
 \subsection{Search Algorithm Benchmarks}
 \label{sec:search-algorithms-benchmark}
 % TODO: Write duration of the trials (in text and figures)
-Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots.All results can be found in Appendix \ref{appendix:more-plots}. 
+Each algorithm was run 10 times on the Depot and Warehouse maps with 1, 2, 4, 8 robots using \texttt{simple\_sim}. The warehouse map was also run with 16 robots. The relative performance between the behaviors seems stable regardless of robot count. \Cref{fig:coverage-benchmark} shows a representative result with 4 robots. All results can be found in Appendix \ref{appendix:more-plots}. 
 
-
-% TODO: Move common caption text to common caption
-% TODO: Mention robot count
 \begin{figure}[H]
   \centering
   \begin{subfigure}[b]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-depot.png}
-      \caption{Results from running 4 robots in the Depot environment with \texttt{simple\_sim}.}
+      \caption{800 s in simple map (Depot)}
   \end{subfigure}
   \begin{subfigure}[b]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-warehouse.png}
-      \caption{Results from running 4 robots in the Warehouse environment with \texttt{simple\_sim}.}
+      \caption{1200 s in complex map (Warehouse)}
   \end{subfigure}
-    \caption{Coverage performance of search algorithms over 10 runs starting in random positions in the same environment.}
+    \caption{Coverage performance of search algorithms over 10 runs with 4 robots starting in random positions in the same environment.}
     \label{fig:coverage-benchmark}
 \end{figure}
 
 The results clearly show that the Pure Pathing outperforms the other algorithms followed by the Hybrid algorithm. The Gradient algorithm is significantly worse than both the Pure Pathing and Hybrid algorithms. The Roomba algorithm is generally better performing in the beginning of the run, but has a hard time getting full coverage of the map, and is overtaken by the Gradient algorithm which has the search gradient to guide it towards unexplored areas.
-
-% All algorithms eventually achieve full coverage, though their exploration efficiency varies significantly. 
-% Gradient-based methods tend to cover local areas quickly but slow down due to diminishing gradients near fully explored zones. 
-% Frontier-based methods achieve higher global efficiency by directing robots toward unknown regions, but at a higher computational cost. The hybrid method strikes a balance by switching strategies based on local exploration progress. 
-% Deep reinforcement learning shows promise but requires further tuning for consistent early-stage performance.
 
 \def\w{0.329\textwidth}
 \begin{figure}[H]
@@ -154,32 +154,23 @@ The results clearly show that the Pure Pathing outperforms the other algorithms 
 
 \subsection{Computational Performance}
 A critical aspect of the search algorithm's performance is computational requirement for running the behaviors.
+\Cref{fig:computation-performance} shows the distribution of computation times per time step for each search algorithm, measured over six runs in the same environment. The data highlights key differences in computational cost and stability across behaviors.\\
 
-\subsubsection{Computation Time}
-\Cref{fig:computation-performance} presents distributions of time to run the behavior in each time step. The benchmark was recorded over 6 runs for each algorithm running in the same environment. General observations are:
+As expected, the \textbf{Roomba} algorithm demonstrates the lowest and most consistent computation time due to its simplicity and lack of map processing. In contrast, the \textbf{Pure Pathing} algorithm performs efficiently on average but displays noticeable outliers. These spikes are caused by expensive operations --- such as costmap updates, frontier evaluation, and A* path planning --- which are not executed at every time step. This variability suggests a degree of computational instability that could pose challenges when deploying on resource-constrained platforms like microcontrollers.\\
 
-% TODO: Turn into paragraph
-% TODO: Mention that pure pathing seems to be more computationally unstable. Sensitive to outliers. Effect on microcontrollers.
-\begin{itemize}
-  \item The \textbf{Roomba} algorithm, being the simplest, exhibits the lowest and most consistent computation time.
-  \item The \textbf{Pure Pathing} algorithm also performs efficiently on average, though it shows more outliers due to the occasional expensive operations --- namely, costmap generation, frontier exploration/evaluation, and path planning --- which are not triggered at every time step.
-  \item The \textbf{Gradient} method is consistent but is the slowest on average, as gradient recalculation occurs at each step.
-  \item The \textbf{Hybrid} method was expected to fall between Pure Pathing and Gradient in terms of complexity as it uses a combination of the two. This assumption holds based on the observed data.
-\end{itemize}
+The \textbf{Gradient} method, while computationally stable, exhibits the highest average computation time. This is due to the cost of recalculating the gradient field at every step, regardless of environmental changes. The \textbf{Hybrid} algorithm was expected to fall between Pure Pathing and Gradient in terms of computational load, which is consistent with the observed data. Its ability to switch between strategies allows it to balance responsiveness and efficiency without incurring the full cost of either method.
 
-% TODO: Log scale mention
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.95\textwidth]{./figures/plots/computation-performance-(6-runs).png}
     \end{center}
-    \caption{Computation time for each search algorithm in the same map environment.}
+    \caption{Computation time for each search algorithm in the same map environment. Log scale is used for better visualization.}
     \label{fig:computation-performance}
 \end{figure}
 
 \subsection{Communication Load}
 The messages transmitted during operation are updates to the search grid, which are sent whenever a robot’s internal search grid is modified. From these updates, other robots can synchronize their local search grids and infer the position of the robot that originated the message. Each message has a fixed size of 26 bytes. The \texttt{botbrain} library includes a configurable parameter that controls the broadcast frequency. The frequency is set to 10 Hz by default, which is one message every 100 ms, resulting in approximately 260 bytes/sec of outbound communication per robot. \\
 
-% TODO: Maybe only mention this here and not in further development
 A bandwidth of 260 bytes/sec negligible for most communicatino technologies considered for real-world deployment (see \cref{sub:communication-methods}), including Wi-Fi, Zigbee, and cellular. However, it may exceed practical limits for LoRa, particularly as the number of robots increases or in scenarios requiring higher message frequencies. If LoRa is to be considered for deployment, further message compression, reduced transmission frequency, or more aggressive filtering strategies would be necessary to meet the bandwidth constraints.
 
 \subsection{Simulator Performance}
