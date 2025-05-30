@@ -1,5 +1,3 @@
 \section*{Abstract}
 \label{sec:Abstract}
-
-% TODO: Write!
-
+This project explores behaviors which could be used to search a predefined and mapped environment. It includes the development of three algorithms: A gradient-based, a path-planning-based and a hybrid algorithm mixing the two. The algorithms were also compared with a simple obstacle avoiding behavior as a baseline. It also contains an exploration of deep reinforcement learning as it applies to the topic of multi robot search. Algorithms were tested in Gazebo using ROS 2 as well as in a simple custom-built simulator. Experiments showed that the simple simulator was a good approximation of the more complex Gazebo environment in most cases, but that behavior performance did not always translate perfectly. Results gathered using the simple simulator showed that the pure pathing algorithm outperformed all other algorithms in coverage over time. The pure pathing also outperformed the gradient-based alternatives, on mean step computation time, albeit with more outliers. This indicates that gradient based methods could be used as a more stable backup behavior in corner cases where path-planning becomes too expensive.
