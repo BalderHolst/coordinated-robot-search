@@ -10,6 +10,4 @@ This project presents a modular and extensible framework for coordinated robotic
     \item The comparison between \texttt{simple\_sim} and Gazebo showed strong consistency in coverage trends, even accounting for differences in physical modeling and sensor noise. This was achieved with up to 35 times faster simulation speeds. This supports \textbf{hypothesis 3} and validates the use of the lightweight simulator for rapid development and evaluation.
 
 \end{itemize}
-
-% TODO: Ponder...
-Overall, the results highlight that distributed, modular behavior can be developed and tested efficiently in simulation. The groundwork for real-world deployment has been made as the behaviors can be used in ROS 2 using the developed node.
+Overall, the results highlight that distributed, modular behavior can be developed and tested in using a simulator-to-simulator approach. Of the four behavioral algorithms, global path planning using frontier exploration was found to be most effective, but yielded less reliable computation times than the gradient based method.
