@@ -147,8 +147,11 @@ The results clearly show that the Pure Pathing outperforms the other algorithms 
     \label{fig:warehouse-threshold}
 \end{figure}
 
-% TODO: Maybe explain causes in discussion
-\Cref{fig:depot-threshold} and \cref{fig:warehouse-threshold} show the average time it takes the swarm to cover different coverage thresholds of the map in the Depot and Warehouse environments, respectively with a varying number of robots. {\color{red} Here, it is clear that the Pure Pathing and Hybrid behaviors are able to use their global view of the map to find remaining unexplored regions.} It is also evident that the Roomba algorithm performance is drastically reduced in the more complex Warehouse environment as it never reaches above 33\% with any number of robots within the time span of the trial.
+\Cref{fig:depot-threshold} and \cref{fig:warehouse-threshold} show the average time required for the swarm to reach various coverage thresholds in the Depot and Warehouse environments, respectively, using different numbers of robots.
+
+The results clearly indicate that the \textbf{Pure Pathing} and \textbf{Hybrid} behaviors are the most efficient in achieving higher coverage levels. This highlights the benefit of incorporating global map awareness and structured path planning into the search strategy.
+
+In contrast, the \textbf{Roomba} algorithm demonstrates significantly reduced performance in the more complex Warehouse environment. Notably, it fails to surpass 33\% coverage within the trial duration, regardless of the number of robots. This suggests that simple obstacle-avoiding behaviors without global coordination are insufficient in environments with dense obstacle layouts and limited visibility.
 
 \subsection{Computational Performance}
 A critical aspect of the search algorithm's performance is computational requirement for running the behaviors.
