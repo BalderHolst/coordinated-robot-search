@@ -14,16 +14,6 @@ A simulated differential-drive robot equipped with a camera, LiDAR, odometry, an
 
 To leverage existing 3D models and URDF files, the Turtlebot 4 \cite{tb4} is selected as the simulated platform. Although the Turtlebot 4 lacks a dedicated communication unit, inter-robot messaging is handled by the simulator, rendering the system agnostic to the specific communication method. The software can be adapted to any robot platform that satisfies the sensor and communication requirements by configuring parameters in the source code.
 
-% TODO: Move to appendix
-% TODO: Cite source
-\begin{figure}[H]
-    \begin{center}
-        \includegraphics[width=0.55\textwidth]{figures/tb4.png}
-    \end{center}
-    \caption{Turtlebot 4 platform used in simulation.}
-    \label{fig:tb4}
-\end{figure}
-
 \subsection{Using Rust}
 The core of the system is implemented in Rust. While this choice was primarily based on developer preference, it brings several notable benefits. 
 Rust's memory safety guarantees and strong static typing contribute to a more robust and maintainable codebase. The compiler ensures that object lifetimes are correctly managed, eliminating an entire class of memory-related bugs. These features make Rust particularly well-suited for collaborative development, where code clarity and correctness are critical. \\
@@ -62,30 +52,33 @@ Methods prefixed with \texttt{set} are intended for initialization and must be c
 \subsection{Two Simulators}
 This project uses a simulator-to-simulator approach rather than attempting direct deployment to physical hardware. Two simulators were used: a lightweight custom built 2D simulator called \texttt{simple\_sim}, and a more realistic 3D simulation in Gazebo integrated with ROS 2. \\
 
-The 2D simulator supports rapid prototyping, debugging, and algorithm iteration. It is deterministic, lightweight, and capable of running much faster than real time in most cases. The Gazebo simulation, by contrast, is computationally much more heavy and provides high-fidelity sensor emulation and more realistic robot dynamics. It is used to validate that behaviors developed in the simpler simulator transfer correctly to a close to real environment. \\
+The 2D simulator is designed to be lightweight and fast although the simulation environment is very simple. The Gazebo simulation, by contrast, is computationally much more heavy and provides more extensive sensor emulation and more realistic robot dynamics. It is used to validate that behaviors developed in the simpler simulator transfer correctly to a close to real environment. \\
 
-% TODO: Explain EVERYTHING on the figures! It should be quite long.
 \def\w{0.95\textwidth}
 \begin{figure}[H]
     \centering
     \begin{subfigure}[b]{\w}
         \centering
         \includegraphics[width=\textwidth]{./figures/screenshots/simple_sim_depot.png}
-        \caption{Simple Simulator}
+        \caption{Simple Simulator Graphical User Interface showing two robots, one in the middle and one in the lower left part of the map. Several debug items are visualized: Search Grid, Frontiers, and LiDAR and Camera approximations are shown. These will be explained in later sections.}
         \label{fig:simple_sim}
     \end{subfigure} \\
     \vspace{3mm}
     \begin{subfigure}[b]{\w}
         \centering
         \includegraphics[width=\textwidth]{./figures/screenshots/gazebo_sim_depot.png}
-        \caption{Gazebo Simulator in ROS 2}
+        \caption{Gazebo Simulator in ROS 2. The left window contains the Gazebo visualization, which renders the 3D enviornment. On the right, RViz2 is visualizing data sent over topics which includes the current search grid as shown in red and blue.}
         \label{fig:gazebo_sim}
     \end{subfigure}
-    \caption{Screenshots of the simulators running the "depot" environment.}
+    \caption{Screenshots of the two simulators running the "depot" environment.}
     \label{fig:simulators}
 \end{figure}
 
 The double simulator architecture is built around the shared \texttt{botbrain} behavior library, which encapsulates each robot’s internal state and provides a standardized interface for behavior control. This modular design allows the same behavior code to be executed in both the lightweight \texttt{simple\_sim} environment and the more realistic Gazebo based simulation without requiring any code changes. By decoupling the behavior logic from the underlying simulation platform, the system supports consistent benchmarking and fair comparisons between algorithms. This separation also promotes cleaner, more testable, and reusable code, making it easier to iterate on behaviors and evaluate improvements.
 
 \subsubsection{Behavior Debugging}
-To facilitate development and validation, the simple simulator supports real-time debugging of both robot behavior and its internal state. The \texttt{botbrain} library exposes a debugging interface known as the \texttt{Debug Soup}, which allows behavior modules to annotate the simulation with structured debugging data. These debug items --- such as occupancy grids, path vectors, target points, and internal decision states --- can be visualized in both \texttt{simple\_sim} (\cref{fig:simple_sim}) and ROS 2 via RViz2 (\cref{fig:gazebo_sim}). The debug items are located on the right panel i the \texttt{simple\_sim} user interface and their overlays can be toggled at will. To visualize debug items in RViz2, items are converted into ROS 2 messages and published to topics, which can be subscribed to by RViz2. This significantly accelerates the development process and helps in interpreting the emergent behavior of the swarm. The \texttt{Debug Soup} can be disabled to save memory and increase performance after development has finished.
+To facilitate development and validation, \texttt{botbrain} supports real-time debugging of both robot behavior and internal state, through the exposed debugging interface known as the \texttt{Debug Soup}. The \texttt{Debug Soup} allows behavior modules to annotate the simulation with structured debugging data. These debug items --- such as occupancy grids, path vectors, target points, and internal decision states --- can be visualized in both ROS 2 via RViz2 (\cref{fig:gazebo_sim}) and \texttt{simple\_sim} (\cref{fig:simple_sim}). \\
+
+RViz2 supports visualization of messages published on ROS 2 topics. \texttt{Debug Soup} elements are converted into ROS 2 message formats (e.g., \texttt{OccupancyGrid}) and published for real-time display. In \texttt{simple\_sim}, debug items are located on the right panel in the user interface and their overlays can be toggled at will. \\
+
+This enables introspection of robot behavior during simulations and is invaluable for development, debugging, and helps in interpreting emergent behavior of the swarm. The \texttt{Debug Soup} can be disabled to save memory and increase performance after development has finished.

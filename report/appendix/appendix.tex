@@ -5,6 +5,9 @@
   
 \renewcommand\thesubsection{\Alph{subsection}}
 
+\newcommand{\appendent}[3]{
+    \includepdf[pages=-, addtotoc={1, subsection, 1, #1, appendix:#2}]{appendix/#3}
+}
 
 % Add appendix to table of contents
 % Appendix front page
@@ -31,10 +34,25 @@ An online version of this report can be found at the link: \\
 
 \subsection{GitHub Repository}
 \label{appendix:github}
-% TODO: Maybe include README?
-% TODO: Repo not public
 All Source code developed during this project is available on GitHub: \\
 \url{https://github.com/BalderHolst/coordinated-robot-search}.
+
+\newpage
+
+\appendent{Repository README}{readme}{README.pdf}
+The following pages contain a rendered version of the \texttt{README.md} file from the GitHub repository. It contains a description of the project structure, and how to run the code.
+
+
+\newpage
+
+\subsection{Turtlebot 4 Image}
+Below is an image of the Turtbebot 4 platform used in the simulation. 
+More information can be found at the link: \\
+\url{https://clearpathrobotics.com/turtlebot-4/}
+\begin{center}
+    \includegraphics[width=0.65\textwidth]{figures/tb4.png}
+\end{center}
+
 
 \newpage
 \subsection{\texttt{botbrain} Usage Example}
@@ -83,36 +101,47 @@ loop {
 }
 \end{minted}
 
-\stopcontents[inner]
-
 \newpage
 \subsection{More Plots from \texttt{simple\_sim} on Depot and Warehouse Maps}
 \label{appendix:more-plots}
 
-\def\w{0.45\textwidth}
+\def\w{0.49\textwidth}
 
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-gradient-behavior-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-gradient-behavior-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-hybrid-behavior-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-hybrid-behavior-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-pure-pathing-behavior-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-pure-pathing-behavior-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-roomba-behavior-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-using-roomba-behavior-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-1-robots-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-1-robots-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-2-robots-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-2-robots-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-8-robots-in-depot.png}
+\hfill
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-8-robots-in-warehouse.png}
 \\
 \includegraphics[width=\w]{figures/plots/benchmarks/coverage-over-10-runs-with-16-robots-in-warehouse.png}
+
+
+
+
+\stopcontents[inner]

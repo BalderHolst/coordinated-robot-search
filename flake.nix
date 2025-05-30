@@ -95,6 +95,7 @@
                 cargo-hack    # Check feature combinations
                 cargo-machete # Find unused dependencies
                 samply        # Profiling tool
+                pandoc        # Markdown to PDF conversion
                 (all-crates pkgs 
                     "cargo-fmt-all"
                     "cargo fmt --all --manifest-path $MANIFEST"

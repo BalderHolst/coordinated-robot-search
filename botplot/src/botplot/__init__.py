@@ -858,7 +858,7 @@ def plot_avg_coverage_diff(results: list[tuple[pl.DataFrame, str]], title: str) 
     if len(results) > 1:
         ax.legend()
     ax.set_xlabel(r"Time (s)")
-    ax.set_ylabel(r"Coverage Diff (\% points)")
+    ax.set_ylabel(r"Coverage Difference (\% points)")
     ax.set_title(title)
     ax.set_ylim([-17, 17])
     return save_figure(fig, file)

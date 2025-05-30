@@ -137,7 +137,7 @@ def main():
 
     print(f"Copied plot to '{dst}'")
 
-    src = bp.plot_avg_coverage_diff(avg_diffs, f"Diference in Coverage between Simulators ({RUNS} Runs)")
+    src = bp.plot_avg_coverage_diff(avg_diffs, f"Difference in Coverage between Simulators ({RUNS} Runs)")
     os.makedirs(FIG_DIR, exist_ok=True)
     dst = os.path.join(
         FIG_DIR,
