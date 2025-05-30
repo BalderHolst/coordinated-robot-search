@@ -21,12 +21,11 @@ A practical next step would be to implement a small-scale multi-robot testbed us
 
 In simulation, communication is assumed to be instantaneous and lossless. However, in real-world deployments, communication introduces latency, potential packet loss, and limited bandwidth. Selecting an appropriate communication technology is critical for maintaining coordinated behavior among robots. The following technologies are considered:
 
-% TODO: Find cites for this
 \begin{itemize}
-  \item \textbf{Wi-Fi}: Offers high bandwidth, typically between \SI{50}{Mbps} and \SI{600}{Mbps} under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to \SI{100}{m} indoors, \SI{300}{m} outdoors).
-  \item \textbf{Cellular (4G/5G)}: Provides broad coverage and high bandwidth. 4G networks offer download speeds up to \SI{100}{Mbps}, while 5G can exceed \SI{1}{Gbps} in ideal conditions. Cellular networks are suitable for large-scale outdoor deployments but may introduce variable latency and incur data costs.
-  \item \textbf{Zigbee}: Designed for low-power, low-data-rate mesh networking. Typical throughput is around \SI{250}{kbps}, with an effective range of up to \SI{100}{m} line-of-sight. Zigbee is well-suited for structured indoor environments with modest communication demands.
-  \item \textbf{LoRa (Long Range)}: Offers long-range communication (up to \SI{10}{km} in rural settings) with extremely low data rates, typically between \SI{0.3}{kbps} and \SI{50}{kbps}. It is appropriate for sparse, low-frequency messaging where continuous data exchange is not required.
+  \item \textbf{Wi-Fi} \cite{wifi}: Offers high bandwidth, typically between \SI{50}{Mbps} and \SI{600}{Mbps} under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to \SI{100}{m} indoors, \SI{300}{m} outdoors).
+  \item \textbf{Cellular (4G/5G)} \cite{cellular}: Provides broad coverage and high bandwidth. 4G networks offer download speeds up to \SI{100}{Mbps}, while 5G can exceed \SI{1}{Gbps} in ideal conditions. Cellular networks are suitable for large-scale outdoor deployments but may introduce variable latency and incur data costs.
+  \item \textbf{Zigbee} \cite{zigbee}: Designed for low-power, low-data-rate mesh networking. Typical throughput is around \SI{250}{kbps}, with an effective range of up to \SI{100}{m} line-of-sight. Zigbee is well-suited for structured indoor environments with modest communication demands.
+  \item \textbf{LoRa (Long Range)} \cite{lora}: Offers long-range communication (up to \SI{10}{km} in rural settings) with extremely low data rates, typically between \SI{0.3}{kbps} and \SI{50}{kbps}. It is appropriate for sparse, low-frequency messaging where continuous data exchange is not required.
 \end{itemize}
 
 Future work may include implementing adaptive communication policies, allowing robots to dynamically adjust their broadcast frequency and data payload based on network conditions and mission priorities.
@@ -37,7 +36,7 @@ The deep reinforcement learning can be extended and tuned in multiple directions
 
 \begin{itemize}
   \item \textbf{Network architecture tuning}: Adjusting the number of layers, neurons, and activation functions to improve learning stability and performance.
-  \item \textbf{Network input layers}: Add input which allows for global knowledge, e.g. from frontiers or entire costmap.
+  \item \textbf{Network input layers}: Add input which allows for more information like global knowledge, e.g. from frontiers or the entire costmap.
   \item \textbf{Hyperparameter optimization}: Fine-tuning learning rate, discount factor, batch size, and exploration parameters for better convergence.
   \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
   \item \textbf{Transfer learning}: Adapting a pretrained simulation policy to real-world conditions via fine-tuning on physical robots.
