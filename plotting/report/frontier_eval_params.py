@@ -47,7 +47,9 @@ def main():
                 res = bp.run_sim(scenario, use_cache=USE_CACHE)
                 results.append(res)
             result_collection.append(
-                bp.ResultCollection(behavior, results, use_cache=USE_CACHE)
+                bp.ResultCollection(
+                    f"{behavior[len('pathing-') :]}", results, use_cache=USE_CACHE
+                )
             )
 
         bp.plot_coverage(
@@ -55,6 +57,8 @@ def main():
             f"frontier_eval_params_{world_name}",
             f'Coverage of {ROBOTS} robots in "{world_name}" ({RUNS} Runs)',
             spread=False,
+            figsize=(6, 4),
+            y_limit=None,
         )
 
 

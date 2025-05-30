@@ -167,6 +167,7 @@ A critical aspect of the search algorithm's performance is computational require
   \item The \textbf{Hybrid} method was expected to fall between Pure Pathing and Gradient in terms of complexity as it uses a combination of the two. This assumption holds based on the observed data.
 \end{itemize}
 
+% TODO: Log scale mention
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.95\textwidth]{./figures/plots/computation-performance-(6-runs).png}
@@ -179,7 +180,6 @@ A critical aspect of the search algorithm's performance is computational require
 The messages transmitted during operation are updates to the search grid, which are sent whenever a robot’s internal search grid is modified. From these updates, other robots can synchronize their local search grids and infer the position of the robot that originated the message. Each message has a fixed size of 26 bytes. The \texttt{botbrain} library includes a configurable parameter that controls the broadcast frequency. The frequency is set to 10 Hz by default, which is one message every 100 ms, resulting in approximately 260 bytes/sec of outbound communication per robot. \\
 
 % TODO: Maybe only mention this here and not in further development
-% TODO: Cite communication technologies
 A bandwidth of 260 bytes/sec negligible for most communicatino technologies considered for real-world deployment (see \cref{sub:communication-methods}), including Wi-Fi, Zigbee, and cellular. However, it may exceed practical limits for LoRa, particularly as the number of robots increases or in scenarios requiring higher message frequencies. If LoRa is to be considered for deployment, further message compression, reduced transmission frequency, or more aggressive filtering strategies would be necessary to meet the bandwidth constraints.
 
 \subsection{Simulator Performance}

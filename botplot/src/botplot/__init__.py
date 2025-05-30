@@ -807,6 +807,7 @@ def plot_coverage(
     title=None,
     spread=True,
     ax=None,
+    y_limit=[0, 105],
     figsize: tuple[int, int] = (9, 5),
 ) -> str:
     fig = None
@@ -842,7 +843,8 @@ def plot_coverage(
 
     ax.set_xlabel(r"Time (s)")
     ax.set_ylabel(r"Coverage (\%)")
-    ax.set_ylim([0, 105])
+    if y_limit:
+        ax.set_ylim(y_limit)
     ax.set_title(title)
 
     if fig:
@@ -1471,8 +1473,8 @@ def plot_training(file: str, name: str) -> str:
 
     return plot_file
 
-def plot_big_coverage(results: dict[int, ResultCollection], name: str) -> list[str]:
 
+def plot_big_coverage(results: dict[int, ResultCollection], name: str) -> list[str]:
     plots = []
 
     LEGEND = [b for _, b in results.keys()]
@@ -1489,12 +1491,14 @@ def plot_big_coverage(results: dict[int, ResultCollection], name: str) -> list[s
 
             crossings = df.with_columns(
                 (
-                    (pl.col("coverage") < threshold).shift(1) &  # was below
-                    (pl.col("coverage") >= threshold)            # now at or above
+                    (pl.col("coverage") < threshold).shift(1)  # was below
+                    & (pl.col("coverage") >= threshold)  # now at or above
                 ).alias("cross_up")
             )
 
-            cross_times = crossings.filter(pl.col("cross_up")).select("time")["time"].to_list()
+            cross_times = (
+                crossings.filter(pl.col("cross_up")).select("time")["time"].to_list()
+            )
 
             if len(cross_times) > 0:
                 points[behavior].append(cross_times[0])
@@ -1507,7 +1511,8 @@ def plot_big_coverage(results: dict[int, ResultCollection], name: str) -> list[s
         df = pl.DataFrame(cols)
 
         for i, col in enumerate(cols.keys()):
-            if col == "robots": continue
+            if col == "robots":
+                continue
             marker = MARKERS[i % len(MARKERS)]
             ax.plot(
                 df["robots"],

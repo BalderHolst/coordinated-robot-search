@@ -35,27 +35,7 @@ Each robot maintains an internal state, which --- combined with sensor input ---
 
 Each robot maintains a "search grid," which acts as a heatmap representing the exploredness of each cell in the map. This grid is continuously updated using the robot’s own observations and messages received from other robots via the shared communication channel. Explored areas are considered "cold," while unexplored areas and search objects are "hot".  \\
 
-Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from the search grid at its current position, encouraging movement toward hotter (less explored) regions, as shown in \cref{fig:gradient-forward-bias}.
-
-% TODO: Remove no forward bias image, move to Gradient behavior section as an illustation of the search grid as the behavior is run.
-\begin{figure}[H]
-  \centering
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-        \includegraphics[width=0.9\textwidth]{./figures/screenshots/without-forward.png}
-    \caption{Without forward bias (400 s).}
-    \label{fig:search-gradient-no-forward}
-  \end{subfigure}
-  \begin{subfigure}[b]{0.45\textwidth}
-    \centering
-    \includegraphics[width=0.9\textwidth]{./figures/screenshots/with-forward.jpeg}
-    \caption{With forward bias (400 s).}
-    \label{fig:search-gradient-forward}
-  \end{subfigure}
-  \caption{Gradient-based search derived from the search grid with and without forward bias.}
-  \label{fig:gradient-forward-bias}
-\end{figure}
-
+Assuming lossless communication, the search grids across robots should remain synchronized. Each robot computes a directional gradient from the search grid at its current position, encouraging movement toward hotter (less explored) regions. 
 
 In practice, computing the gradient involves several steps. First, the average heat under the robot ($H$) must be calculated, using the cells underneath the robot ($C_H$), as in \cref{eq:robot-heat}. $N$ is the number of cells in $C_H$.
 
@@ -102,18 +82,17 @@ This modification prevents attraction toward map boundaries and ensures the robo
 \subsection{Proximity Grid}
 To maintain simulated network connectivity, robots must stay within communication range of each other. Each robot uses a "proximity grid" to estimate which areas of the map are within range of the main robot network.
 
-% TODO: Explain the elements of the figure well
 \begin{figure}[H]
     \begin{center}
         \includegraphics[width=0.45\textwidth]{figures/screenshots/proximity-gradient.png}
     \end{center}
-    \caption{Proximity grid indicating areas connected to the main network.}
+    \caption{Proximity grid showing 3 robots forming the main network and a disconnected robot is heading towards the main network.}
     \label{fig:proximity-grid}
 \end{figure}
 
 The proximity grid is computed by identifying the largest set of connected robots and "coloring" their communication range. Tiles connected by a single robot are half-shaded to indicate weaker signal reliability (see \cref{fig:proximity-grid}). A gradient is computed over this grid and added as a weighted contribution to the robot’s overall target vector. \\
 
-Importantly, each robot excludes itself when calculating the proximity grid. This ensures that if a robot is the sole link between two clusters, it will move toward the main network and draw disconnected robots with it. \\
+Importantly, each robot excludes itself when calculating the proximity grid. This ensures that if a robot is the sole link between two clusters, it will move toward the main network and draw disconnected robots with it.
 
 \subsection{Gradient Based-Algorithm}
 The gradient-based algorithm calculates the robot's "target" vector using contributions from both the search and proximity grid gradients. However, when relying solely on these contributions, the resulting target vector often points sideways or even backward. This occurs because the robot continuously "cools" down the area in camera's field of view, which leads to excessive turning and minimal forward progress. \\
@@ -140,25 +119,29 @@ To mitigate this, a small constant forward vector is added to the total target v
     \label{fig:gradient-paths}
 \end{figure}
 
-The robots explore the environment effectively but tend to linger in already explored regions. This behavior may be due to the limited range of the search gradient. Additionally, robots exhibit more erratic paths when the gradient magnitude becomes small. In general, robots switch between smooth trajectories in unexplored areas and jagged paths when trapped in previously covered regions.
+The robots explore the environment effectively but tend to linger in already explored regions. This behavior may be due to the limited range of the search gradient. Additionally, robots exhibit more erratic paths when the gradient magnitude becomes small. In general, robots switch between smooth trajectories in unexplored areas and jagged paths when trapped in previously covered regions.\\
 
-% TODO: Put the search grid figure here and explain it
+In \cref{fig:gradient-forward-bias} the search grid is visualized, here the robots is moving towards unexplored or hotter areas.
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.65\textwidth]{./figures/screenshots/with-forward.jpeg}
+  \caption{The search grid, where darker blue shows the cooler aeras..}
+  \label{fig:gradient-forward-bias}
+\end{figure}
 
 To improve coverage, mechanisms that encourage movement toward globally unexplored areas would be beneficial.
 
 \subsection{Global Planner}
-% TODO: Cite resources used for devlopment of the planner: A* and frontier exploration
-
 When the search gradient fails to provide a clear direction --- i.e., when the robot lacks a local preference --- a global planner is used to guide the robot to a more promising unexplored region. The global planner operates according to the following procedure:
 
 \begin{enumerate}
   \item Generate a costmap (\cref{sec:costmap}).
-  \item Identify frontiers and group them into regions (\cref{sec:frontier_exploration}).
+  \item Identify frontiers and group them into regions \cite{frontier-exploration} (\cref{sec:frontier_exploration}).
   \item Evaluate the frontiers and select a goal (\cref{sec:frontier_exploration}).
-  \item Plan a path using a straight line or the A* algorithm (\cref{sec:path_planning}).
+  \item Plan a path using a straight line or the A* algorithm \cite{a-star} (\cref{sec:path_planning}).
   \item Follow the path until the goal is reached or the path is invalidated (\cref{sec:path_following}).
 \end{enumerate}
-
+ 
 \subsubsection{Costmap}
 \label{sec:costmap}
 The costmap is a grid-based representation of the environment with a variable resolution. Each cell in the costmap is assigned one of three states:
@@ -169,7 +152,12 @@ The costmap is a grid-based representation of the environment with a variable re
   \item \textbf{Obstacle:} Cells corresponding to known obstacles or other robots, inferred from recent LiDAR readings.
 \end{itemize}
 
-The costmap is used for both frontier exploration and path planning. See \cref{fig:path_planning} on page \pageref{fig:path_planning} for an example of the costmap.
+The costmap is used in both frontier exploration and path planning. To ensure safe navigation, the robot must avoid collisions with obstacles as well as other robots. Therefore, when evaluating potential paths or frontiers, the surrounding cells are also checked to ensure they are free of obstacles. The number of surrounding cells considered depends on a configurable clearance parameter, which defines the minimum required buffer between the robot and nearby obstacles.
+
+This clearance can be dynamically adjusted over time --- for example, allowing the robot to take riskier, narrower paths during later stages of the search when unexplored areas become harder to reach. This adaptive behavior helps maintain efficiency without compromising early-stage safety.
+
+An example of the costmap and its affect on path planning is shown in \cref{fig:path_planning} on page \pageref{fig:path_planning}.
+
 
 \subsubsection{Frontier Exploration}
 \label{sec:frontier_exploration}
@@ -183,59 +171,57 @@ Detected frontier cells are grouped into regions and scored based on:
   \item Required turn angle to face the frontier
 \end{itemize}
 
-Frontiers must also meet a minimum obstacle clearance threshold to be considered valid.
+As mentioned, frontiers must meet a minimum obstacle clearance threshold to be considered valid as a potential goal.\\
 
-% TODO: Remove "pathing-" from legend
-% TODO: Tweak `figsize`
+An experiment was conducted in two environments to evaluate the coverage performance with a range of different weights, see \cref{fig:frontier-eval-params}. 
+All tested configurations will eventually achieved full map coverage; therefore, performance is evaluated based on coverage speed.
 \begin{figure}[H]
     \centering
-    \begin{subfigure}[b]{0.45\textwidth}
+    \begin{subfigure}[b]{0.49\textwidth}
         \centering
-        \includegraphics[width=\textwidth]{figures/frontier_eval_params_medium_obstacles.png}
+        \includegraphics[width=\textwidth]{figures/frontier_eval_params_depot.png}
         \caption{Simple map}
     \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.45\textwidth}
+    % \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
         \centering
         \includegraphics[width=\textwidth]{figures/frontier_eval_params_warehouse.png}
         \caption{Complex map}
     \end{subfigure}
-    \caption{Frontier evaluation parameters on two maps.}
+    \caption{Frontier evaluation parameters comparison. The weights are: \texttt{sXX} for frontier size, \texttt{dXX} for distance to the frontier, and \texttt{tXX} for the required turn angle.}
     \label{fig:frontier-eval-params}
 \end{figure}
 
-% TODO: "An experiment was conducted to..."
-% TODO: Move sXX to figure caption
-These evaluations were conducted in two distinct environments. Line labels in \cref{fig:frontier-eval-params} indicate the parameter weightings used: \texttt{sXX} for frontier size, \texttt{dXX} for distance to the frontier, and \texttt{tXX} for the required turn angle. All tested configurations successfully achieved full map coverage; therefore, performance is evaluated based on coverage speed. \\
-
-As shown in \cref{fig:frontier-eval-params}, configurations that prioritized distance and turn angle produced the fastest coverage. This outcome suggests that minimizing rotation allows for higher sustained forward velocity. In contrast, configurations that emphasized frontier size alone often resulted in inefficient behavior, such as long detours and frequent turning, which slowed down overall progress. The final parameter configuration, \texttt{s10-d45-t45}, produced the overall best  and most consistent performance across maps with various complexity.
+Configurations that prioritized distance and turn angle produced the fastest coverage. This outcome suggests that minimizing rotation allows for higher sustained forward velocity. In contrast, configurations that emphasized frontier size alone often resulted in inefficient behavior, such as long detours and frequent turning, which slowed down overall progress. The final parameter configuration, \texttt{s10-d45-t45}, produced the overall best and most consistent performance across maps with various complexity.
 
 \subsubsection{Path Planning}
 \label{sec:path_planning}
-Once a goal is selected, the planner first attempts to use a direct straight-line path. If this path violates the clearance requirement, the A* algorithm is used instead. \\
+Once a goal is selected, the planner first attempts to generate a direct, straight-line path to the goal. If this path violates the required clearance from obstacles or other robots, the planner falls back to the A* algorithm.\\
 
-A* explores cells using a heuristic that combines cumulative path cost and estimated distance to the goal. A min-heap is used to prioritize directions with a lower estimated cost. Only collision-free cells that meet clearance requirements are considered.
+The A* algorithm explores the grid by combining the cumulative path cost with a heuristic estimate of the remaining distance to the goal. A min-heap (priority queue) is used to efficiently select the next cell to expand based on the lowest estimated total cost. Only collision-free cells that satisfy the clearance constraint are considered during expansion.\\
 
-% TODO: Explain colors
-% TODO: Explain everything
-% TODO: Mention how everything that came before can be seen
+Once the goal is reached, the resulting path consists of the sequence of cells from the start to the goal. This path is then post-processed to remove unnecessary intermediate points, provided that the smoothed path still maintains the required clearance. This smoothing step reduces path length and ensures more natural robot motion while preserving safety.
+
 \begin{figure}[H]
   \begin{center}
-    \includegraphics[width=0.95\textwidth]{./figures/screenshots/path-planning.png}
+    \includegraphics[width=0.95\textwidth]{./figures/screenshots/path-planning-edit.png}
   \end{center}
-    \caption{Goal, goal path, frontiers, and costmap shown in \texttt{simple\_sim}.}
+  \caption{Screenshot of global path planner components in \texttt{simple\_sim}: 1) obstacle cells, 2) unknown cells, 3) explored cells, 4) frontier cells, 5) goal path, and 6) goal.}
   \label{fig:path_planning}
 \end{figure}
 
 
 \subsubsection{Path Following}
 \label{sec:path_following}
-The robot follows the planned path as a sequence of waypoints. When it reaches a waypoint within a predefined range, that waypoint is marked as visited and removed from the path.
+The robot follows the planned path as a sequence of waypoints. As each waypoint is reached, it is marked as visited and removed from the remaining path.
 
-% TODO: Describe more "what" and "why"
-The path is continuously validated to account for dynamic changes in the environment. If a path segment becomes invalid, the robot continues toward the next waypoint while enabling LiDAR-based obstacle avoidance. If path validation fails repedaetly, the planner replans. If replanning is not possible, a new goal is selected. \\
+To ensure robustness in dynamic environments, the path is continuously validated using the costmap. If the clearance to the next waypoint becomes invalid due to a newly detected obstacle, the robot does not immediately discard the path. Instead, it continues toward the waypoint, while incorporating reactive feedback from the LiDAR sensor.
 
-If a robot becomes disconnected from the swarm, a new goal is selected to reconnect with the main network, using the proximity grid, to maintain communication.
+LiDAR input takes precedence over the path-following command. For example, if a new obstacle appears directly in front of the robot, the repulsive contribution from the LiDAR cancels out the forward path-following command, causing the robot to stop. In less obstructed cases—such as when an obstacle appears on the front-right side—the robot will adjust its heading and veer left to navigate around it.
+
+If the path fails clearance checks repeatedly, the planner attempts to replan a new path to the current goal. However, in some cases, no viable path may exist due to dynamic obstructions. In such scenarios, the robot will abandon the current goal and select a new one.
+
+Additionally, if a robot becomes disconnected from the swarm, a new goal is generated to guide it back toward the network. This reconnection behavior uses the proximity grid to identify areas with higher robot density, helping to restore communication.
 
 \subsection{Hybrid Algorithm}
 The global planner enables a hybrid algorithm that combines both local and global strategies. As long as the local search gradient provides a sufficiently strong direction, the robot continues using the gradient-based method. When the gradient magnitude falls below a predefined threshold, the global planner is triggered to relocate the robot to an unexplored area.
@@ -264,7 +250,7 @@ The global planner enables a hybrid algorithm that combines both local and globa
 \subsection{Pure Pathing Algorithm}
 An alternative to the hybrid approach is to use the global planner exclusively. In this case, the robot continuously alternates between selecting a new goal and following the computed path. \Cref{fig:pure-pathing-paths} shows example paths. As with the hybrid algorithm, the trajectories are smooth and consistent, with little lingering.
 
-% TODO: Fix broken paths
+% TODO: Fix broken paths (Add mode 2)
 \def\w{0.329\textwidth}
 \begin{figure}[H]
     \centering
