@@ -8,30 +8,6 @@ Bachelor Project 2025
 
 ---
 
-## Development Environment
-Different parts of this project require certain dependencies. It is recommended to use the provided development environments, look through the [`flake.nix`](./flake.nix) and [`Dockerfile`](./Dockerfile) to find the required packages.
-
-### Nix Development Shell
-This project contains a [`flake.nix`](./flake.nix) specifying the dependencies for the project.
-
-Use the following command to install dependencies and start the development shell.
-```bash
-nix develop
-```
-
-### Dockerfile
-A dockerfile is provided to run ROS2 and Gazebo. The provided [`enter-docker.sh`](./enter-docker.sh) can be used to build and enter the container.
-
-```bash
-./enter-docker.sh
-```
-
-To rebuild the container before running run
-
-```bash
-./enter-docker.sh --rebuild
-```
-
 ## [`botbrain`](./botbrain)
 
 Rust library crate containing the core logic of the project including the search algorithms.
@@ -59,7 +35,7 @@ cargo run --release -- --help
 ![Simple Sim environment](./report/figures/screenshots/simple-sim-gui.png)
 ![Another simple sim enviornment](./report/figures/screenshots/simple_sim_depot.png)
 
-## ROS 2 Integration
+## ROS 2
 The [`multi_robot_control`](./ros_ws/src/multi_robot_control) ROS 2 package, contains the nodes needed to run the robot behaviors in ROS 2. [`ros_agent`](./ros_ws/src/multi_robot_control/src/ros_agent) is the main behavior node which manages the [`botbrain`](#botbrain) robot state.
 
 
@@ -82,6 +58,18 @@ This will launch Gazebo and Rviz2 windows, where the simulation can be observed.
 See [ROS 2 Agent](./ros_ws/ros_agent.md) for more information.
 
 ![ROS 2 environment](./report/figures/screenshots/multi_robot_map_overlay.png)
+### Dockerfile
+A Dockerfile is provided to run ROS 2 and Gazebo. The provided [`enter-docker.sh`](./enter-docker.sh) can be used to build and enter the container.
+
+```bash
+./enter-docker.sh
+```
+
+To rebuild the container before running run
+
+```bash
+./enter-docker.sh --rebuild
+```
 
 ## Trainer
 The [`trainer`](./trainer) crate can be used to train models defined in [`botbrain`](#botbrain). It defines the training loop and implements deep reinforcement learning.
@@ -102,4 +90,36 @@ pip install -e ./botplot  # Install the `botplot` package
 Run a plotting script
 ```bash
 python3 ./plotting/report/sim_consistency.py
+```
+
+### Compiling the LaTeX Report
+```bash
+cd report
+latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex
+```
+
+## Nix Integration
+This project contains a [`flake.nix`](./flake.nix) which allows self-contained build recipes and development shells. All dependencies are automatically downloaded.
+
+#### Build the Project
+Build the entire project:
+- Executables: `simple_sim` and `trainer`
+- Documentation: `botbrain` and `simple_sim`
+- LaTeX Report
+
+```bash
+nix build .
+```
+
+The output is located in the `result` directory.
+
+Sub-packages can be listed with the following
+```bash
+nix flake show
+```
+
+#### Development Shell
+Use the following command to install dependencies and start the development shell. ROS 2 is not supported with this shell, the `Dockerfile` can be used instead.
+```bash
+nix develop
 ```

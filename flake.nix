@@ -32,6 +32,54 @@
                 '');
         in {
         packages = rec {
+            default = pkgs.stdenv.mkDerivation {
+                name = "coordinated-robot-search";
+                unpackPhase = "true"; # No `src`
+                installPhase = ''
+                    mkdir -p $out/bin
+                    mkdir -p $out/docs
+
+                    cp ${simple_sim}/bin/simple_sim $out/bin
+                    cp ${trainer}/bin/trainer $out/bin
+
+                    cp -r ${botbrain-docs} $out/docs/botbrain
+                    cp -r ${simple_sim-docs} $out/docs/simple_sim
+
+                    cp -r ${report} $out/report.pdf
+                '';
+            };
+            trainer = pkgs.stdenv.mkDerivation rec {
+                name = "trainer";
+                src = ./.;
+                cargoRoot = name;
+                cargoDeps = pkgs.rustPlatform.importCargoLock {
+                    lockFile = src + "/${cargoRoot}/Cargo.lock";
+                };
+                buildInputs = with pkgs; [ cargo rustPlatform.cargoSetupHook ];
+                buildPhase = ''
+                    cargo build --release --frozen --manifest-path ${cargoRoot}/Cargo.toml
+                '';
+                installPhase = ''
+                    mkdir -p $out/bin
+                    cp -r ./${cargoRoot}/target/release/trainer $out/bin
+                '';
+            };
+            simple_sim = pkgs.stdenv.mkDerivation rec {
+                name = "simple_sim";
+                src = ./.;
+                cargoRoot = name;
+                cargoDeps = pkgs.rustPlatform.importCargoLock {
+                    lockFile = src + "/${cargoRoot}/Cargo.lock";
+                };
+                buildInputs = with pkgs; [ cargo rustPlatform.cargoSetupHook ];
+                buildPhase = ''
+                    cargo build --release --frozen --manifest-path ${cargoRoot}/Cargo.toml
+                '';
+                installPhase = ''
+                    mkdir -p $out/bin
+                    cp -r ./${cargoRoot}/target/release/simple_sim $out/bin
+                '';
+            };
             site = pkgs.stdenv.mkDerivation {
                 name = "site";
                 unpackPhase = "true";
