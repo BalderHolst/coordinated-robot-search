@@ -1,7 +1,7 @@
 % TODO: Too much "rapid debugging" and "high-fidelity"
 \section{Simple Simulator}
 \label{sec:simple-simulator}
-The simple simulator was developed to enable rapid testing and debugging of robot swarm behavior in a controlled 2D environment. It simulates multiple robots operating in a discretized world, rendering them as circles with their respective IDs displayed at their centers. The simulator advances in discrete time steps at 60 updates per simulated second and executes in a multi-threaded fashion to maintain performance across large robot groups. \\
+The simple simulator was developed to enable rapid testing and debugging of robot swarm behavior in a controlled 2D environment. It simulates multiple robots operating in a discretized world, rendering them as circles with their respective IDs displayed at their centers. The simulator advances in discrete time steps at 60 updates per simulated second and executes in a multi-threaded fashion to maintain performance across large robot groups. The simulator can also be run in headless mode, without visualization, for even better performance. \\
 
 The simulator supports loading map layouts from ROS 2-compatible \texttt{.pgm} files, allowing it to closely mirror environments used in the 3D Gazebo simulations. This compatibility facilitates seamless testing of behaviors across both simulation platforms. \\
 
@@ -44,6 +44,3 @@ The camera emulation follows a similar ray-casting procedure, but is constrained
     \caption{Sensor input approximation in the simple simulator.}
     \label{fig:sensor-approximation}
 \end{figure}
-
-\subsection{\texttt{simple\_sim} as a Library}
-As well as being an executable, the \texttt{simple\_sim} simulator is also implemented as a reusable library. In addition to running with a graphical user interface, it can be executed in headless mode, without visualization. This is particularly useful when running reinforcement learning experiments as explored in \cref{sec:rl}.

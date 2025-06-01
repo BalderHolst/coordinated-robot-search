@@ -119,12 +119,12 @@ To mitigate this, a small constant forward vector is added to the total target v
     \label{fig:gradient-paths}
 \end{figure}
 
-The robots explore the environment effectively but tend to linger in already explored regions. This behavior may be due to the limited range of the search gradient. Additionally, robots exhibit more erratic paths when the gradient magnitude becomes small. In general, robots switch between smooth trajectories in unexplored areas and jagged paths when trapped in previously covered regions.\\
+The robots explore the environment effectively but tend to linger in already explored regions. This behavior may be due to the limited range of the search gradient. Additionally, robots exhibit more erratic paths when the gradient magnitude becomes small. In general, robots switch between smooth trajectories in unexplored areas and jagged paths when trapped in previously covered regions. \\
 
-In \cref{fig:gradient-forward-bias} the search grid is visualized, here the robots is moving towards unexplored or hotter areas.
+In \cref{fig:gradient-forward-bias}, the search grid is visualized. Here the robots are moving towards unexplored or hotter areas.
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.65\textwidth]{./figures/screenshots/with-forward.jpeg}
+  \includegraphics[width=0.45\textwidth]{./figures/screenshots/with-forward.jpeg}
   \caption{The search grid, where darker blue shows the cooler aeras..}
   \label{fig:gradient-forward-bias}
 \end{figure}
@@ -152,7 +152,7 @@ The costmap is a grid-based representation of the environment with a variable re
   \item \textbf{Obstacle:} Cells corresponding to known obstacles or other robots, inferred from recent LiDAR readings.
 \end{itemize}
 
-The costmap is used in both frontier exploration and path planning. To ensure safe navigation, the robot must avoid collisions with obstacles as well as other robots. Therefore, when evaluating potential paths or frontiers, the surrounding cells are also checked to ensure they are free of obstacles. The number of surrounding cells considered depends on a configurable clearance parameter, which defines the minimum required buffer between the robot and nearby obstacles.
+The costmap is used in both frontier exploration and path planning. To ensure safe navigation, the robot must avoid collisions with obstacles as well as other robots. Therefore, when evaluating potential paths or frontiers, the surrounding cells are also checked to ensure they are free of obstacles. The number of surrounding cells considered depends on a configurable clearance parameter, which defines the minimum required buffer between the robot and nearby obstacles. \\
 
 This clearance can be dynamically adjusted over time --- for example, allowing the robot to take riskier, narrower paths during later stages of the search when unexplored areas become harder to reach. This adaptive behavior helps maintain efficiency without compromising early-stage safety.
 
@@ -206,20 +206,20 @@ Once the goal is reached, the resulting path consists of the sequence of cells f
   \begin{center}
     \includegraphics[width=0.95\textwidth]{./figures/screenshots/path-planning-edit.png}
   \end{center}
-  \caption{Screenshot of global path planner components in \texttt{simple\_sim}: 1) obstacle cells, 2) unknown cells, 3) explored cells, 4) frontier cells, 5) goal path, and 6) goal.}
+  \caption{Screenshot of global path planner components in \texttt{simple\_sim}: 1) obstacle cells, 2) unexplored cells, 3) explored cells, 4) frontier cells, 5) goal path, and 6) goal.}
   \label{fig:path_planning}
 \end{figure}
 
 
 \subsubsection{Path Following}
 \label{sec:path_following}
-The robot follows the planned path as a sequence of waypoints. As each waypoint is reached, it is marked as visited and removed from the remaining path.
+The robot follows the planned path as a sequence of waypoints. As each waypoint is reached, it is marked as visited and removed from the remaining path. \\
 
-To ensure robustness in dynamic environments, the path is continuously validated using the costmap. If the clearance to the next waypoint becomes invalid due to a newly detected obstacle, the robot does not immediately discard the path. Instead, it continues toward the waypoint, while incorporating reactive feedback from the LiDAR sensor.
+To ensure robustness in dynamic environments, the path is continuously validated using the costmap. If the clearance to the next waypoint becomes invalid due to a newly detected obstacle, the robot does not immediately discard the path. Instead, it continues toward the waypoint, while incorporating reactive feedback from the LiDAR sensor. \\
 
-LiDAR input takes precedence over the path-following command. For example, if a new obstacle appears directly in front of the robot, the repulsive contribution from the LiDAR cancels out the forward path-following command, causing the robot to stop. In less obstructed cases—such as when an obstacle appears on the front-right side—the robot will adjust its heading and veer left to navigate around it.
+LiDAR input takes precedence over the path-following command. For example, if a new obstacle appears directly in front of the robot, the repulsive contribution from the LiDAR cancels out the forward path-following command, causing the robot to stop. In less obstructed cases—such as when an obstacle appears on the front-right side—the robot will adjust its heading and veer left to navigate around it. \\
 
-If the path fails clearance checks repeatedly, the planner attempts to replan a new path to the current goal. However, in some cases, no viable path may exist due to dynamic obstructions. In such scenarios, the robot will abandon the current goal and select a new one.
+If the path fails clearance checks repeatedly, the planner attempts to replan a new path to the current goal. However, in some cases, no viable path may exist due to dynamic obstructions. In such scenarios, the robot will abandon the current goal and select a new one. \\
 
 Additionally, if a robot becomes disconnected from the swarm, a new goal is generated to guide it back toward the network. This reconnection behavior uses the proximity grid to identify areas with higher robot density, helping to restore communication.
 

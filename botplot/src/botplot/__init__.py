@@ -1376,17 +1376,17 @@ def plot_paths(
                 ),
             )
 
-        plot_title = f"{title} (after {end_time:.0f}s)"
+        ptitle = f"{title} (after {end_time:.0f}s)"
 
         plot_world(
             ax,
             result.world(),
-            plot_title,
+            ptitle,
             borders=borders,
             plot_title=plot_title,
         )
 
-        out_file = os.path.join(plot_dir(), f"{plot_title.replace(' ', '-').lower()}.png")
+        out_file = os.path.join(plot_dir(), f"{ptitle.replace(' ', '-').lower()}.png")
 
         if fig:
             plot_file = save_figure(fig, out_file)

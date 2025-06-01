@@ -22,15 +22,15 @@ Search algorithms are evaluated in terms of two key metrics: map coverage over t
 \end{figure}
 
 \subsection{Botplot}
-To enable efficient and reproducible experimentation, a custom Python package named \texttt{botplot} was developed. This tool provides utility functions for running and analyzing scenarios in both \texttt{simple\_sim} and the Gazebo/ROS 2 simulation environments.
+To enable efficient and reproducible experimentation, a custom Python package named \texttt{botplot} was developed. This tool provides utility functions for running and analyzing scenarios in both \texttt{simple\_sim} and the Gazebo/ROS 2 simulation environments. \\
 
-During each simulation run, data is collected in real time. In \texttt{simple\_sim}, the data is recorded directly and stored in a \texttt{.ipc} (Apache Arrow) file. Similarly, in the ROS 2 setup, a dedicated logger node captures relevant simulation data, which is likewise serialized for later analysis.\\
+During each simulation run, data is collected in real time. In \texttt{simple\_sim}, the data is recorded directly and stored in a \texttt{.ipc} (Apache Arrow) file. Similarly, in the ROS 2 setup, a dedicated logger node captures relevant simulation data, which is likewise serialized for later analysis. \\
 
-Once recorded, the data is processed using \texttt{botplot}, which offers a suite of customizable plotting functions to visualize various performance metrics. These include map coverage, robot paths, communication patterns, and computational performance, among others.
+Once recorded, the data is processed using \texttt{botplot}, which offers a suite of customizable plotting functions to visualize various performance metrics. These include map coverage, robot paths, communication patterns, and computational performance, among others. \\
 
-To streamline the workflow, results are cached based on the simulation scenario. This allows for rapid re-plotting without the need to rerun the simulation, significantly improving the iteration speed when tuning parameters or updating visualizations.
+To streamline the workflow, results are cached based on the simulation scenario. This allows for rapid re-plotting without the need to rerun the simulation, significantly improving the iteration speed when updating visualizations. \\
 
-All figures presented in this report were generated using \texttt{botplot}.
+All plots presented in this report were generated using \texttt{botplot}.
 
 \subsection{Simulator Consistency}
 \label{sec:simulator-consistency}
@@ -176,7 +176,7 @@ A bandwidth of 260 bytes/sec negligible for most communicatino technologies cons
 
 \subsection{Simulator Performance}
 \label{sec:simulator-performance}
-The performance and rapid iteration cycle offered by the \texttt{simple\_sim} simulator were key motivations for its development in this project. To quantify its efficiency, a simple benchmark was conducted by running both simulators headless (without a GUI) for 600 simulated seconds using the Roomba algorithm. Over 5 runs, Gazebo required 628 real-time seconds on average to complete the simulation, whereas \texttt{simple\_sim} completed the same task in an average of just 18 seconds. This substantial difference highlights the lightweight simulator’s superior computational performance.\\
+The performance and rapid iteration cycle offered by the \texttt{simple\_sim} simulator were key motivations for its development in this project. To quantify its efficiency, a simple benchmark was conducted by running both simulators headless (without a GUI) for 600 simulated seconds using the Roomba algorithm. Over 5 runs, Gazebo required 628 real-time seconds on average to complete the simulation, whereas \texttt{simple\_sim} completed the same task in an average of just 18 seconds. This substantial difference highlights the lightweight simulator’s superior computational performance. \\
 
 The ability to run simulations significantly faster than real time is highly beneficial for development. It enables rapid experimentation, easier debugging, and efficient benchmarking of algorithmic changes—making \texttt{simple\_sim} a preferable tool during the design and testing phases.
 

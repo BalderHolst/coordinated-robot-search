@@ -28,7 +28,7 @@ Each training episode starts with one or more robots placed in a randomly genera
 During training, two networks with identical structure called the target and policy networks are used. The policy network encodes the current best policy and is updated at each time step using gradient decent. The target network is used as a steady reference when calculating the loss. Each time step, the weights of the target network are updated in a small linear step towards the policy network. The size of the step is configured with the $\tau$ hyperparameter. These networks both continually approach the optimal policy; The policy network approaches faster and is used to get on-policy actions, while the target network trails behind, but provides more stable state action values.
 
 \subsubsection{Calculating Loss}
-Each time step, batches of transitions are sampled randomly from the replay buffer and used to train the policy network by performing gradient decent on the loss function. Loss ($L$) is calculated as the mean square error (MSE) between the value of an action, as determined by the policy network, $Q_\mathrm{policy}$, and the expected value of the action $Q_\mathrm{expeted}$ in the current state. The expected value is the value of the best action from the next state, as given by the target network, $Q_{\mathrm{target},\mathrm{next}}$, multiplied by the step discount $\gamma$, plus the reward gotten from taking the current action $R$.
+Each time step, batches of transitions are sampled randomly from the replay buffer and used to train the policy network by performing gradient decent on the loss function. Loss ($L$) is calculated as the mean square error (MSE) between the value of an action, as determined by the policy network, $Q_\mathrm{policy}$, and the expected value of the action $Q_\mathrm{expeted}$ in the current state. The expected value is the value of the best action from the next state, as given by the target network, $Q_{\mathrm{target},\mathrm{next}}$, multiplied by the discount factor $\gamma$, plus the reward gotten from taking the current action $R$.
 
 \begin{equation}
     L = \mathrm{MSE}(Q_\mathrm{policy},\, Q_\mathrm{expected}), \quad \text{where}\quad
@@ -79,7 +79,7 @@ The agent was trained on 200 episodes, each consisting of 240 simulated seconds.
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{figures/rl/small-search-agent-training.png}
-    \caption{Plots of the training progress of a single minimal agent. The top plot show $\epsilon$ (random action chance), the second plot, reward, the third plot loss and the last plot shows the coverage. As training progresses, the agent learns to cover more of the map withing the episode time of 240 s. The loss also decreases, indicating that the model improves its prediction of state action values.}
+    \caption{Plots of the training progress of a single minimal agent. The top plot show $\epsilon$ (random action chance), the second plot, reward, the third plot loss and the last plot shows the coverage. As training progresses, the agent learns to cover more of the map within the episode time of 240 s. The loss also decreases, indicating that the model improves its prediction of state action values.}
     \label{fig:rl-minimal-training}
 \end{figure}
 

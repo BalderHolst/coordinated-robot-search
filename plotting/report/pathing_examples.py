@@ -1,6 +1,7 @@
 import botplot as bp
 import os
 import shutil
+import random
 
 BEHAVIORS = [
     ("avoid-obstacles", "Roomba Behavior"),
@@ -17,18 +18,26 @@ if __name__ == "__main__":
 
     for (behavior, name) in BEHAVIORS:
 
-        bp.seed(2)
+        random.seed(100)
+
+        random_angle = lambda: random.uniform(-3.14, 3.14)
+
         scenario = bp.Scenario(
             title=name,
             world=bp.repo_path("worlds/objectmap/pathing_example.ron"),
             behavior=behavior,
             duration=DURATION,
-            robots=4,
+            robots=[
+                bp.Robot(x=2, y=-6, angle=random_angle()),
+                bp.Robot(x=4, y=-6, angle=random_angle()),
+                bp.Robot(x=2, y=-8, angle=random_angle()),
+                bp.Robot(x=4, y=-8, angle=random_angle()),
+            ],
         )
 
         res = bp.run_sim(scenario)
 
-        plot_files = bp.plot_paths(res, f"{behavior}-paths", 3, borders=True)
+        plot_files = bp.plot_paths(res, f"{behavior}-paths", segments=3, borders=True)
 
         bp.plot_velocity(res, f"{behavior}-velocity", f"{behavior} Velocity")
 
