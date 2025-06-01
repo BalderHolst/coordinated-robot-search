@@ -4,6 +4,7 @@ Bachelor Project 2025
 
 - [Thesis Report](https://balderholst.github.io/coordinated-robot-search/report.pdf)
 - [botbrain documentation](https://balderholst.github.io/coordinated-robot-search/docs/botbrain/botbrain)
+
 ---
 
 ## [`botbrain`](./botbrain)
@@ -108,11 +109,11 @@ latexmk -pdf -bibtex-cond -shell-escape -interaction=nonstopmode main.tex
 
 ## Nix Integration
 
-This project contains a [`flake.nix`](./flake.nix) which allows self-contained build recipes and development shells. All dependencies are automatically downloaded.
+This project contains a [`flake.nix`](./flake.nix) which allows self-contained build recipes and development shells. All dependencies and build tools are automatically downloaded and validated.
 
 #### Build the Project
 
-Build the entire project:
+Build the entire project which includes:
 
 - Executables: `simple_sim` and `trainer`
 - Documentation: `botbrain` and `simple_sim`
