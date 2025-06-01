@@ -2,16 +2,16 @@
 While this project demonstrates a complete simulation-based framework for coordinated robotic search, several opportunities exist for real-world deployment and further algorithmic enhancements. This section outlines key considerations for transitioning to physical systems and explores future directions in algorithmic development.
 
 \subsection{Real World Implementation}
-Although this project has not been tested on physical hardware, the entire software stack has been developed with real-world deployment in mind. Both the simulation architecture and behavior algorithms are modular, portable, and compatible with widely available robotics platforms and middleware, due to only requirements being: LiDAR, camera, odometry, and communication.
+Although this project has not been tested on physical hardware, the software stack has been developed with real-world deployment in mind. Both the simulation architecture and behavior algorithms are modular, portable, and compatible with widely available robotics platforms and middleware, due to only requirements being: LiDAR, camera, odometry, and communication.\\
 
 To ensure reliable performance in real-world conditions, the following aspects should be evaluated and potentially refined:
 
 \begin{itemize}
   \item \textbf{Sensor calibration and frame alignment}: Accurate transformations between the LiDAR, camera, and base frames are essential for sensor fusion and localization.
   \item \textbf{Robust object detection}: The current color-based detection may perform poorly under varying lighting conditions. More advanced detection techniques (e.g., learned models or depth-based filtering) could improve reliability.
-  \item \textbf{Communication robustness}: Real-world wireless communication introduces latency, packet loss, and range limitations. Fault-tolerant strategies such as message queuing, compression, or redundancy may be necessary.
+  \item \textbf{Communication robustness}: Real-world wireless communication introduces latency, packet loss, and range limitations. Strategies such as message batching, compression, or redundancy may be necessary.
   \item \textbf{Real-time performance}: The behavior logic and path planning algorithms should be profiled on embedded hardware to ensure real-time feasibility.
-  \item \textbf{ROS 2 control integration}: Currently, differential drive is simulated via a Gazebo plugin. Transitioning to \texttt{ros2\_control} \cite{ros2-control} would enable consistent controller behavior, as it offers modular hardware interfaces and is compatible with both real and simulated environments via a Gazebo plugin.
+  \item \textbf{ROS 2 control integration}: Currently, differential drive is simulated via a Gazebo plugin. Transitioning to \texttt{ros2\_control} \cite{ros2-control} would enable consistent controller behavior, as it offers modular hardware interfaces and is compatible with both real and simulated environments via further Gazebo plugins.
 \end{itemize}
 
 A practical next step would be to implement a small-scale multi-robot testbed using TurtleBot 4 platforms. This would facilitate hardware-in-the-loop testing and help uncover system-level challenges not observable in simulation.
@@ -19,7 +19,7 @@ A practical next step would be to implement a small-scale multi-robot testbed us
 \subsubsection{Communication Considerations}
 \label{sub:communication-methods}
 
-In simulation, communication is assumed to be instantaneous and lossless. However, in real-world deployments, communication introduces latency, potential packet loss, and limited bandwidth. Selecting an appropriate communication technology is critical for maintaining coordinated behavior among robots. The following technologies are considered:
+In simulation, communication is assumed to be instantaneous and lossless. However, in real-world deployments, communication introduces latency, potential packet loss, and limited bandwidth. Selecting an appropriate communication technology is critical for maintaining coordinated behavior among robots. The following technologies may be considered:
 
 \begin{itemize}
   \item \textbf{Wi-Fi} \cite{wifi}: Offers high bandwidth, typically between 50 Mbps and 600 Mbps under ideal conditions. It is widely supported by commercial robotics platforms but is susceptible to interference and has a limited effective range (up to 100 m indoors, 300 m outdoors).
@@ -31,14 +31,14 @@ In simulation, communication is assumed to be instantaneous and lossless. Howeve
 Future work may include implementing adaptive communication policies, allowing robots to dynamically adjust their broadcast frequency and data payload based on network conditions and mission priorities.
 
 \subsection{Advancing Deep Reinforcement Learning}
-A basic model has been developed as a proof of concept. More conplex models is currently limited by the hardware available but with better GPU's more advanced models can be trained.
+A basic model has been developed as a proof of concept. More conplex models are currently limited by the hardware available but with better GPU's more advanced models can be trained.
 The deep reinforcement learning can be extended and tuned in multiple directions to improve both learning performance and real-world applicability:
 
 \begin{itemize}
   \item \textbf{Network architecture tuning}: Adjusting the number of layers, neurons, and activation functions to improve learning stability and performance.
   \item \textbf{Network input layers}: Add input which allows for more information like global knowledge, e.g. from frontiers or the entire costmap.
   \item \textbf{Hyperparameter optimization}: Fine-tuning learning rate, discount factor, batch size, and exploration parameters for better convergence.
-  \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety.Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
+  \item \textbf{Reward function design}: Constructing effective reward signals that balance exploration, efficiency, and safety. Incorporating additional reward terms, such as for maintaining communication, minimizing energy use, or avoiding collisions.
   \item \textbf{Transfer learning}: Adapting a pretrained simulation policy to real-world conditions via fine-tuning on physical robots.
 \end{itemize}
 
@@ -54,11 +54,11 @@ NEAT offers the advantage of automatic architecture discovery, potentially outpe
 A hybrid approach could involve using NEAT to discover promising network architectures, which are then fine-tuned using standard DQN training. This could accelerate learning and yield more effective policies.
 
 \subsubsection{Proximal Policy Optimization (PPO)}
-Another promising direction for advancing the reinforcement learning is the use of Proximal Policy Optimization \cite{ppo}. PPO is unlike DQN an on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.
+Another promising direction for advancing the reinforcement learning is the use of Proximal Policy Optimization \cite{ppo}. PPO is unlike DQN an on-policy reinforcement learning algorithm that has demonstrated strong empirical performance across a range of robotic control tasks.\\
 
-Unlike DQN, which is value-based and limited to discrete action spaces, PPO belongs to the family of policy gradient methods and naturally supports continuous action spaces. This makes it particularly well-suited for real-world robotics applications, where actions such as velocity commands are typically continuous.
+Unlike DQN, which is value-based and limited to discrete action spaces, PPO belongs to the family of policy gradient methods and naturally supports continuous action spaces. This makes it particularly well-suited for real-world robotics applications, where actions such as velocity commands are typically continuous.\\
 
-PPO improves training stability by preventing large updates to the policy. It achieves this by clipping the policy objective function, ensuring that new policies do not deviate too far from the current one. This balances the trade-off between exploration and exploitation while maintaining sample efficiency.
+PPO improves training stability by preventing large updates to the policy. It achieves this by clipping the policy objective function, ensuring that new policies do not deviate too far from the current one. This balances the trade-off between exploration and exploitation while maintaining sample efficiency.\\
 
 Integrating PPO into the current framework would enable:
 \begin{itemize}

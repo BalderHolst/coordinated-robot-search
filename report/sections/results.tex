@@ -73,7 +73,7 @@ To validate performance characteristics across simulators, the coverage of 4 rob
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.95\textwidth]{./figures/plots/consistency/gazebo_vs_simple_sim_coverage.png}
-    \caption{Comparison of coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}.}
+    \caption{Comparison of coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}. Mean and standard deviation of coverage are shown.}
     \label{fig:coverage-benchmark-all}
 \end{figure}
 
@@ -83,7 +83,7 @@ The coverage performance seems to match well between the two simulators, with co
     \begin{center}
         \includegraphics[width=0.90\textwidth]{./figures/plots/consistency/sim_coverage_diff.png}
     \end{center}
-    \caption{Comparison of difference in coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}.}
+    \caption{Comparison of difference in coverage over time between ROS 2 Gazebo and \texttt{simple\_sim}. Positive values indicate coverage are faster in \texttt{simple\_sim} compared to Gazebo.}
     \label{fig:coverage-benchmark-diff}
 \end{figure}
 
@@ -103,7 +103,7 @@ Each algorithm was run 10 times on the Depot (for 800 s) and Warehouse (for 1200
     \includegraphics[width=\textwidth]{./figures/plots/benchmarks/coverage-over-10-runs-with-4-robots-in-warehouse.png}
       \caption{1200 s in complex map (Warehouse)}
   \end{subfigure}
-    \caption{Coverage performance of search algorithms over 10 runs with 4 robots starting in random positions in the same environment.}
+    \caption{Coverage performance of search algorithms over 10 runs with 4 robots starting in random positions in the same environment. Mean and standard deviation of coverage are shown.}
     \label{fig:coverage-benchmark}
 \end{figure}
 
@@ -149,17 +149,17 @@ The results clearly show that the Pure Pathing outperforms the other algorithms 
 
 \Cref{fig:depot-threshold} and \cref{fig:warehouse-threshold} show the average time required for the swarm to reach various coverage thresholds in the Depot and Warehouse environments, respectively, using different numbers of robots.
 
-The results clearly indicate that the \textbf{Pure Pathing} and \textbf{Hybrid} behaviors are the most efficient in achieving higher coverage levels. This highlights the benefit of incorporating global map awareness and structured path planning into the search strategy.
+The results clearly indicate that the Pure Pathing and Hybrid behaviors are the most efficient in achieving higher coverage levels. This highlights the benefit of incorporating global map awareness and structured path planning into the search strategy.
 
-In contrast, the \textbf{Roomba} algorithm demonstrates significantly reduced performance in the more complex Warehouse environment. Notably, it fails to surpass 33\% coverage within the trial duration, regardless of the number of robots. This suggests that simple obstacle-avoiding behaviors without global coordination are insufficient in environments with dense obstacle layouts and limited visibility.
+In contrast, the Roomba algorithm demonstrates significantly reduced performance in the more complex Warehouse environment. Notably, it fails to surpass 33\% coverage within the trial duration, regardless of the number of robots. This suggests that simple obstacle-avoiding behaviors without global coordination are insufficient in environments with dense obstacle layouts.
 
 \subsection{Computational Performance}
 A critical aspect of the search algorithm's performance is computational requirement for running the behaviors.
 \Cref{fig:computation-performance} shows the distribution of computation times per time step for each search algorithm, measured over six runs in the same environment. The data highlights key differences in computational cost and stability across behaviors.\\
 
-As expected, the \textbf{Roomba} algorithm demonstrates the lowest and most consistent computation time due to its simplicity and lack of map processing. In contrast, the \textbf{Pure Pathing} algorithm performs efficiently on average but displays noticeable outliers. These spikes are caused by expensive operations --- such as costmap updates, frontier evaluation, and A* path planning --- which are not executed at every time step. This variability suggests a degree of computational instability that could pose challenges when deploying on resource-constrained platforms like microcontrollers.\\
+As expected, the Roomba algorithm demonstrates the lowest and most consistent computation time due to its simplicity and lack of map processing. In contrast, the Pure Pathing algorithm performs efficiently on average but displays noticeable outliers. These spikes are caused by expensive operations --- such as costmap updates, frontier evaluation, and A* path planning --- which are not executed at every time step. This variability suggests a degree of computational instability that could pose challenges when deploying on resource-constrained platforms like microcontrollers.\\
 
-The \textbf{Gradient} method, while computationally stable, exhibits the highest average computation time. This is due to the cost of recalculating the gradient field at every step, regardless of environmental changes. The \textbf{Hybrid} algorithm was expected to fall between Pure Pathing and Gradient in terms of computational load, which is consistent with the observed data. Its ability to switch between strategies allows it to balance responsiveness and efficiency without incurring the full cost of either method.
+The Gradient method, while computationally stable, exhibits the highest average computation time. This is due to the cost of recalculating the gradient field at every step, regardless of environmental changes. The Hybrid algorithm was expected to fall between Pure Pathing and Gradient in terms of computational load, which is consistent with the observed data. Its ability to switch between strategies allows it to balance responsiveness and efficiency without incurring the full cost of either method.
 
 \begin{figure}[H]
     \begin{center}
@@ -176,10 +176,10 @@ A bandwidth of 260 bytes/sec negligible for most communicatino technologies cons
 
 \subsection{Simulator Performance}
 \label{sec:simulator-performance}
-The performance and rapid iteration cycle offered by the \texttt{simple\_sim} simulator were key motivations for its development in this project. To quantify its efficiency, a simple benchmark was conducted by running both simulators headless (without a GUI) for 600 simulated seconds using the Roomba algorithm. Over 5 runs, Gazebo required 628 real-time seconds on average to complete the simulation, whereas \texttt{simple\_sim} completed the same task in an average of just 18 seconds. This substantial difference highlights the lightweight simulator’s superior computational performance.
+The performance and rapid iteration cycle offered by the \texttt{simple\_sim} simulator were key motivations for its development in this project. To quantify its efficiency, a simple benchmark was conducted by running both simulators headless (without a GUI) for 600 simulated seconds using the Roomba algorithm. Over 5 runs, Gazebo required 628 real-time seconds on average to complete the simulation, whereas \texttt{simple\_sim} completed the same task in an average of just 18 seconds. This substantial difference highlights the lightweight simulator’s superior computational performance.\\
 
 The ability to run simulations significantly faster than real time is highly beneficial for development. It enables rapid experimentation, easier debugging, and efficient benchmarking of algorithmic changes—making \texttt{simple\_sim} a preferable tool during the design and testing phases.
 
 \subsubsection{Gazebo Stability}
-Benchmark data was collected with Python scripts which run both \texttt{simple\_sim} and Gazebo on the same environments automatically for a set of runs. Gazebo was, however, quite unreliable in its initialization which meant that Gazebo had to be supervised during benchmarking. This made it infeasible to run long trials multiple times with multiple behaviors. The following sections contain plots with data gathered using \texttt{simple\_sim} and would have taken days of supervised benchmarking to record using Gazebo.
+Benchmark data was collected with Python scripts using \texttt{botplot} to run both \texttt{simple\_sim} and Gazebo on the same environments automatically for a set of runs. Gazebo was, however, quite unreliable in its initialization which meant that tests had to be supervised during benchmarking. This made it infeasible to run long trials multiple times with multiple behaviors.
 

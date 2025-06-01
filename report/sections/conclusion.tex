@@ -3,11 +3,11 @@
 This project presents a modular and extensible framework for coordinated robotic search, evaluated using both a custom lightweight 2D simulator and a high-fidelity 3D Gazebo environment. Several search strategies were implemented and tested, including a simple obstacle-avoiding baseline, a gradient-based method, a pure pathing method, and a hybrid algorithm algorithm combining gradient and pathing behaviors. A Deep Q-Network based learning approach was also explored. The goal was to assess their performance in terms of coverage efficiency, computational cost, and cross-simulator consistency. The experimental results support several of the initial hypotheses:
 
 \begin{itemize}
-    \item The gradient-based algorithm significantly outperformed the baseline in terms of coverage efficiency, due to its local map knowledge, confirming \textbf{hypothesis 1}. However, as expected it introduced increased computational cost due to continuous gradient computation.
+    \item The gradient-based algorithm significantly outperformed the baseline in terms of coverage efficiency, due to its local map knowledge, confirming hypothesis 1. However, as expected it introduced increased computational cost due to continuous gradient computation.
 
-    \item The hybrid approach achieved higher coverage efficiency than the gradient-based method, as expected, partially confirming \textbf{hypothesis 2}. Interestingly, the algorithm's average computational cost was lower than the gradient algorithm. This result challenges the original assumption but led to the insight that pure path planning is a more performant alternative to gradient-based navigation in all tested scenarios.
+    \item The hybrid approach achieved higher coverage efficiency than the gradient-based method, as expected, partially confirming hypothesis 2. Interestingly, the algorithm's average computational cost was lower than the gradient algorithm. This result challenges the original assumption but led to the insight that pure path planning is a more performant alternative to gradient-based navigation in all tested scenarios.
 
-    \item The comparison between \texttt{simple\_sim} and Gazebo showed strong consistency in coverage trends, even accounting for differences in physical modeling and sensor noise. This was achieved with up to 35 times faster simulation speeds. This supports \textbf{hypothesis 3} and validates the use of the lightweight simulator for rapid development and evaluation.
+    \item The comparison between \texttt{simple\_sim} and Gazebo showed strong consistency in coverage trends, even accounting for differences in physical modeling and sensor noise. This was achieved with up to 35 times faster simulation speeds. This supports hypothesis 3 and validates the use of the lightweight simulator for rapid development and evaluation.
 
 \end{itemize}
 
